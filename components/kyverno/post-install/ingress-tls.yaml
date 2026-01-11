@@ -1,0 +1,73 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-ingress-tls
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+  - name: add-tls-annotations
+    match:
+      resources:
+        kinds:
+        - Ingress
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          annotations:
+            +(kubernetes.io/tls-acme): "true"
+            +(cert-manager.io/cluster-issuer): "letsencrypt-nginx"
+
+  - name: add-tls-spec
+    match:
+      resources:
+        kinds:
+        - Ingress
+    preconditions:
+      all:
+      # Only apply if spec.tls is not already defined
+      - key: "{{ request.object.spec.tls || '' | length(@) }}"
+        operator: Equals
+        value: "0"
+    mutate:
+      patchStrategicMerge:
+        spec:
+          +(tls):
+          - hosts:
+            # Dynamically extract all hosts from the ingress rules
+            - "{{ request.object.spec.rules[0].host }}"
+            secretName: "{{ request.object.metadata.name }}-tls"
+
+  - name: add-oauth-annotations
+    match:
+      resources:
+        kinds:
+        - Ingress
+    preconditions:
+      all:
+      # Only apply if enable-oauth label is set to "true"
+      - key: "{{ request.object.metadata.labels.\"enable-oauth\" || 'false' }}"
+        operator: Equals
+        value: "true"
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          annotations:
+            +(nginx.ingress.kubernetes.io/auth-url): "https://auth.example.com/oauth2/auth"
+            +(nginx.ingress.kubernetes.io/auth-signin): "https://auth.example.com/oauth2/start?rd=$scheme://$host$escaped_request_uri"
+
+  - name: add-ingress-class
+    match:
+      resources:
+        kinds:
+        - Ingress
+    preconditions:
+      all:
+      # Only apply if ingressClassName is not already set
+      - key: "{{ request.object.spec.ingressClassName || '' }}"
+        operator: Equals
+        value: ""
+    mutate:
+      patchStrategicMerge:
+        spec:
+          ingressClassName: nginx

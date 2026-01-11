@@ -1,0 +1,200 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-cert-manager
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/cert-manager
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-cert-manager-post-install
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/cert-manager/post-install
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: system-cert-manager
+    - name: secrets-kustomization
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-longhorn
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/longhorn
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-longhorn-post-install
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/longhorn/post-install
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: system-longhorn
+    - name: system-nginx
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-metallb
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/metallb
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-metallb-post-install
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/metallb/post-install
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: system-metallb
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-nginx
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/ingress-nginx
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-kyverno
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./components/kyverno
+  prune: true
+  wait: true
+  timeout: 10m
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: kyverno-admission-controller
+      namespace: kyverno
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: kyverno-background-controller
+      namespace: kyverno
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: kyverno-cleanup-controller
+      namespace: kyverno
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: kyverno-reports-controller
+      namespace: kyverno
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-kyverno-post-install
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/kyverno/post-install
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: system-kyverno
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-victoriametrics
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/victoriametrics
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+  dependsOn:
+    - name: system-nginx
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-oauth2-proxy
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/oauth2-proxy
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+  dependsOn:
+    - name: system-nginx
+    - name: secrets-kustomization
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-amd-drivers
+  namespace: flux-system
+spec:
+  interval: 12h
+  path: ./components/amd-gpu
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true

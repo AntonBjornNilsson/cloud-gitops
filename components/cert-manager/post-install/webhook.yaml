@@ -1,0 +1,24 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: simply-dns-webhook-repo
+  namespace: cert-manager
+spec:
+  interval: 10m0s
+  url: https://runnerm.github.io/simply-dns-webhook/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: simply-dns-webhook-release
+  namespace: cert-manager
+spec:
+  chart:
+    spec:
+      chart: simply-dns-webhook
+      reconcileStrategy: ChartVersion
+      sourceRef:
+        kind: HelmRepository
+        name: simply-dns-webhook-repo
+      version: 1.9.0
+  interval: 10m0s

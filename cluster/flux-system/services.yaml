@@ -1,0 +1,18 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-services
+  namespace: flux-system
+spec:
+  interval: 30s
+  path: ./services
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: system-nginx
+    - name: system-cert-manager-post-install
+    - name: system-longhorn
+  wait: true
+---

@@ -1,0 +1,4 @@
+.env
+k0s_backup*
+secrets
+scripts

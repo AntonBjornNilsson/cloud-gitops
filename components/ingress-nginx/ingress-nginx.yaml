@@ -1,0 +1,86 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-nginx
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  interval: 24h
+  url: https://kubernetes.github.io/ingress-nginx
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  dependsOn:
+    - name: cert-manager
+      namespace: cert-manager
+  interval: 12h
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: "*"
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: ingress-nginx
+      interval: 12h
+  values:
+    controller:
+      admissionWebhooks:
+        certManager:
+          enabled: true
+      allowSnippetAnnotations: true
+      service:
+        annotations:
+          metallb.io/address-pool: external-pool
+        type: "LoadBalancer"
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ingress-nginx-internal
+  namespace: ingress-nginx
+spec:
+  dependsOn:
+    - name: cert-manager
+      namespace: cert-manager
+  interval: 12h
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: "*"
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: ingress-nginx
+      interval: 12h
+  values:
+    nameOverride: nginx-internal
+    controller:
+      admissionWebhooks:
+        certManager:
+          enabled: true
+      allowSnippetAnnotations: true
+      config:
+        use-forwarded-headers: "true"
+        proxy-real-ip-cidr: "0.0.0.0/0"
+      service:
+        type: "LoadBalancer"
+        externalTrafficPolicy: Local
+        annotations:
+          metallb.io/address-pool: internal-pool
+      electionID: ingress-controller-leader
+      ingressClass: nginx-internal
+      ingressClassResource:
+        name: nginx-internal
+        default: true
+        ingressClass: nginx-internal
+        controllerValue: "k8s.io/ingress-nginx-internal"

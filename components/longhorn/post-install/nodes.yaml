@@ -1,0 +1,59 @@
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: node1
+  namespace: longhorn-system
+spec:
+  allowScheduling: true
+  disks:
+    node1-nvme:
+      allowScheduling: true
+      diskType: filesystem
+      evictionRequested: false
+      path: /var/lib/longhorn/
+      storageReserved: 32212254720 # 30 Gb
+      tags: []
+  evictionRequested: false
+  instanceManagerCPURequest: 0
+  name: node1
+  tags: []
+---
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: node2
+  namespace: longhorn-system
+spec:
+  allowScheduling: true
+  disks:
+    node2-nvme:
+      allowScheduling: true
+      diskType: filesystem
+      evictionRequested: false
+      path: /var/lib/longhorn/
+      storageReserved: 32212254720
+      tags: []
+  evictionRequested: false
+  instanceManagerCPURequest: 0
+  name: node2
+  tags: []
+---
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: nilsson-linux
+  namespace: longhorn-system
+spec:
+  allowScheduling: true
+  disks:
+    nilsson-linux-nvme:
+      allowScheduling: true
+      diskType: filesystem
+      evictionRequested: false
+      path: /var/lib/longhorn/
+      storageReserved: 2684354560000 # 2.5 Tb
+      tags: []
+  evictionRequested: false
+  instanceManagerCPURequest: 0
+  name: nilsson-linux
+  tags: []

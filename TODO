@@ -1,0 +1,24 @@
+> secrets handling
+> Add Mutating Admission Webhook/Policy Engines, kyverno. Auto set anno/tls
+> Authentication
+oauth2-proxy being a proxy not reverse
+> - grafana
+> - oauth2-proxy
+ - kubeapi
+ - headlamp
+total backup on s3
+netbox
+wakeonlan
+(not homarr) dashboard
+SMTP server + tftp + dhcp + ipxe
+> chromecast
+shutdown intervlan communication
+cloudflare tunnel?
+github runners
+harbor / dragonfly
+Security compliance, automated
+Adblock
+key-vault
+Better secret management in k8s, maybe key-vault integrated with external secrets
+Headlamp or other
+switch to trafic

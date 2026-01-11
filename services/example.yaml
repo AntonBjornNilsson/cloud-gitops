@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx-echo-namespace
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  namespace: nginx-echo-namespace
+  labels:
+    app: nginx-echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-echo
+  template:
+    metadata:
+      labels:
+        app: nginx-echo
+    spec:
+      containers:
+        - name: nginx-echo
+          image: registry.k8s.io/e2e-test-images/echoserver:2.3
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx-echo
+  namespace: nginx-echo-namespace
+  labels:
+    app: nginx-echo
+spec:
+  selector:
+    app: nginx-echo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello
+  namespace: nginx-echo-namespace
+  labels:
+    enable-oauth: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: hello.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: nginx-echo
+            port:
+              number: 80

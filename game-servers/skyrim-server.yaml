@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skyrim-server
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skyrim-server-config
+  namespace: skyrim-server
+data:
+  config.yaml: |
+    [general]
+    sLogLevel=info
+    bConsole=true
+
+
+    [LiveServices]
+    bAnnounceServer=false
+
+
+    [Gameplay]
+    bEnableMiscQuestSync=false
+    fGoldLossFactor=0
+    bAutoPartyJoin=true
+    bEnableItemDrops=false
+    bEnableXpSync=true
+    bSyncPlayerCalendar=false
+    uTimeScale=20
+    bEnableDeathSystem=true
+    bSyncPlayerHomes=false
+    bEnablePvp=false
+    bEnableGreetings=false
+    uDifficulty=4
+
+
+    [ModPolicy]
+    bAllowMO2=true
+    bAllowSKSE=true
+    bEnableModCheck=false
+
+
+    [GameServer]
+    sPassword=
+    sAdminPassword=
+    sServerName=Dedicated Together Server
+    bPremiumMode=true
+    uMaxPlayerCount=8
+    uPort=10578
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: skyrim-server-data-pvc
+  namespace: skyrim-server
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: skyrim-server-logs-pvc
+  namespace: skyrim-server
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skyrim-server
+  namespace: skyrim-server
+  labels:
+    app: skyrim-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skyrim-server
+  template:
+    metadata:
+      labels:
+        app: skyrim-server
+    spec:
+      containers:
+        - name: skyrim-server
+          image: tiltedphoques/st-reborn-server:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 10578
+              protocol: UDP
+              name: udp-game
+          volumeMounts:
+            - name: config-volume
+              mountPath: /st-server/config
+            - name: data-volume
+              mountPath: /st-server/Data
+            - name: logs-volume
+              mountPath: /st-server/logs
+      volumes:
+        - name: config-volume
+          configMap:
+            name: skyrim-server-config
+            items:
+              - key: config.yaml
+                path: config.yaml
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: skyrim-server-data-pvc
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: skyrim-server-logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skyrim-server
+  namespace: skyrim-server
+  labels:
+    app: skyrim-server
+spec:
+  selector:
+    app: skyrim-server
+  ports:
+    - name: udp-game
+      protocol: UDP
+      port: 10578
+      targetPort: 10578
+  type: ClusterIP
