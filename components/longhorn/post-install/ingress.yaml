@@ -7,7 +7,7 @@ metadata:
     enable-oauth: "true"
 spec:
   rules:
-  - host: longhorn.example.com
+  - host: longhorn.${domain}
     http:
       paths:
       - path: /
