@@ -54,7 +54,7 @@ metadata:
     enable-oauth: "true"
 spec:
   rules:
-  - host: headlamp.example.com
+  - host: headlamp.${domain}
     http:
       paths:
       - path: /

@@ -69,7 +69,7 @@ spec:
     ingress:
       enabled: true
       class: "nginx"
-      host: "ai.example.com"
+      host: "ai.${domain}"
 
     persistentVolume:
       enabled: true

@@ -58,7 +58,7 @@ spec:
 
         ingressClassName: nginx
         hosts:
-          - authentik.example.com
+          - authentik.${domain}
 
     postgresql:
       enabled: true

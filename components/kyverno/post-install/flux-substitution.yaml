@@ -1,0 +1,20 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-flux-kustomization-substitute
+  namespace: kyverno
+spec:
+  validationFailureAction: Audit
+  rules:
+  - name: add-substitute-from
+    match:
+      resources:
+        kinds:
+        - kustomize.toolkit.fluxcd.io/v1/Kustomization
+    mutate:
+      patchStrategicMerge:
+        spec:
+          postBuild:
+            substituteFrom:
+            - kind: Secret
+              name: flux-substitutions

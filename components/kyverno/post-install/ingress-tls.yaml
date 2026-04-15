@@ -53,8 +53,8 @@ spec:
       patchStrategicMerge:
         metadata:
           annotations:
-            +(nginx.ingress.kubernetes.io/auth-url): "https://auth.example.com/oauth2/auth"
-            +(nginx.ingress.kubernetes.io/auth-signin): "https://auth.example.com/oauth2/start?rd=$scheme://$host$escaped_request_uri"
+            +(nginx.ingress.kubernetes.io/auth-url): "https://auth.${domain}/oauth2/auth"
+            +(nginx.ingress.kubernetes.io/auth-signin): "https://auth.${domain}/oauth2/start?rd=$scheme://$host$escaped_request_uri"
 
   - name: add-ingress-class
     match:
