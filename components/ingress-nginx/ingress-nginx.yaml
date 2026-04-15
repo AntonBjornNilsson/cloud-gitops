@@ -37,7 +37,6 @@ spec:
       admissionWebhooks:
         certManager:
           enabled: true
-      allowSnippetAnnotations: true
       service:
         annotations:
           metallb.io/address-pool: external-pool
