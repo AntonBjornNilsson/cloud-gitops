@@ -48,7 +48,7 @@ spec:
       error_reporting:
         enabled: true
       postgresql:
-        password: "ThisIsNotASecurePassword"
+        password: ${authentik_postgres_password}
 
     server:
       ingress:
@@ -63,4 +63,4 @@ spec:
     postgresql:
       enabled: true
       auth:
-        password: "ThisIsNotASecurePassword"
+        password: ${authentik_postgres_password}

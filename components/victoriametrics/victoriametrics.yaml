@@ -29,7 +29,30 @@ spec:
       interval: 12h
   # Timeout for Helm operations
   timeout: 10m
-  valuesFrom:
-    - kind: ConfigMap
-      name: victoriametrics-values
-      valuesKey: values.yaml
+  values:
+    fullnameOverride: "vm-k8s-stack"
+
+    grafana:
+      assertNoLeakedSecrets: false
+      ingress:
+        enabled: true
+        ingressClassName: nginx
+        hosts:
+          - grafana.${domain}
+
+      grafana.ini:
+        server:
+          root_url: https://grafana.${domain}
+        auth:
+          signout_redirect_url: ${victoriametrics_auth_redirect_url}
+          oauth_auto_login: true
+        auth.generic_oauth:
+          name: authentik
+          enabled: true
+          client_id: ${victoriametrics_client_id}
+          client_secret: ${victoriametrics_client_secret}
+          scopes: "openid profile email"
+          auth_url: ${victoriametrics_auth_url}
+          token_url: ${victoriametrics_token_url}
+          api_url: ${victoriametrics_api_url}
+          role_attribute_path: contains(groups, 'Grafana Admins') && 'Admin' || contains(groups, 'Grafana Editors') && 'Editor' || 'Viewer'

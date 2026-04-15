@@ -52,13 +52,6 @@ spec:
       enabled: true
       type: "amd"
       number: 1
-    # models:
-    #   pull:
-    #     - aravhawk/gemma4:26b
-    #     - epicmajorman/gemma4-biomedical
-    #     - moyosoreoluwa/gemma4-trading:latest
-    #   run:
-    #     - aravhawk/gemma4:26b
     tolerations:
     - key: "GPU"
       operator: "Equal"
@@ -79,7 +72,6 @@ spec:
   postRenderers:
     - kustomize:
         patches:
-          # Add cost-center annotation to all Deployments
           - target:
               kind: Service
             patch: |

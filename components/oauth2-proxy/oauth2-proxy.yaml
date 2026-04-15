@@ -29,8 +29,27 @@ spec:
       interval: 12h
   # Timeout for Helm operations
   timeout: 10m
-  valuesFrom:
-    - kind: ConfigMap
-      name: oauth2-values
-      valuesKey: values.yaml
-    
+  values:
+ingress:
+    host: auth.${domain}
+    auth:
+      oidc:
+        enabled: true
+        issuerUrl: ${oauth2_issuer_url}
+      config:
+        clientId: ${oauth_client_id}
+        clientSecret: ${oauth_client_secret}
+        cookieSecret: ${oauth_client_cookie_secret}
+        setAuthorizationHeader: true
+        emailDomain: "*"
+        cookieRefresh: 1m
+        cookieExpire: 30m
+        codeChallengeMethod: S256
+        scope: "openid user groups"
+      extraConfig: |
+        cookie_name = ${oauth_client_cookie_name}
+        whitelist_domains = "*.${domain}"
+        set_xauthrequest = "true"
+        reverse_proxy = "true"
+        cookie_domains = ".${domain}"
+        oidc_email_claim = "sub"
