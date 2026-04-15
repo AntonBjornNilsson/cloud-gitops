@@ -5,7 +5,7 @@ metadata:
   namespace: cert-manager
 spec:
   acme:
-    email: ${admin-email}
+    email: ${adminEmail}
     server: https://acme-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       name: letsencrypt-nginx
