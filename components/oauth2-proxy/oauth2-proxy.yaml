@@ -30,8 +30,8 @@ spec:
   # Timeout for Helm operations
   timeout: 10m
   values:
-ingress:
-    host: auth.${domain}
+    ingress:
+      host: auth.${domain}
     auth:
       oidc:
         enabled: true
