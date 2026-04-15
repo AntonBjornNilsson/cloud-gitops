@@ -11,6 +11,12 @@ spec:
       resources:
         kinds:
         - kustomize.toolkit.fluxcd.io/v1/Kustomization
+    exclude:
+      resources:
+        names:
+        - secrets-kustomization
+        namespaces:
+        - flux-system
     mutate:
       patchStrategicMerge:
         spec:
