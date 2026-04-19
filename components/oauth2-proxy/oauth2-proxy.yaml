@@ -47,7 +47,7 @@ spec:
         codeChallengeMethod: S256
         scope: "openid user groups"
       extraConfig: |
-        cookie_name = ${oauth_client_cookie_name}
+        cookie_name = "${oauth_client_cookie_name}"
         whitelist_domains = "*.${domain}"
         set_xauthrequest = "true"
         reverse_proxy = "true"
