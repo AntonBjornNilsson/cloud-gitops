@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: nginx-echo
-          image: registry.k8s.io/e2e-test-images/echoserver:latest
+          image: registry.k8s.io/e2e-test-images/echoserver:2.3
           ports:
             - containerPort: 8080
           env:
