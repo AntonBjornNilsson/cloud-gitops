@@ -33,15 +33,21 @@ spec:
       reclaimPolicy: Retain
       migratable: true
     csi:
-      # attacherReplicaCount: 1
-      # provisionerReplicaCount: 1
-      # resizerReplicaCount: 1
-      # snapshotterReplicaCount: 1
+      attacherReplicaCount: 1
+      provisionerReplicaCount: 1
+      resizerReplicaCount: 1
+      snapshotterReplicaCount: 1
     defaultSettings:
       defaultReplicaCount: 1
       storageOverProvisioningPercentage: 100
       storageMinimalAvailablePercentage: 10
       taintToleration: "GPU=true:NoSchedule"
+
+    defaultBackupStore:
+      backupTarget: ${s3_bucket_longhorn}
+      backupTargetCredentialSecret: longhorn-backup-target-secret
+      pollInterval: 500
+
     longhornManager:
       tolerations:
       - key: "GPU"
@@ -54,6 +60,6 @@ spec:
         operator: "Equal"
         value: "true"
         effect: "NoSchedule"
-    # longhornUI:
-    #   replicas: 1
+    longhornUI:
+      replicas: 1
 ---
