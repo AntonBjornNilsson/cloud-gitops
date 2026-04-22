@@ -6,7 +6,7 @@ metadata:
   namespace: metallb
 spec:
   addresses:
-  - 192.168.21.25-192.168.21.29
+    - 192.168.21.25-192.168.21.29
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -15,7 +15,7 @@ metadata:
   namespace: metallb
 spec:
   addresses:
-  - 192.168.21.30-192.168.21.40
+    - 192.168.21.30-192.168.21.40
 ---
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
@@ -24,13 +24,13 @@ metadata:
   namespace: metallb
 spec:
   addresses:
-  - 192.168.21.41-192.168.21.50
+    - 192.168.21.41-192.168.21.50
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
   name: ltwo
   namespace: metallb
-spec:
-  ipAddressPools:
-  - l2-service-pool
+# spec:
+#   ipAddressPools:
+#   - l2-service-pool

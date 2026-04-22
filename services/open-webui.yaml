@@ -54,6 +54,7 @@ spec:
 
     ollama:
       enabled: false
+
     ollamaUrls:
       - http://ollama.ollama.svc.cluster.local:11434
 
