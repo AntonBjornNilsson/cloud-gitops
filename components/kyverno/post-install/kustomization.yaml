@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - ingress-tls.yaml
   - flux-substitution.yaml
+  - pvc.yaml

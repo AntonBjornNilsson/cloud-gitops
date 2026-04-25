@@ -63,10 +63,8 @@ spec:
       auth:
         password: ${authentik_postgres_password}
       persistence:
+        existingClaim: authentik-postgresql-pvc
         size: 8Gi
-        labels:
-          recurring-job.longhorn.io/daily-backup: enabled
-          recurring-job-group.longhorn.io/default: enabled
 ---
 apiVersion: v1
 kind: Secret
@@ -78,3 +76,18 @@ stringData:
   AUTHENTIK_BOOTSTRAP_PASSWORD: ${authentik_bootstrap_password}
   AUTHENTIK_BOOTSTRAP_TOKEN: ${authentik_bootstrap_token}
   AUTHENTIK_SECRET_KEY: ${authentik_secret_key}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authentik-postgresql-pvc
+  namespace: authentik
+  labels:
+    recurring-job.longhorn.io/daily-backup: enabled
+    recurring-job-group.longhorn.io/default: enabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 8Gi
