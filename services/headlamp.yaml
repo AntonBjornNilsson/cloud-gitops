@@ -38,11 +38,13 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 3m
-
-  valuesFrom:
-    - kind: ConfigMap
-      name: headlamp-values
-      valuesKey: values.yaml
+  values:
+    config:
+      oidc:
+        clientID: ${headlamp_client_id}
+        clientSecret: ${headlamp_client_secret}
+        issuerURL: ${headlamp_issuer_url}
+        scopes: ${headlamp_scopes}
 
 ---
 apiVersion: networking.k8s.io/v1

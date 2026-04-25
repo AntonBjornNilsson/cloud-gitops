@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - letsencrypt.yaml
   - webhook.yaml
+  - dns-credentials.yaml

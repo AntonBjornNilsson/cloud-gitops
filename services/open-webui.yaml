@@ -37,13 +37,17 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 3m
-
-  valuesFrom:
-    - kind: ConfigMap
-      name: open-webui-values
-      valuesKey: sso-values.yaml
-
   values:
+    sso:
+      enabled: true
+      enableSignup: true
+      oidc:
+        enabled: true
+        clientId: ${open_webui_client_id}
+        clientSecret: ${open_webui_client_secret}
+        providerUrl: ${open_webui_provider_url}
+        providerName: ${open_webui_provider_name}
+        scopes: ${open_webui_scopes}
     replicaCount: 1
 
     tolerations:
