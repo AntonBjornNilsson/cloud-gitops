@@ -6,4 +6,4 @@ resources:
   - components.yaml
   - services.yaml
   - secrets.yaml
-  - ../cluster-oidc-admin.yaml
+  # - ../cluster-oidc-admin.yaml
