@@ -38,7 +38,7 @@ spec:
       resizerReplicaCount: 1
       snapshotterReplicaCount: 1
     defaultSettings:
-      defaultReplicaCount: 1
+      # defaultReplicaCount: 1
       storageOverProvisioningPercentage: 100
       storageMinimalAvailablePercentage: 10
       taintToleration: "GPU=true:NoSchedule"
