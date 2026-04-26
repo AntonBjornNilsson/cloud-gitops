@@ -19,4 +19,4 @@ spec:
             apiKey: ${simply_api_key}
       selector:
         dnsZones:
-        - '${domain}'
+        - '*.${domain}'
