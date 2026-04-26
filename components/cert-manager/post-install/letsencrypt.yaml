@@ -15,7 +15,8 @@ spec:
           groupName: com.github.runnerm.cert-manager-simply-webhook
           solverName: simply-dns-solver
           config:
-            secretName: simply-credentials
+            accountName: ${simply_account_name}
+            apiKey: ${simply_api_key}
       selector:
         dnsZones:
         - '${domain}'
