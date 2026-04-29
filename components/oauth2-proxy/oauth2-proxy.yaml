@@ -27,7 +27,6 @@ spec:
         kind: HelmRepository
         name: oauth2-proxy
       interval: 12h
-  # Timeout for Helm operations
   timeout: 10m
   values:
     ingress:
@@ -46,10 +45,10 @@ spec:
         cookieExpire: 30m
         codeChallengeMethod: S256
         scope: "openid user groups"
-      extraConfig: |
-        cookie_name = "${oauth_client_cookie_name}"
-        whitelist_domains = "*.${domain}"
-        set_xauthrequest = "true"
-        reverse_proxy = "true"
-        cookie_domains = ".${domain}"
-        oidc_email_claim = "sub"
+      # extraConfig: |
+      #   cookie_name = "${oauth_client_cookie_name}"
+      #   whitelist_domains = "*.${domain}"
+      #   set_xauthrequest = "true"
+      #   reverse_proxy = "true"
+      #   cookie_domains = ".${domain}"
+      #   oidc_email_claim = "sub"
