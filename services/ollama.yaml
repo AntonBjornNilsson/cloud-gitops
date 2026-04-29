@@ -47,6 +47,7 @@ spec:
       tag: "rocm" # force amd
     persistentVolume:
       enabled: true
+      size: 60Gi
     gpu:
       enabled: true
       type: "amd"
@@ -65,9 +66,9 @@ spec:
         memory: "10Gi"
         cpu: "6"
         amd.com/gpu: "1"
-    extraEnv:
-      - name: OLLAMA_DEBUG
-        value: "2"
+    # extraEnv:
+    #   - name: OLLAMA_DEBUG
+    #     value: "2"
   postRenderers:
     - kustomize:
         patches:
