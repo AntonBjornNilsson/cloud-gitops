@@ -28,23 +28,23 @@ spec:
         name: oauth2-proxy
       interval: 12h
   timeout: 10m
-  values:
-    ingress:
-      host: auth.${domain}
-    auth:
-      oidc:
-        enabled: true
-        issuerUrl: ${oauth2_issuer_url}
-      config:
-        clientId: ${oauth_client_id}
-        clientSecret: ${oauth_client_secret}
-        cookieSecret: ${oauth_client_cookie_secret}
-        setAuthorizationHeader: true
-        emailDomain: "*"
-        cookieRefresh: 1m
-        cookieExpire: 30m
-        codeChallengeMethod: S256
-        scope: "openid user groups"
+  # values:
+  #   ingress:
+  #     host: auth.${domain}
+  #   auth:
+  #     oidc:
+  #       enabled: true
+  #       issuerUrl: ${oauth2_issuer_url}
+  #     config:
+  #       clientId: ${oauth_client_id}
+  #       clientSecret: ${oauth_client_secret}
+  #       cookieSecret: ${oauth_client_cookie_secret}
+  #       setAuthorizationHeader: true
+  #       emailDomain: "*"
+  #       cookieRefresh: 1m
+  #       cookieExpire: 30m
+  #       codeChallengeMethod: S256
+  #       scope: "openid user groups"
       # extraConfig: |
       #   cookie_name = "${oauth_client_cookie_name}"
       #   whitelist_domains = "*.${domain}"
