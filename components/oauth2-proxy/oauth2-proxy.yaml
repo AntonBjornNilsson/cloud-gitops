@@ -22,7 +22,7 @@ spec:
   chart:
     spec:
       chart: simple-oauth2-proxy
-      version: "*"
+      version: "10.4.2"
       sourceRef:
         kind: HelmRepository
         name: oauth2-proxy
