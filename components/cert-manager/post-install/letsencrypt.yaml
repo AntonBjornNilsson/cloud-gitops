@@ -18,7 +18,7 @@ spec:
             secretName: simply-credentials
       selector:
         dnsZones:
-        - '*.${domain}'
+        - '${domain}'
 ---
 apiVersion: v1
 kind: Secret
