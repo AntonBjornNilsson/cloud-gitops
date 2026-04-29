@@ -15,6 +15,7 @@ spec:
       resources:
         names:
         - secrets-kustomization
+        - system-oauth2-proxy
         namespaces:
         - flux-system
     mutate:
