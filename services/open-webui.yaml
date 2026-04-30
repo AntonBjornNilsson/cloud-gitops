@@ -48,13 +48,13 @@ spec:
         providerUrl: ${open_webui_provider_url}
         providerName: ${open_webui_provider_name}
         scopes: ${open_webui_scopes}
-    replicaCount: 2
+    replicaCount: 1
 
-    tolerations:
-    - key: "GPU"
-      operator: "Equal"
-      value: "true"
-      effect: "NoSchedule"
+    # tolerations:
+    # - key: "GPU"
+    #   operator: "Equal"
+    #   value: "true"
+    #   effect: "NoSchedule"
 
     ollama:
       enabled: false
