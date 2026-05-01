@@ -93,6 +93,23 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: system-traefik
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/traefik
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+  dependsOn:
+    - name: system-cert-manager
+    - name: system-metallb-post-install
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: system-nginx
   namespace: flux-system
 spec:
@@ -167,6 +184,20 @@ spec:
   wait: true
   dependsOn:
     - name: system-nginx
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-jaeger
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/jaeger
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization

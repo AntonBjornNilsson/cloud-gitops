@@ -16,7 +16,7 @@ spec:
         metadata:
           annotations:
             +(kubernetes.io/tls-acme): "true"
-            +(cert-manager.io/cluster-issuer): "letsencrypt-nginx"
+            +(cert-manager.io/cluster-issuer): "letsencrypt-wildcard-issuer"
 
   - name: add-tls-spec
     match:
@@ -70,4 +70,4 @@ spec:
     mutate:
       patchStrategicMerge:
         spec:
-          ingressClassName: nginx
+          ingressClassName: traefik
