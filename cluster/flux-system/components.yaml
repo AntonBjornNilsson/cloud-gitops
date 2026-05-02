@@ -32,6 +32,24 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  name: system-authentik
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/authentik
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    - name: system-traefik
+    - name: system-longhorn-post-install
+    - name: secrets-kustomization
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: system-longhorn
   namespace: flux-system
 spec:
