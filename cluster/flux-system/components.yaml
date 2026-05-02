@@ -24,9 +24,9 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: system-cert-manager
-    - name: secrets-kustomization
+  # dependsOn:
+  #   - name: system-cert-manager
+  #   - name: secrets-kustomization
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -41,10 +41,10 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: system-traefik
-    - name: system-longhorn-post-install
-    - name: secrets-kustomization
+  # dependsOn:
+  #   - name: system-traefik
+  #   - name: system-longhorn-post-install
+  #   - name: secrets-kustomization
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -73,9 +73,9 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: system-longhorn
-    - name: system-traefik
+  # dependsOn:
+  #   - name: system-longhorn
+  #   - name: system-traefik
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -104,8 +104,8 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: system-metallb
+  # dependsOn:
+  #   - name: system-metallb
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -121,9 +121,9 @@ spec:
     kind: GitRepository
     name: flux-system
   wait: true
-  dependsOn:
-    - name: system-cert-manager
-    - name: system-metallb-post-install
+  # dependsOn:
+  #   - name: system-cert-manager
+  #   - name: system-metallb-post-install
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -183,8 +183,8 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: system-kyverno
+  # dependsOn:
+  #   - name: system-kyverno
   wait: true
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -200,8 +200,8 @@ spec:
     kind: GitRepository
     name: flux-system
   wait: true
-  dependsOn:
-    - name: system-traefik
+  # dependsOn:
+  #   - name: system-traefik
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -230,9 +230,9 @@ spec:
     kind: GitRepository
     name: flux-system
   wait: true
-  dependsOn:
-    - name: system-traefik
-    - name: secrets-kustomization
+  # dependsOn:
+  #   - name: system-traefik
+  #   - name: secrets-kustomization
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
