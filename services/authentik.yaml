@@ -54,7 +54,7 @@ spec:
       ingress:
         enabled: true
 
-        ingressClassName: nginx
+        ingressClassName: traefik
         hosts:
           - authentik.${domain}
 
