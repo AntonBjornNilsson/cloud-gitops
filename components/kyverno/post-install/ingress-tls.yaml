@@ -38,23 +38,23 @@ spec:
             - "{{ request.object.spec.rules[0].host }}"
             secretName: "{{ request.object.metadata.name }}-tls"
 
-  - name: add-oauth-annotations
-    match:
-      resources:
-        kinds:
-        - Ingress
-    preconditions:
-      all:
-      # Only apply if enable-oauth label is set to "true"
-      - key: "{{ request.object.metadata.labels.\"enable-oauth\" || 'false' }}"
-        operator: Equals
-        value: "true"
-    mutate:
-      patchStrategicMerge:
-        metadata:
-          annotations:
-            +(nginx.ingress.kubernetes.io/auth-url): "https://auth.${domain}/oauth2/auth"
-            +(nginx.ingress.kubernetes.io/auth-signin): "https://auth.${domain}/oauth2/start?rd=$scheme://$host$escaped_request_uri"
+  # - name: add-oauth-annotations
+  #   match:
+  #     resources:
+  #       kinds:
+  #       - Ingress
+  #   preconditions:
+  #     all:
+  #     # Only apply if enable-oauth label is set to "true"
+  #     - key: "{{ request.object.metadata.labels.\"enable-oauth\" || 'false' }}"
+  #       operator: Equals
+  #       value: "true"
+  #   mutate:
+  #     patchStrategicMerge:
+  #       metadata:
+  #         annotations:
+  #           +(nginx.ingress.kubernetes.io/auth-url): "https://auth.${domain}/oauth2/auth"
+  #           +(nginx.ingress.kubernetes.io/auth-signin): "https://auth.${domain}/oauth2/start?rd=$scheme://$host$escaped_request_uri"
 
   - name: add-ingress-class
     match:
