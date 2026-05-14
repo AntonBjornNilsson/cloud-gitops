@@ -3,8 +3,12 @@ kind: Ingress
 metadata:
   name: longhorn
   namespace: longhorn-system
-  labels:
-    enable-oauth: "true"
+  # labels:
+  #   enable-oauth: "false"
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    # traefik.ingress.kubernetes.io/router.middlewares: "traefik-traefik-auth-forward@kubernetescrd"
+
 spec:
   rules:
   - host: longhorn.${domain}

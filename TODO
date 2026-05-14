@@ -21,4 +21,5 @@ Adblock
 key-vault
 Better secret management in k8s, maybe key-vault integrated with external secrets
 Headlamp or other
-switch to trafic
+> switch to trafic
+Use operator for managing cloudflare

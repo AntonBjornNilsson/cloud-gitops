@@ -65,10 +65,10 @@ kind: Ingress
 metadata:
   name: hello
   namespace: nginx-echo-namespace
-  labels:
-    enable-oauth: "true"
+  annotations:
+    kubernetes.io/ingress.class: traefik
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
   - host: hello.${domain}
     http:

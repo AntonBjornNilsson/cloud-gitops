@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-metallb-post-install
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/metallb/post-install
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  # dependsOn:
+  #   - name: system-metallb
+  wait: true

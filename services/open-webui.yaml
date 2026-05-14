@@ -48,13 +48,7 @@ spec:
         providerUrl: ${open_webui_provider_url}
         providerName: ${open_webui_provider_name}
         scopes: ${open_webui_scopes}
-    replicaCount: 1
-
-    # tolerations:
-    # - key: "GPU"
-    #   operator: "Equal"
-    #   value: "true"
-    #   effect: "NoSchedule"
+    replicaCount: 2
 
     ollama:
       enabled: false
@@ -76,7 +70,7 @@ spec:
 
     ingress:
       enabled: true
-      class: "nginx"
+      class: "traefik"
       host: "ai.${domain}"
 
     persistentVolume:

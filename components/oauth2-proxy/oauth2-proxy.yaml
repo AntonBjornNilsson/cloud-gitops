@@ -10,7 +10,7 @@ metadata:
   namespace: oauth2-proxy
 spec:
   interval: 1h
-  url: https://kostiantyn-matsebora.github.io/helm-charts/
+  url: https://oauth2-proxy.github.io/manifests
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -21,41 +21,86 @@ spec:
   interval: 30m
   chart:
     spec:
-      chart: simple-oauth2-proxy
-      version: "*"
+      chart: oauth2-proxy
+      version: "10.4.3"
       sourceRef:
         kind: HelmRepository
         name: oauth2-proxy
       interval: 12h
-  timeout: 10m
-  valuesFrom:
-    - kind: ConfigMap
-      name: oauth2-values
-      valuesKey: values.yaml
-
-  # The HelmChart is bugged and doens't support flux substitutions
-  # The values look like this.
-  # values:
-  #   ingress:
-  #     host: auth.${domain}
-  #   auth:
-  #     oidc:
-  #       enabled: true
-  #       issuerUrl: ${oauth2_issuer_url}
-  #     config:
-  #       clientId: ${oauth_client_id}
-  #       clientSecret: ${oauth_client_secret}
-  #       cookieSecret: ${oauth_client_cookie_secret}
-  #       setAuthorizationHeader: true
-  #       emailDomain: "*"
-  #       cookieRefresh: 1m
-  #       cookieExpire: 30m
-  #       codeChallengeMethod: S256
-  #       scope: "openid user groups"
-  #     extraConfig: |
-  #       cookie_name = "${oauth_client_cookie_name}"
-  #       whitelist_domains = "*.${domain}"
-  #       set_xauthrequest = "true"
-  #       reverse_proxy = "true"
-  #       cookie_domains = ".${domain}"
-  #       oidc_email_claim = "sub"
+  timeout: 1m
+  values:
+    config:
+      clientID: ${oauth_client_id}
+      clientSecret: ${oauth_client_secret}
+      cookieSecret: ${oauth_client_cookie_secret}
+      configFile: |
+        provider = "oidc"
+        oidc_issuer_url = "https://authentik.${domain}/application/o/oauth2-proxy/"
+        email_domains = "*"
+        insecure_oidc_allow_unverified_email="true"
+        cookie_secure = "false"
+        upstreams = "static://200"
+        redirect_url = "https://oauth2-proxy.${domain}/oauth2/callback"
+        scope = "openid email profile"
+        pass_access_token = true
+        pass_authorization_header = true
+        pass_user_headers = true
+        set_authorization_header = true
+        cookie_domains = ".${domain}"
+        cookie_name = "${oauth_client_cookie_name}"
+        cookie_refresh = "2m"
+        cookie_expire = "24h"
+        whitelist_domains = ".${domain}"
+        set_xauthrequest = true
+    extraArgs:
+      - --cookie-secure=false
+      - --skip-provider-button
+      - --ssl-insecure-skip-verify
+      - --provider-display-name=Authentik
+      - --reverse-proxy
+        # WARNING: --reverse-proxy is enabled but no --trusted-proxy-ip CIDRs were configured. All connecting IPs are trusted to supply X-Forwarded-* headers by default (0.0.0.0/0, ::/0). This preserves backwards compatibility but is a potential security risk; configure --trusted-proxy-ip to match your reverse proxy addresses
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-auth-forward
+  namespace: authentik
+spec:
+  forwardAuth:
+    address: "https://oauth2-proxy.${domain}/oauth2/"
+    trustForwardHeader: true
+    authResponseHeaders:
+      - X-authentik-username
+      - X-authentik-groups
+      - X-authentik-entitlements
+      - X-authentik-email
+      - X-authentik-name
+      - X-authentik-uid
+      - X-authentik-jwt
+      - X-authentik-meta-jwks
+      - X-authentik-meta-outpost
+      - X-authentik-meta-provider
+      - X-authentik-meta-app
+      - X-authentik-meta-version
+      - Authorization
+      - Set-Cookie
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy
+  namespace: oauth2-proxy
+  annotations:
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: oauth2-proxy.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  name: http

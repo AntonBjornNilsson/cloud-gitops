@@ -1,0 +1,31 @@
+apiVersion: networking.cfargotunnel.com/v1alpha2
+kind: ClusterTunnel
+metadata:
+  name: dropout-cluster
+  namespace: cloudflare-operator-system
+spec:
+  # newTunnel:
+  #   name: dropout-cluster
+  existingTunnel:
+    ## Existing Tunnel id/name to run on. Tunnel Name and Tunnel ID cannot be both empty. If both are provided, id is used if valid, else falls back to name
+    id: xyz
+    name: dropout-tunnel
+  cloudflare:
+    email: TODO
+    domain: ${domain}
+    secret: cloudflare-secrets
+    accountId: xyz
+---
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: TunnelBinding
+metadata:
+  name: traefik
+  namespace: cloudflare-operator-system
+subjects:
+  - name: wildcard
+    spec:
+      fqdn: "*.${domain}"
+      target: https://traefik.traefik.svc.cluster.local:443
+tunnelRef:
+  kind: ClusterTunnel
+  name: dropout-cluster

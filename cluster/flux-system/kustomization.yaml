@@ -3,7 +3,27 @@ kind: Kustomization
 resources:
   - gotk-components.yaml
   - gotk-sync.yaml
-  - components.yaml
-  - services.yaml
-  - secrets.yaml
+
+  # Components
+  - system-amd-drivers.yaml
+  - system-authentik.yaml
+  - system-cert-manager-post-install.yaml
+  - system-cert-manager.yaml
+  - system-jaeger.yaml
+  - system-kyverno-post-install.yaml
+  - system-kyverno.yaml
+  - system-longhorn-post-install.yaml
+  - system-longhorn.yaml
+  - system-metallb-post-install.yaml
+  - system-metallb.yaml
+  # - system-nginx.yaml
+  - system-oauth2-proxy.yaml
+  - system-traefik.yaml
+  - system-victoriametrics.yaml
+
+  # Secrets
+  - secrets-repo.yaml
+
+  # Services
+  - flux-services.yaml
   # - ../cluster-oidc-admin.yaml

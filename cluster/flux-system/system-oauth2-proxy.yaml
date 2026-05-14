@@ -1,0 +1,16 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-oauth2-proxy
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/oauth2-proxy
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  wait: true
+  # dependsOn:
+  #   - name: system-traefik
+  #   - name: secrets-kustomization

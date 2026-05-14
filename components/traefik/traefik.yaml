@@ -35,6 +35,10 @@ spec:
     ingressRoute:
       dashboard:
         enabled: false
+    logs:
+      general:
+        format: json
+        level: TRACE
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
