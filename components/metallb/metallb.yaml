@@ -26,4 +26,5 @@ spec:
         kind: HelmRepository
         name: metallb-repo
   interval: 10m0s
+  timeout: 30s
 ---

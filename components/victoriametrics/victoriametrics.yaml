@@ -28,7 +28,7 @@ spec:
         name: victoriametrics
       interval: 12h
   # Timeout for Helm operations
-  timeout: 10m
+  timeout: 30s
   values:
     fullnameOverride: "vm-k8s-stack"
 

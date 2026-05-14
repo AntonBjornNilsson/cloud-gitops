@@ -32,6 +32,7 @@ spec:
         name: gha-runner-scale-set
         namespace: arc-runners
       interval: 12h
+  timeout: 30s
   install:
     strategy:
       name: RetryOnFailure

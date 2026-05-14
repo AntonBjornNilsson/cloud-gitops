@@ -27,6 +27,7 @@ spec:
         name: longhorn-repo
       version: v1.10.1
   interval: 10m0s
+  timeout: 30s
   values:
     persistence:
       # defaultClassReplicaCount: 1
@@ -59,6 +60,8 @@ spec:
       - key: "GPU"
         operator: "Equal"
         value: "true"
+        effect: "NoSchedule"
+      - key: "node-role.kubernetes.io/control-plane"
         effect: "NoSchedule"
     # longhornUI:
     #   replicas: 1

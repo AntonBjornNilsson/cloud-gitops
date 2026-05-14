@@ -31,6 +31,7 @@ spec:
         name: kyverno-repo
         namespace: kyverno
       interval: 12h
+  timeout: 30s
   install:
     crds: CreateReplace
     remediation:

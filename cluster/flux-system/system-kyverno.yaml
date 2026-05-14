@@ -4,14 +4,13 @@ metadata:
   name: system-kyverno
   namespace: flux-system
 spec:
-  interval: 10m
+  interval: 2m
   sourceRef:
     kind: GitRepository
     name: flux-system
   path: ./components/kyverno
   prune: true
   wait: true
-  timeout: 10m
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment

@@ -29,6 +29,7 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 2m
+  timeout: 30s
   upgrade:
     strategy:
       name: RetryOnFailure

@@ -29,6 +29,7 @@ spec:
         name: authentik
         namespace: authentik
       interval: 12h
+  timeout: 30s
   install:
     strategy:
       name: RetryOnFailure

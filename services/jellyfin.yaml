@@ -23,13 +23,13 @@ spec:
   chart:
     spec:
       chart: jellyfin
-      version: "*"
+      version: "3.2.0"
       sourceRef:
         kind: HelmRepository
         name: jellyfin
         namespace: jellyfin
       interval: 12h
-  timeout: 10m
+  timeout: 30s
   values:
     replicaCount: 1
     resources:
@@ -52,9 +52,17 @@ spec:
     persistence:
       config:
         enabled: true
+        accessMode: ReadWriteMany
       media:
-        enabled: false
+        enabled: true
+        type: hostPath
+        hostPath: "/mnt/hdd"
       cache:
         enabled: true
+        accessMode: ReadWriteMany
 
-
+    nodeSelector:
+      kubernetes.io/hostname: nilsson-server
+    tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        effect: "NoSchedule"

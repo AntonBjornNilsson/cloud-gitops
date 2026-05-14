@@ -29,6 +29,7 @@ spec:
         name: traefik
         namespace: traefik
       interval: 12h
+  timeout: 30s
   values:
     api:
       dashboard: true

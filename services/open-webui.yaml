@@ -29,6 +29,7 @@ spec:
         name: open-webui
         namespace: open-webui
       interval: 12h
+  timeout: 30s
   install:
     strategy:
       name: RetryOnFailure

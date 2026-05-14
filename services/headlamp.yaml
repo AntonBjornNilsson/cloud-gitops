@@ -29,7 +29,7 @@ spec:
         name: headlamp
         namespace: headlamp
       interval: 12h
-  timeout: 10s
+  timeout: 30s
   install:
     strategy:
       name: RetryOnFailure

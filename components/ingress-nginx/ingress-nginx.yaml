@@ -32,6 +32,7 @@ spec:
         name: ingress-nginx
         namespace: ingress-nginx
       interval: 12h
+  timeout: 30s
   values:
     controller:
       admissionWebhooks:

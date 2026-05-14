@@ -5,5 +5,5 @@ if [[ ($1 != 'suspend') && ($1 != 'resume') ]]; then
 fi;
 
 for i in $(kubectl get kustomizations.kustomize.toolkit.fluxcd.io -n flux-system -o name | cut -d "/" -f2); do
-    flux $1 kustomization -n flux-system $i
+    flux $1 kustomization -n flux-system $i --timeout 1s
 done
