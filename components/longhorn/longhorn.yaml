@@ -42,7 +42,7 @@ spec:
       # defaultReplicaCount: 1
       storageOverProvisioningPercentage: 100
       storageMinimalAvailablePercentage: 10
-      taintToleration: "GPU=true:NoSchedule"
+      taintToleration: "GPU=true:NoSchedule,node-role.kubernetes.io/control-plane:NoSchedule"
 
     defaultBackupStore:
       backupTarget: ${s3_bucket_longhorn}
@@ -54,6 +54,8 @@ spec:
       - key: "GPU"
         operator: "Equal"
         value: "true"
+        effect: "NoSchedule"
+      - key: "node-role.kubernetes.io/control-plane"
         effect: "NoSchedule"
     longhornDriver:
       tolerations:
