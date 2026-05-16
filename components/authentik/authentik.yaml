@@ -57,7 +57,7 @@ spec:
 
         ingressClassName: traefik
         hosts:
-          - authentik.${domain}
+          - authentik.${auth_domain}
 
     postgresql:
       enabled: true

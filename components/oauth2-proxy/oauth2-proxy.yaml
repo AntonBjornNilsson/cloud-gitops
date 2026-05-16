@@ -35,22 +35,22 @@ spec:
       cookieSecret: ${oauth_client_cookie_secret}
       configFile: |
         provider = "oidc"
-        oidc_issuer_url = "https://authentik.${domain}/application/o/oauth2-proxy/"
+        oidc_issuer_url = "https://authentik.${auth_domain}/application/o/oauth2-proxy/"
         email_domains = "*"
         insecure_oidc_allow_unverified_email="true"
         cookie_secure = "false"
         upstreams = "static://200"
-        redirect_url = "https://oauth2-proxy.${domain}/oauth2/callback"
+        redirect_url = "https://oauth2-proxy.${auth_domain}/oauth2/callback"
         scope = "openid email profile"
         pass_access_token = true
         pass_authorization_header = true
         pass_user_headers = true
         set_authorization_header = true
-        cookie_domains = ".${domain}"
+        cookie_domains = ".${auth_domain}"
         cookie_name = "${oauth_client_cookie_name}"
         cookie_refresh = "2m"
         cookie_expire = "24h"
-        whitelist_domains = ".${domain}"
+        whitelist_domains = ".${auth_domain}"
         set_xauthrequest = true
     extraArgs:
       - --cookie-secure=false
@@ -67,7 +67,7 @@ metadata:
   namespace: authentik
 spec:
   forwardAuth:
-    address: "https://oauth2-proxy.${domain}/oauth2/"
+    address: "https://oauth2-proxy.${auth_domain}/oauth2/"
     trustForwardHeader: true
     authResponseHeaders:
       - X-authentik-username
@@ -94,7 +94,7 @@ metadata:
     kubernetes.io/ingress.class: traefik
 spec:
   rules:
-    - host: oauth2-proxy.${domain}
+    - host: oauth2-proxy.${auth_domain}
       http:
         paths:
           - path: /

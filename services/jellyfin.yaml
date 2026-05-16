@@ -44,7 +44,7 @@ spec:
       enabled: true
       ingressClassName: "traefik"
       hosts:
-        - host: stream.${domain}
+        - host: stream.${auth_domain}
           paths:
             - path: /
               pathType: Prefix

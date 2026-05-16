@@ -8,7 +8,7 @@
 #   namespace: authentik
 # type: Opaque
 # stringData:
-#   AUTHENTIK_HOST: "https://authentik.${domain}"
+#   AUTHENTIK_HOST: "https://authentik.${auth_domain}"
 #   AUTHENTIK_INSECURE: "true"
 #   AUTHENTIK_TOKEN: "Cocxik9prquYvQrjt9qcn2mRkSXRZ5BOy846UJ8w52NaZwdtLupVrbWpd4iY"
 # ---
@@ -79,7 +79,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: sso.${domain}
+    - host: sso.${auth_domain}
       http:
         paths:
           - path: /outpost.goauthentik.io
@@ -99,7 +99,7 @@ metadata:
 spec:
   forwardAuth:
     # This address should point to the cluster endpoint provided by the kubernetes service, not the Ingress.
-    address: https://sso.${domain}/outpost.goauthentik.io/auth/traefik
+    address: https://sso.${auth_domain}/outpost.goauthentik.io/auth/traefik
     trustForwardHeader: true
     authResponseHeaders:
         - X-authentik-username
