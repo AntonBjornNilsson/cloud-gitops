@@ -16,7 +16,7 @@ spec:
         metadata:
           annotations:
             +(kubernetes.io/tls-acme): "true"
-            +(cert-manager.io/cluster-issuer): "letsencrypt-wildcard-issuer"
+            +(cert-manager.io/cluster-issuer): "cloudflare-wildcard-issuer"
 
   - name: add-tls-spec
     match:
