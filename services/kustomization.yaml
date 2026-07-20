@@ -4,4 +4,8 @@ resources:
   - example.yaml
   - open-webui.yaml
   - ollama.yaml
+  # - tailscale.yaml
+  # - vaultwarden.yaml
+  # - homeassistant.yaml
+  # - homepage.yaml
   # - github-runners/
