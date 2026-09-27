@@ -9,7 +9,7 @@ resources:
 
   # Networking
   # - system-adguard-home.yaml
-  # - system-cilium.yaml
+  - system-cilium.yaml
   - system-metallb.yaml
   - system-metallb-post-install.yaml
   - system-traefik.yaml
