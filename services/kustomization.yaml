@@ -11,7 +11,7 @@ resources:
   # Media
   # - media/arr
   - media/dispatcharr
-  # - media/jellyfin
+  - media/jellyfin
 
   # Home Automation
   # - home-automation/homeassistant
