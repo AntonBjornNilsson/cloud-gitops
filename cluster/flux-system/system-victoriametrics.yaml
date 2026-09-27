@@ -13,3 +13,7 @@ spec:
   wait: true
   # dependsOn:
   #   - name: system-traefik
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

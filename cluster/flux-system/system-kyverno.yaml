@@ -28,3 +28,7 @@ spec:
       kind: Deployment
       name: kyverno-reports-controller
       namespace: kyverno
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

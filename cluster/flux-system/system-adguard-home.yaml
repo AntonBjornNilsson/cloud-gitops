@@ -11,3 +11,7 @@ spec:
     kind: GitRepository
     name: flux-system
   wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

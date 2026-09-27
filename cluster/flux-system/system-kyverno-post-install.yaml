@@ -13,3 +13,7 @@ spec:
   # dependsOn:
   #   - name: system-kyverno
   wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

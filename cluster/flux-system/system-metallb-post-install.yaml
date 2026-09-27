@@ -13,3 +13,7 @@ spec:
   # dependsOn:
   #   - name: system-metallb
   wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

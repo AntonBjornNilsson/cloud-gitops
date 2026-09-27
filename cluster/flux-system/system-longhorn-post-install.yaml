@@ -14,3 +14,7 @@ spec:
   #   - name: system-longhorn
   #   - name: system-traefik
   wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

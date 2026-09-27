@@ -15,3 +15,4 @@ spec:
     substituteFrom:
       - kind: Secret
         name: flux-substitutions
+  

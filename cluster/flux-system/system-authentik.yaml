@@ -15,3 +15,7 @@ spec:
   #   - name: system-longhorn-post-install
   #   - name: secrets-kustomization
   wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions
