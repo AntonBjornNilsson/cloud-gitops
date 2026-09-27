@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/longhorn/post-install
+  path: ./components/storage/longhorn/post-install
   prune: true
   sourceRef:
     kind: GitRepository

@@ -1,0 +1,51 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: authelia
+  ingress:
+    # HTTP web, forward-auth, and OIDC traffic from Ingress and internal cluster clients
+    - fromEntities:
+        - cluster
+        - world
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "9091"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+        - cluster
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Internal communication within authelia namespace
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/instance: authelia
+    # Outbound federation, external notifications, NTP, world connectivity
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+            - port: "123"
+              protocol: UDP

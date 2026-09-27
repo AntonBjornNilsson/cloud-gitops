@@ -1,0 +1,44 @@
+---
+apiVersion: holmesgpt.dev/v1alpha1
+kind: ScheduledHealthCheck
+metadata:
+  name: daily-cluster-investigation
+  namespace: holmesgpt
+spec:
+  schedule: "0 6 * * *"
+  query: >-
+    Investigate the entire Kubernetes cluster across all namespaces for active problems,
+    crashlooping pods, warning events, failing jobs, OOM kills, resource exhaustion, and security misconfigurations.
+    For each identified problem:
+    1. If a clear remediating code, manifest, or configuration fix can be identified,
+       open a Pull Request in the GitHub repository AntonBjornNilsson/cloud-gitops with the proposed fix and explanation.
+    2. If a problem is identified but no automated solution or PR can be determined,
+       open an Issue in the GitHub repository AntonBjornNilsson/cloud-gitops describing the symptoms, affected resources,
+       relevant log snippets, and suggested troubleshooting steps.
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-holmesgpt-investigation
+  namespace: holmesgpt
+spec:
+  schedule: "0 6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: investigator
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Triggering daily HolmesGPT cluster investigation..."
+                  curl -s -X POST http://holmesgpt-holmes:80/api/investigate \
+                    -H "Content-Type: application/json" \
+                    -d '{"prompt": "Investigate the entire Kubernetes cluster across all namespaces for problems, crashlooping pods, warning events, and security issues. If a solution is identified, open a PR in GitHub repository AntonBjornNilsson/cloud-gitops. If no solution can be determined, open an Issue in GitHub repository AntonBjornNilsson/cloud-gitops."}'

@@ -1,0 +1,83 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: adguard-home
+  namespace: adguard-home
+spec:
+  endpointSelector: {}
+  ingress:
+    # DNS queries from any entity (LAN devices, cluster pods, host, remote nodes)
+    - fromEntities:
+        - world
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+    # Web UI ingress from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "3000"
+              protocol: TCP
+    # Direct access to Web UI / setup from LAN via MetalLB IP
+    - fromEntities:
+        - world
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "3000"
+              protocol: TCP
+    # Probes and health checks
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # In-cluster DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Upstream DNS servers (standard DNS, DoT, DoH, DoQ)
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+            - port: "853"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+            - port: "784"
+              protocol: UDP
+    # Filter blocklist downloads and updates
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+    # Local LAN / cluster PTR reverse DNS queries
+    - toEntities:
+        - cluster
+        - host

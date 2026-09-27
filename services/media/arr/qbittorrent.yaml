@@ -1,0 +1,179 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent
+  namespace: arr
+spec:
+  selector:
+    matchLabels:
+      app: qbittorrent
+  template:
+    metadata:
+      labels:
+        app: qbittorrent
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: nilsson-server
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          effect: "NoSchedule"
+      initContainers:
+        - name: init-qbittorrent-config
+          image: busybox:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              mkdir -p /config/qBittorrent
+              CONF="/config/qBittorrent/qBittorrent.conf"
+              if [ ! -f "$CONF" ]; then
+                cat << 'EOF' > "$CONF"
+              [Preferences]
+              Connection\PortRangeMin=6881
+              Downloads\SavePath=/data/downloading/
+              Downloads\TempPath=/data/downloading/incomplete/
+              Downloads\TempPathEnabled=true
+              WebUI\Address=*
+              WebUI\Port=8080
+              WebUI\HostHeaderValidation=false
+              WebUI\LocalHostAuth=false
+              WebUI\AuthSubnetWhitelistEnabled=true
+              WebUI\AuthSubnetWhitelist=127.0.0.1/32
+              EOF
+              else
+                grep -q "WebUI\\\HostHeaderValidation" "$CONF" || echo "WebUI\\HostHeaderValidation=false" >> "$CONF"
+                grep -q "WebUI\\\LocalHostAuth" "$CONF" || echo "WebUI\\LocalHostAuth=false" >> "$CONF"
+              fi
+              chown -R 1000:1000 /config
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      containers:
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.39.1
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: "private internet access"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: OPENVPN_USER
+              value: "${pia_user}"
+            - name: OPENVPN_PASSWORD
+              value: "${pia_password}"
+            - name: SERVER_REGIONS
+              value: "${pia_region}"
+            - name: VPN_PORT_FORWARDING
+              value: "on"
+            - name: VPN_PORT_FORWARDING_PROVIDER
+              value: "private internet access"
+            - name: VPN_PORT_FORWARDING_STATUS_FILE
+              value: "/tmp/gluetun/forwarded_port"
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: gluetun-data
+              mountPath: /tmp/gluetun
+            - name: tun
+              mountPath: /dev/net/tun
+        - name: qbittorrent
+          image: lscr.io/linuxserver/qbittorrent:latest
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Stockholm"
+            - name: WEBUI_PORT
+              value: "8080"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+        - name: port-forward-sync
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting qBittorrent port-forward sync watcher..."
+              LAST_PORT=""
+              while true; do
+                if [ -s /tmp/gluetun/forwarded_port ]; then
+                  PORT=$(cat /tmp/gluetun/forwarded_port)
+                  if [ -n "$PORT" ] && [ "$PORT" != "$LAST_PORT" ]; then
+                    echo "Forwarded port detected: $PORT. Updating qBittorrent..."
+                    if curl -s -f http://127.0.0.1:8080/api/v2/app/version >/dev/null 2>&1; then
+                      curl -s -X POST -d "json={\"listen_port\":$PORT,\"random_port\":false}" http://127.0.0.1:8080/api/v2/app/setPreferences
+                      echo "Updated listening port to $PORT"
+                      LAST_PORT="$PORT"
+                    fi
+                  fi
+                fi
+                sleep 15
+              done
+          volumeMounts:
+            - name: gluetun-data
+              mountPath: /tmp/gluetun
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: qbittorrent-config
+        - name: data
+          hostPath:
+            path: /mnt/hdd/Shared
+        - name: gluetun-data
+          emptyDir: {}
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qbittorrent
+  namespace: arr
+spec:
+  selector:
+    app: qbittorrent
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qbittorrent
+  namespace: arr
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qbit.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080
+    - host: qbittorrent.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qbittorrent
+                port:
+                  number: 8080

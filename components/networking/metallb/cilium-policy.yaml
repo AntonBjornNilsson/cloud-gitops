@@ -1,0 +1,67 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: metallb
+  namespace: metallb
+spec:
+  endpointSelector: {}
+  ingress:
+    # Admission webhook calls from kube-apiserver
+    - fromEntities:
+        - kube-apiserver
+        - host
+        - remote-node
+        - cluster
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+    # Speaker memberlist and BGP peering
+    - fromEntities:
+        - host
+        - remote-node
+        - cluster
+      toPorts:
+        - ports:
+            - port: "7946"
+              protocol: TCP
+            - port: "7946"
+              protocol: UDP
+            - port: "179"
+              protocol: TCP
+    # Health checks and metrics
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+        - cluster
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Kubernetes API Server
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Memberlist communication and BGP announcements
+    - toEntities:
+        - host
+        - remote-node
+        - cluster
+      toPorts:
+        - ports:
+            - port: "7946"
+              protocol: TCP
+            - port: "7946"
+              protocol: UDP
+            - port: "179"
+              protocol: TCP

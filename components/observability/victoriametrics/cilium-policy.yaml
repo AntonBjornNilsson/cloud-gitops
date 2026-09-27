@@ -1,0 +1,63 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: victoriametrics
+  namespace: victoriametrics
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web UI (Grafana) and TSDB endpoints from Traefik and cluster
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+            - port: "8428"
+              protocol: TCP
+            - port: "9090"
+              protocol: TCP
+    # Intra-namespace component traffic (vmagent, vmalert, vmalertmanager, grafana, node-exporter)
+    - fromEndpoints:
+        - {}
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Kubernetes API Server (operator, kube-state-metrics)
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
+    # Scraping metrics across cluster workloads and nodes
+    - toEntities:
+        - cluster
+        - host
+        - remote-node
+    # External alertmanager webhooks, notifications, or OIDC auth
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP

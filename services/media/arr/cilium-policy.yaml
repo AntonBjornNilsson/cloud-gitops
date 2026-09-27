@@ -1,0 +1,70 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arr-suite
+  namespace: arr
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web UI ingress from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "5055"
+              protocol: TCP
+            - port: "6767"
+              protocol: TCP
+            - port: "7878"
+              protocol: TCP
+            - port: "8080"
+              protocol: TCP
+            - port: "8989"
+              protocol: TCP
+            - port: "9696"
+              protocol: TCP
+    # Intra-namespace communication among arr applications (Sonarr, Radarr, Prowlarr, qBittorrent, FlareSolverr, Jellyseerr)
+    - fromEndpoints:
+        - {}
+    # BitTorrent incoming peer traffic for qBittorrent
+    - fromEntities:
+        - world
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "6881"
+              protocol: TCP
+            - port: "6881"
+              protocol: UDP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
+    # Jellyfin media server access in jellyfin namespace
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP
+    # External trackers, indexers, metadata APIs, and peer download traffic
+    - toEntities:
+        - world

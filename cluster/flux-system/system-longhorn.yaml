@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/longhorn
+  path: ./components/storage/longhorn
   prune: true
   sourceRef:
     kind: GitRepository

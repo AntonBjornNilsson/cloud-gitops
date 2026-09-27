@@ -1,0 +1,306 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dispatcharr
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dispatcharr-data
+  namespace: dispatcharr
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dispatcharr-db
+  namespace: dispatcharr
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatcharr-db
+  namespace: dispatcharr
+spec:
+  selector:
+    matchLabels:
+      app: dispatcharr-db
+  template:
+    metadata:
+      labels:
+        app: dispatcharr-db
+    spec:
+      containers:
+        - name: db
+          image: postgres:17
+          env:
+            - name: POSTGRES_DB
+              value: dispatcharr
+            - name: POSTGRES_USER
+              value: dispatch
+            - name: POSTGRES_PASSWORD
+              value: secret
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - dispatch
+                - -d
+                - dispatcharr
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+              subPath: db
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: dispatcharr-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dispatcharr-db
+  namespace: dispatcharr
+spec:
+  selector:
+    app: dispatcharr-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatcharr-redis
+  namespace: dispatcharr
+spec:
+  selector:
+    matchLabels:
+      app: dispatcharr-redis
+  template:
+    metadata:
+      labels:
+        app: dispatcharr-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:latest
+          command:
+            - redis-server
+            - --timeout
+            - "300"
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dispatcharr-redis
+  namespace: dispatcharr
+spec:
+  selector:
+    app: dispatcharr-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatcharr-web
+  namespace: dispatcharr
+spec:
+  selector:
+    matchLabels:
+      app: dispatcharr-web
+  template:
+    metadata:
+      labels:
+        app: dispatcharr-web
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: nilsson-server
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          effect: "NoSchedule"
+      containers:
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.39.1
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: "private internet access"
+            - name: VPN_TYPE
+              value: "wireguard"
+            - name: OPENVPN_USER
+              value: "${pia_user}"
+            - name: OPENVPN_PASSWORD
+              value: "${pia_password}"
+            - name: SERVER_REGIONS
+              value: "${pia_region}"
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+          ports:
+            - name: http
+              containerPort: 9191
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
+        - name: web
+          image: ghcr.io/dispatcharr/dispatcharr:latest
+          env:
+            - name: DISPATCHARR_ENV
+              value: modular
+            - name: POSTGRES_HOST
+              value: dispatcharr-db
+            - name: POSTGRES_DB
+              value: dispatcharr
+            - name: POSTGRES_USER
+              value: dispatch
+            - name: POSTGRES_PASSWORD
+              value: secret
+            - name: REDIS_HOST
+              value: dispatcharr-redis
+            - name: DISPATCHARR_LOG_LEVEL
+              value: info
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              subPath: data
+        - name: celery
+          image: ghcr.io/dispatcharr/dispatcharr:latest
+          command:
+            - /app/docker/entrypoint.celery.sh
+          env:
+            - name: DISPATCHARR_ENV
+              value: modular
+            - name: DISPATCHARR_PORT
+              value: "9191"
+            - name: DISPATCHARR_WEB_HOST
+              value: "127.0.0.1"
+            - name: POSTGRES_HOST
+              value: dispatcharr-db
+            - name: POSTGRES_DB
+              value: dispatcharr
+            - name: POSTGRES_USER
+              value: dispatch
+            - name: POSTGRES_PASSWORD
+              value: secret
+            - name: REDIS_HOST
+              value: dispatcharr-redis
+            - name: DISPATCHARR_LOG_LEVEL
+              value: info
+            - name: DJANGO_SETTINGS_MODULE
+              value: dispatcharr.settings
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+              subPath: data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: dispatcharr-data
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dispatcharr-web
+  namespace: dispatcharr
+spec:
+  selector:
+    app: dispatcharr-web
+  ports:
+    - port: 9191
+      targetPort: 9191
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dispatcharr
+  namespace: dispatcharr
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: dispatcharr.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dispatcharr-web
+                port:
+                  number: 9191
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: dispatcharr
+  namespace: dispatcharr
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web ingress from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "9191"
+              protocol: TCP
+    # Intra-namespace traffic
+    - fromEndpoints:
+        - {}
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
+    # Interaction with arr suite (Radarr, Sonarr, Prowlarr, qBittorrent)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: arr
+    # External network traffic (APIs, webhooks)
+    - toEntities:
+        - world

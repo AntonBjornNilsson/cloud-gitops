@@ -1,0 +1,131 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: homepage
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: jameswynn
+  namespace: homepage
+spec:
+  interval: 24h
+  url: https://jameswynn.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: homepage
+  namespace: homepage
+spec:
+  interval: 12h
+  chart:
+    spec:
+      chart: homepage
+      version: "*"
+      sourceRef:
+        kind: HelmRepository
+        name: jameswynn
+        namespace: homepage
+      interval: 12h
+  timeout: 30s
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+  values:
+    ingress:
+      main:
+        enabled: true
+        ingressClassName: "traefik"
+        hosts:
+          - host: homepage.${domain}
+            paths:
+              - path: /
+                pathType: Prefix
+    config:
+      settings:
+        title: bonjwa.cloud Dashboard
+      bookmarks:
+        - Developer:
+            - Github:
+                - href: https://github.com
+            - YouTube:
+                - href: https://youtube.com
+      services:
+        - Cluster:
+            - Open WebUI:
+                - href: https://ai.${domain}
+                  icon: open-webui.png
+            - Headlamp:
+                - href: https://headlamp.${domain}
+                  icon: headlamp.png
+            - Jellyfin:
+                - href: https://stream.${domain}
+                  icon: jellyfin.png
+        - Media & Downloads:
+            - Jellyseerr:
+                - href: https://requests.${domain}
+                  icon: jellyseerr.png
+            - Prowlarr:
+                - href: https://prowlarr.${domain}
+                  icon: prowlarr.png
+            - Radarr:
+                - href: https://radarr.${domain}
+                  icon: radarr.png
+            - Sonarr:
+                - href: https://sonarr.${domain}
+                  icon: sonarr.png
+            - Bazarr:
+                - href: https://bazarr.${domain}
+                  icon: bazarr.png
+            - qBittorrent:
+                - href: https://qbit.${domain}
+                  icon: qbittorrent.png
+            - Dispatcharr:
+                - href: https://dispatcharr.${domain}
+                  icon: dispatcharr.png
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: homepage
+  namespace: homepage
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web ingress from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Internal cluster services queried by dashboard widgets
+    - toEntities:
+        - cluster
+    # External services, icons, weather APIs
+    - toEntities:
+        - world
+

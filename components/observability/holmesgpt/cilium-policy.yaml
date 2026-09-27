@@ -1,0 +1,60 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: holmesgpt
+  namespace: holmesgpt
+spec:
+  endpointSelector: {}
+  ingress:
+    # Internal communication among holmes, holmes-operator, and github-mcp-server
+    - fromEndpoints:
+        - {}
+    # Internal cluster communication to Holmes API
+    - fromEntities:
+        - cluster
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Kubernetes API Server for cluster discovery, logs, and events
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Google AI (Gemini) and GitHub APIs
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP
+    # Internal communication between pods in holmesgpt namespace
+    - toEndpoints:
+        - {}
+    # VictoriaMetrics cluster metrics access
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "8428"
+              protocol: TCP

@@ -8,7 +8,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./components/kyverno
+  path: ./components/security/kyverno
   prune: true
   wait: true
   healthChecks:

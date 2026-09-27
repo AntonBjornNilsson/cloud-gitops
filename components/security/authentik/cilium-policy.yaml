@@ -1,0 +1,72 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: authentik
+  namespace: authentik
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: authentik
+  ingress:
+    # HTTP/HTTPS web and OIDC traffic from Ingress and internal cluster clients
+    - fromEntities:
+        - cluster
+        - world
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "9000"
+              protocol: TCP
+            - port: "9443"
+              protocol: TCP
+    # PostgreSQL internal access from authentik components
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/instance: authentik
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+        - cluster
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Internal communication within authentik namespace (server, worker, database, redis)
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/instance: authentik
+    # Kubernetes API Server (used by outpost integration)
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Outbound federation, external OAuth providers, avatar fetching, and SMTP notifications
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+            - port: "587"
+              protocol: TCP
+            - port: "465"
+              protocol: TCP
+            - port: "25"
+              protocol: TCP

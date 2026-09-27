@@ -1,0 +1,67 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: longhorn-system
+  namespace: longhorn-system
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web UI from Traefik and cluster clients
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+    # Intra-namespace replication, engine communication, and CSI plugin traffic
+    - fromEndpoints:
+        - {}
+    # Node-to-node replication and host CSI driver communication
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Admission webhook from kube-apiserver
+    - fromEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "9501"
+              protocol: TCP
+            - port: "9502"
+              protocol: TCP
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Kubernetes API Server
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
+    # Node storage replication and CSI communication
+    - toEntities:
+        - host
+        - remote-node
+    # External S3 backup store
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP

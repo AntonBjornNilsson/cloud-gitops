@@ -1,0 +1,76 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 24h
+  url: https://helm.cilium.io/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: kube-system
+spec:
+  interval: 12h
+  chart:
+    spec:
+      chart: cilium
+      version: "*"
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+        namespace: kube-system
+      interval: 12h
+  timeout: 5m
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    # Standalone Cilium with kube-proxy replacement
+    kubeProxyReplacement: true
+    k8sServiceHost: "192.168.21.105"
+    k8sServicePort: 6443
+
+    # Routing configuration
+    routingMode: tunnel
+    tunnelProtocol: vxlan
+
+    # Cgroup v2 configuration
+    cgroup:
+      autoMount:
+        enabled: false
+      hostRoot: /sys/fs/cgroup
+
+    # Operator configuration
+    operator:
+      replicas: 1
+      tolerations:
+        - operator: Exists
+
+    # IPAM configuration matching cluster pod CIDRs
+    ipam:
+      mode: kubernetes
+
+    # Automatically restart pods when config updates
+    rollOutCiliumPods: true
+
+    # Hubble observability & UI
+    hubble:
+      enabled: true
+      relay:
+        enabled: true
+      ui:
+        enabled: true
+        ingress:
+          enabled: true
+          className: "traefik"
+          hosts:
+            - hubble.${domain}

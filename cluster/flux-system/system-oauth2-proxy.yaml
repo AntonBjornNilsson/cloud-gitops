@@ -5,7 +5,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/oauth2-proxy
+  path: ./components/security/oauth2-proxy
   prune: true
   sourceRef:
     kind: GitRepository

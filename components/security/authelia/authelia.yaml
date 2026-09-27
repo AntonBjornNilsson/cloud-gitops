@@ -1,0 +1,269 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authelia
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-jwks
+  namespace: authelia
+type: Opaque
+data:
+  key.pem: ${authelia_oidc_issuer_private_key_b64}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: authelia-users
+  namespace: authelia
+type: Opaque
+stringData:
+  users_database.yml: |
+    ###############################################################################
+    #                      Authelia Users Database File                           #
+    ###############################################################################
+    users:
+      admin:
+        displayname: "Admin"
+        password: "${authelia_admin_password_hash}"
+        email: "${admin_email}"
+        groups:
+          - admins
+          - dev
+          - "Grafana Admins"
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  interval: 24h
+  url: https://charts.authelia.com
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  interval: 12h
+  chart:
+    spec:
+      chart: authelia
+      version: "0.11.22"
+      sourceRef:
+        kind: HelmRepository
+        name: authelia
+        namespace: authelia
+      interval: 12h
+  timeout: 3m
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+  values:
+    pod:
+      kind: Deployment
+      extraVolumes:
+        - name: users-database
+          secret:
+            secretName: authelia-users
+            items:
+              - key: users_database.yml
+                path: users_database.yml
+      extraVolumeMounts:
+        - name: users-database
+          mountPath: /etc/authelia
+          readOnly: true
+    persistence:
+      enabled: true
+      storageClass: longhorn
+      size: 1Gi
+    secret:
+      additionalSecrets:
+        authelia-jwks:
+          path: jwks
+          items:
+            - key: key.pem
+              path: key.pem
+    ingress:
+      enabled: true
+      className: traefik
+    configMap:
+      theme: dark
+      totp:
+        issuer: "Authelia"
+      ntp:
+        disable_startup_check: true
+        disable_failure: true
+      notifier:
+        filesystem:
+          enabled: true
+          filename: "/config/notification.txt"
+      authentication_backend:
+        file:
+          enabled: true
+          path: "/etc/authelia/users_database.yml"
+      access_control:
+        default_policy: "one_factor"
+      session:
+        name: authelia_session
+        same_site: "lax"
+        expiration: "1 hour"
+        inactivity: "5 minutes"
+        remember_me: "1 month"
+        encryption_key:
+          value: "${authelia_session_secret}"
+        cookies:
+          - domain: "${domain}"
+            subdomain: "auth"
+          - domain: "${auth_domain}"
+            subdomain: "auth"
+      storage:
+        encryption_key:
+          value: "${authelia_storage_encryption_key}"
+        local:
+          enabled: true
+          path: "/config/db.sqlite3"
+      identity_validation:
+        reset_password:
+          secret:
+            value: "${authelia_jwt_secret}"
+      identity_providers:
+        oidc:
+          enabled: true
+          hmac_secret:
+            value: "${authelia_oidc_hmac_secret}"
+          cors:
+            allowed_origins_from_client_redirect_uris: true
+          jwks:
+            - key_id: default
+              algorithm: RS256
+              use: sig
+              key:
+                path: "/secrets/jwks/key.pem"
+          clients:
+            - client_id: grafana
+              client_name: Grafana
+              client_secret:
+                value: "${authelia_victoriametrics_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              redirect_uris:
+                - "https://grafana.${domain}/login/generic_oauth"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              userinfo_signed_response_alg: none
+
+            - client_id: headlamp
+              client_name: Headlamp
+              client_secret:
+                value: "${authelia_headlamp_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              redirect_uris:
+                - "https://headlamp.${domain}/oidc-callback"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              userinfo_signed_response_alg: none
+
+            - client_id: open-webui
+              client_name: Open WebUI
+              client_secret:
+                value: "${authelia_open_webui_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              redirect_uris:
+                - "https://ai.${domain}/oauth/oidc/callback"
+              scopes:
+                - openid
+                - profile
+                - email
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              userinfo_signed_response_alg: none
+
+            - client_id: oauth2-proxy
+              client_name: OAuth2 Proxy
+              client_secret:
+                value: "${authelia_oauth_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              redirect_uris:
+                - "https://oauth2-proxy.${auth_domain}/oauth2/callback"
+                - "https://oauth2-proxy.${domain}/oauth2/callback"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              userinfo_signed_response_alg: none
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forward-auth
+  namespace: authelia
+spec:
+  forwardAuth:
+    address: "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth"
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Name
+      - Remote-Email
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-forward-auth
+  namespace: traefik
+spec:
+  forwardAuth:
+    address: "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth"
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Name
+      - Remote-Email
