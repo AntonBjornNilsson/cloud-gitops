@@ -9,4 +9,4 @@ resources:
   - sonarr.yaml
   - bazarr.yaml
   - jellyseerr.yaml
-  - cilium-policy.yaml
+  # - cilium-policy.yaml

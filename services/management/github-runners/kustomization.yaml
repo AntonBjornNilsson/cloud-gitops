@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - controller.yaml
   - scale-set.yaml
-  - cilium-policy.yaml
+  # - cilium-policy.yaml
