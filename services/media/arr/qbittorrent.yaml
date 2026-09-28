@@ -59,7 +59,7 @@ spec:
             - name: VPN_SERVICE_PROVIDER
               value: "private internet access"
             - name: VPN_TYPE
-              value: "wireguard"
+              value: "openvpn"
             - name: OPENVPN_USER
               value: "${pia_user}"
             - name: OPENVPN_PASSWORD
