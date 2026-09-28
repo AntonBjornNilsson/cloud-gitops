@@ -143,20 +143,22 @@ graph TD
 2. **`system-cert-manager-config`**:
    - `dependsOn: [system-cert-manager, secrets-kustomization]`
 3. **`system-traefik`**:
-   - `dependsOn: [system-metallb-config, system-cert-manager-config]`
+   - `dependsOn: [system-metallb-config, system-cert-manager-config, system-victoriametrics]`
 4. **`system-longhorn-config`**:
    - `dependsOn: [system-longhorn, system-traefik]`
-5. **`system-kyverno-config`**:
+5. **`system-kyverno`**:
+   - `dependsOn: [system-victoriametrics]`
+6. **`system-kyverno-config`**:
    - `dependsOn: [system-kyverno]`
-6. **`system-victoriametrics`**:
+7. **`system-victoriametrics`**:
    - Reconciles independently (provides foundational Prometheus CRDs required by other components).
-7. **`system-grafana`**:
+8. **`system-grafana`**:
    - `dependsOn: [system-victoriametrics, system-traefik]`
-8. **`system-authentik`**:
+9. **`system-authentik`**:
    - `dependsOn: [system-traefik, system-longhorn-config, secrets-kustomization]`
-9. **`system-oauth2-proxy`**:
+10. **`system-oauth2-proxy`**:
    - `dependsOn: [system-traefik, secrets-kustomization]`
-10. **`flux-services`**:
+11. **`flux-services`**:
     - `dependsOn: [flux-components, system-traefik, system-cert-manager-config, system-longhorn]`
 
 ---

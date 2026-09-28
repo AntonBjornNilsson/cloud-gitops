@@ -16,6 +16,7 @@ spec:
   dependsOn:
     - name: system-metallb-config
     - name: system-cert-manager-config
+    - name: system-victoriametrics
   postBuild:
     substituteFrom:
       - kind: Secret
