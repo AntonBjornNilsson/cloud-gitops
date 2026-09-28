@@ -132,6 +132,7 @@ metadata:
 spec:
   strategy:
     type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels:
       app: dispatcharr-web
