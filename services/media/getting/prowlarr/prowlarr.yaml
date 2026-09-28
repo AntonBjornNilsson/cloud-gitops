@@ -1,25 +1,32 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prowlarr-config
+  namespace: arr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: radarr
+  name: prowlarr
   namespace: arr
 spec:
   selector:
     matchLabels:
-      app: radarr
+      app: prowlarr
   template:
     metadata:
       labels:
-        app: radarr
+        app: prowlarr
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: nilsson-server
-      tolerations:
-        - key: "node-role.kubernetes.io/control-plane"
-          effect: "NoSchedule"
       containers:
-        - name: radarr
-          image: lscr.io/linuxserver/radarr:latest
+        - name: prowlarr
+          image: lscr.io/linuxserver/prowlarr:latest
           env:
             - name: PUID
               value: "1000"
@@ -29,48 +36,43 @@ spec:
               value: "Europe/Stockholm"
           ports:
             - name: http
-              containerPort: 7878
+              containerPort: 9696
           volumeMounts:
             - name: config
               mountPath: /config
-            - name: data
-              mountPath: /data
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: radarr-config
-        - name: data
-          hostPath:
-            path: /mnt/hdd/Shared
+            claimName: prowlarr-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: radarr
+  name: prowlarr
   namespace: arr
 spec:
   selector:
-    app: radarr
+    app: prowlarr
   ports:
     - name: http
-      port: 7878
-      targetPort: 7878
+      port: 9696
+      targetPort: 9696
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: radarr
+  name: prowlarr
   namespace: arr
 spec:
   ingressClassName: traefik
   rules:
-    - host: radarr.${domain}
+    - host: prowlarr.${domain}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: radarr
+                name: prowlarr
                 port:
-                  number: 7878
+                  number: 9696

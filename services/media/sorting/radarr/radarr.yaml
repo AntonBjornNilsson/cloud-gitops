@@ -1,16 +1,28 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: radarr-config
+  namespace: arr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sonarr
+  name: radarr
   namespace: arr
 spec:
   selector:
     matchLabels:
-      app: sonarr
+      app: radarr
   template:
     metadata:
       labels:
-        app: sonarr
+        app: radarr
     spec:
       nodeSelector:
         kubernetes.io/hostname: nilsson-server
@@ -18,8 +30,8 @@ spec:
         - key: "node-role.kubernetes.io/control-plane"
           effect: "NoSchedule"
       containers:
-        - name: sonarr
-          image: lscr.io/linuxserver/sonarr:latest
+        - name: radarr
+          image: lscr.io/linuxserver/radarr:latest
           env:
             - name: PUID
               value: "1000"
@@ -29,7 +41,7 @@ spec:
               value: "Europe/Stockholm"
           ports:
             - name: http
-              containerPort: 8989
+              containerPort: 7878
           volumeMounts:
             - name: config
               mountPath: /config
@@ -38,7 +50,7 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: sonarr-config
+            claimName: radarr-config
         - name: data
           hostPath:
             path: /mnt/hdd/Shared
@@ -46,31 +58,31 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sonarr
+  name: radarr
   namespace: arr
 spec:
   selector:
-    app: sonarr
+    app: radarr
   ports:
     - name: http
-      port: 8989
-      targetPort: 8989
+      port: 7878
+      targetPort: 7878
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: sonarr
+  name: radarr
   namespace: arr
 spec:
   ingressClassName: traefik
   rules:
-    - host: sonarr.${domain}
+    - host: radarr.${domain}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: sonarr
+                name: radarr
                 port:
-                  number: 8989
+                  number: 7878

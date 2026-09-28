@@ -5,29 +5,16 @@ metadata:
   name: dispatcharr
 ---
 apiVersion: v1
-kind: PersistentVolume
+kind: PersistentVolumeClaim
 metadata:
-  name: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
+  name: dispatcharr-data
+  namespace: dispatcharr
 spec:
-  capacity:
-    storage: 5Gi
   accessModes:
     - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: longhorn
-  volumeMode: Filesystem
-  csi:
-    driver: driver.longhorn.io
-    fsType: ext4
-    volumeHandle: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
-    volumeAttributes:
-      numberOfReplicas: "1"
-      staleReplicaTimeout: "20"
-      migratable: "true"
-      share: "true"
-  claimRef:
-    namespace: dispatcharr
-    name: dispatcharr-db
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -37,50 +24,9 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: longhorn
-  volumeName: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
   resources:
     requests:
       storage: 5Gi
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: longhorn
-  volumeMode: Filesystem
-  csi:
-    driver: driver.longhorn.io
-    fsType: ext4
-    volumeHandle: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
-    volumeAttributes:
-      numberOfReplicas: "1"
-      staleReplicaTimeout: "20"
-      migratable: "true"
-      share: "true"
-  claimRef:
-    namespace: dispatcharr
-    name: dispatcharr-data
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: dispatcharr-data
-  namespace: dispatcharr
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: longhorn
-  volumeName: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
-  resources:
-    requests:
-      storage: 10Gi
 ---
 apiVersion: apps/v1
 kind: Deployment

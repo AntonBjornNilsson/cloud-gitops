@@ -9,9 +9,22 @@ resources:
   - demo/example
 
   # Media
-  # - media/arr
-  - media/dispatcharr
-  - media/jellyfin
+  # Shared
+  # - media/shared
+
+  # Getting
+  # - media/getting/qbittorrent
+  # - media/getting/prowlarr
+  # - media/getting/jellyseerr
+  - media/getting/dispatcharr
+
+  # Sorting
+  # - media/sorting/radarr
+  # - media/sorting/sonarr
+  # - media/sorting/bazarr
+
+  # Playing
+  - media/playing/jellyfin
 
   # Home Automation
   # - home-automation/homeassistant

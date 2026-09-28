@@ -1,20 +1,37 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sonarr-config
+  namespace: arr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prowlarr
+  name: sonarr
   namespace: arr
 spec:
   selector:
     matchLabels:
-      app: prowlarr
+      app: sonarr
   template:
     metadata:
       labels:
-        app: prowlarr
+        app: sonarr
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: nilsson-server
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          effect: "NoSchedule"
       containers:
-        - name: prowlarr
-          image: lscr.io/linuxserver/prowlarr:latest
+        - name: sonarr
+          image: lscr.io/linuxserver/sonarr:latest
           env:
             - name: PUID
               value: "1000"
@@ -24,43 +41,48 @@ spec:
               value: "Europe/Stockholm"
           ports:
             - name: http
-              containerPort: 9696
+              containerPort: 8989
           volumeMounts:
             - name: config
               mountPath: /config
+            - name: data
+              mountPath: /data
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: prowlarr-config
+            claimName: sonarr-config
+        - name: data
+          hostPath:
+            path: /mnt/hdd/Shared
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: prowlarr
+  name: sonarr
   namespace: arr
 spec:
   selector:
-    app: prowlarr
+    app: sonarr
   ports:
     - name: http
-      port: 9696
-      targetPort: 9696
+      port: 8989
+      targetPort: 8989
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: prowlarr
+  name: sonarr
   namespace: arr
 spec:
   ingressClassName: traefik
   rules:
-    - host: prowlarr.${domain}
+    - host: sonarr.${domain}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: prowlarr
+                name: sonarr
                 port:
-                  number: 9696
+                  number: 8989
