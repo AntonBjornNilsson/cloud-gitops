@@ -130,6 +130,8 @@ metadata:
   name: dispatcharr-web
   namespace: dispatcharr
 spec:
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: dispatcharr-web
@@ -145,7 +147,7 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: gluetun
-          image: qmcgaw/gluetun:v3.39.1
+          image: qmcgaw/gluetun:v3.38.0
           securityContext:
             capabilities:
               add:
@@ -154,7 +156,7 @@ spec:
             - name: VPN_SERVICE_PROVIDER
               value: "private internet access"
             - name: VPN_TYPE
-              value: "wireguard"
+              value: "openvpn"
             - name: OPENVPN_USER
               value: "${pia_user}"
             - name: OPENVPN_PASSWORD
@@ -163,6 +165,8 @@ spec:
               value: "${pia_region}"
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+            - name: IP6TABLES
+              value: "off"
           ports:
             - name: http
               containerPort: 9191
