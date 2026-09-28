@@ -26,6 +26,9 @@ spec:
     # Admission webhook from kube-apiserver
     - fromEntities:
         - kube-apiserver
+        - host
+        - remote-node
+        - cluster
       toPorts:
         - ports:
             - port: "9501"
