@@ -148,7 +148,7 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: gluetun
-          image: qmcgaw/gluetun:v3.38.0
+          image: qmcgaw/gluetun:v3.41.3
           securityContext:
             capabilities:
               add:
@@ -166,6 +166,8 @@ spec:
               value: "${pia_region}"
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+            - name: FIREWALL_INPUT_PORTS
+              value: "9191"
             - name: IP6TABLES
               value: "off"
           ports:
