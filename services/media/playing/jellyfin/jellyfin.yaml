@@ -75,12 +75,12 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # Web and streaming ingress from Traefik, Jellyseerr (in arr namespace), and local LAN
+    # Web and streaming ingress from Traefik, Jellyseerr, and local LAN
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
         - matchLabels:
-            io.kubernetes.pod.namespace: arr
+            io.kubernetes.pod.namespace: jellyseerr
       toPorts:
         - ports:
             - port: "8096"

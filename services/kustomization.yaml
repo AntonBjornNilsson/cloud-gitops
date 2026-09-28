@@ -9,9 +9,6 @@ resources:
   - demo/example
 
   # Media
-  # Shared
-  # - media/shared
-
   # Getting
   # - media/getting/qbittorrent
   # - media/getting/prowlarr

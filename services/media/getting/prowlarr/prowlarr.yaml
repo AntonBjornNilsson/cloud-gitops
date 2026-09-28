@@ -1,8 +1,13 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: prowlarr
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: prowlarr-config
-  namespace: arr
+  namespace: prowlarr
 spec:
   accessModes:
     - ReadWriteOnce
@@ -14,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prowlarr
-  namespace: arr
+  namespace: prowlarr
 spec:
   selector:
     matchLabels:
@@ -49,7 +54,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prowlarr
-  namespace: arr
+  namespace: prowlarr
 spec:
   selector:
     app: prowlarr
@@ -62,7 +67,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: prowlarr
-  namespace: arr
+  namespace: prowlarr
 spec:
   ingressClassName: traefik
   rules:
@@ -76,3 +81,80 @@ spec:
                 name: prowlarr
                 port:
                   number: 9696
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: prowlarr
+  namespace: prowlarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: prowlarr
+  ingress:
+    # Web UI access from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP
+    # Indexer searches / release grabs from Radarr and Sonarr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: radarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Download client testing / management on qBittorrent
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: qbittorrent
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Indexer sync to Radarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: radarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Indexer sync to Sonarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "8989"
+              protocol: TCP
+    # External trackers, indexers, and RSS feeds
+    - toEntities:
+        - world
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}

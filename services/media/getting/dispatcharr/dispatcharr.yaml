@@ -12,6 +12,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: longhorn
+  volumeName: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
   resources:
     requests:
       storage: 10Gi
@@ -24,6 +26,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  storageClassName: longhorn
+  volumeName: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
   resources:
     requests:
       storage: 5Gi
@@ -307,7 +311,13 @@ spec:
     # Interaction with arr suite (Radarr, Sonarr, Prowlarr, qBittorrent)
     - toEndpoints:
         - matchLabels:
-            io.kubernetes.pod.namespace: arr
+            io.kubernetes.pod.namespace: radarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: prowlarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: qbittorrent
     # External network traffic (APIs, webhooks)
     - toEntities:
         - world

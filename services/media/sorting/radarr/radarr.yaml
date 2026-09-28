@@ -1,8 +1,13 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: radarr
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: radarr-config
-  namespace: arr
+  namespace: radarr
 spec:
   accessModes:
     - ReadWriteOnce
@@ -14,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: radarr
-  namespace: arr
+  namespace: radarr
 spec:
   selector:
     matchLabels:
@@ -59,7 +64,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: radarr
-  namespace: arr
+  namespace: radarr
 spec:
   selector:
     app: radarr
@@ -72,7 +77,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: radarr
-  namespace: arr
+  namespace: radarr
 spec:
   ingressClassName: traefik
   rules:
@@ -86,3 +91,102 @@ spec:
                 name: radarr
                 port:
                   number: 7878
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: radarr
+  namespace: radarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: radarr
+  ingress:
+    # Web UI access from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Requests from Jellyseerr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyseerr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Indexer sync from Prowlarr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: prowlarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Subtitle management from Bazarr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: bazarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Stream integration from Dispatcharr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: dispatcharr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Download management on qBittorrent
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: qbittorrent
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Indexer search on Prowlarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: prowlarr
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP
+    # Webhook triggers to Bazarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: bazarr
+      toPorts:
+        - ports:
+            - port: "6767"
+              protocol: TCP
+    # External metadata APIs (TMDB, Radarr API)
+    - toEntities:
+        - world
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}

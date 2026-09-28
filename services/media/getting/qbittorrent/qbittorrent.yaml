@@ -1,8 +1,13 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: qbittorrent
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: qbittorrent-config
-  namespace: arr
+  namespace: qbittorrent
 spec:
   accessModes:
     - ReadWriteOnce
@@ -14,7 +19,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qbittorrent
-  namespace: arr
+  namespace: qbittorrent
 spec:
   selector:
     matchLabels:
@@ -152,7 +157,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: qbittorrent
-  namespace: arr
+  namespace: qbittorrent
 spec:
   selector:
     app: qbittorrent
@@ -165,7 +170,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: qbittorrent
-  namespace: arr
+  namespace: qbittorrent
 spec:
   ingressClassName: traefik
   rules:
@@ -189,3 +194,70 @@ spec:
                 name: qbittorrent
                 port:
                   number: 8080
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: qbittorrent
+  namespace: qbittorrent
+spec:
+  endpointSelector:
+    matchLabels:
+      app: qbittorrent
+  ingress:
+    # Web UI / API access from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Download client API calls from Radarr, Sonarr, Prowlarr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: radarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: prowlarr
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # BitTorrent incoming peer traffic
+    - fromEntities:
+        - world
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "6881"
+              protocol: TCP
+            - port: "6881"
+              protocol: UDP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # VPN tunnel / BitTorrent peers and trackers to world
+    - toEntities:
+        - world
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
