@@ -15,3 +15,7 @@ spec:
     - name: system-cert-manager-post-install
     - name: system-longhorn
   wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions
