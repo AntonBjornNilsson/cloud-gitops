@@ -71,6 +71,12 @@ spec:
         enabled: true
         ingress:
           enabled: true
+          annotations:
+            cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
           className: "traefik"
           hosts:
             - hubble.${domain}
+          tls:
+            - secretName: hubble-ui-tls
+              hosts:
+                - hubble.${domain}
