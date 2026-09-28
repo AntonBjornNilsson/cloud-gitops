@@ -29,7 +29,15 @@ spec:
         name: traefik
         namespace: traefik
       interval: 12h
-  timeout: 30s
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 1m
+  timeout: 5m
   values:
     api:
       dashboard: true

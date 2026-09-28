@@ -12,6 +12,8 @@ spec:
     name: flux-system
   dependsOn:
     - name: system-kyverno
+  retryInterval: 1m0s
+  timeout: 5m0s
   wait: true
   postBuild:
     substituteFrom:

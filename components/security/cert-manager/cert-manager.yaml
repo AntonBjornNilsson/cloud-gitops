@@ -29,7 +29,7 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 2m
-  timeout: 30s
+  timeout: 5m
   upgrade:
     strategy:
       name: RetryOnFailure
@@ -47,5 +47,5 @@ spec:
     prometheus:
       enabled: true
       servicemonitor:
-        enabled: true
+        enabled: false
 ---

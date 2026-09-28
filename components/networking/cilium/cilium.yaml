@@ -57,13 +57,13 @@ spec:
       prometheus:
         enabled: true
         serviceMonitor:
-          enabled: true
+          enabled: false
 
     # Prometheus Metrics & ServiceMonitors
     prometheus:
       enabled: true
       serviceMonitor:
-        enabled: true
+        enabled: false
 
     # IPAM configuration matching cluster pod CIDRs
     ipam:

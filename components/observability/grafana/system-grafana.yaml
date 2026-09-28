@@ -13,6 +13,8 @@ spec:
   dependsOn:
     - name: system-victoriametrics
     - name: system-traefik
+  retryInterval: 1m0s
+  timeout: 5m0s
   wait: true
   postBuild:
     substituteFrom:

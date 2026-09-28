@@ -10,7 +10,8 @@ spec:
     name: flux-system
   path: ./components/security/kyverno
   prune: true
-  wait: true
+  retryInterval: 1m0s
+  timeout: 5m0s
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment

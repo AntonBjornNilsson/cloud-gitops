@@ -10,9 +10,9 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  retryInterval: 1m0s
+  timeout: 5m0s
   wait: true
-  dependsOn:
-    - name: system-traefik
   postBuild:
     substituteFrom:
       - kind: Secret

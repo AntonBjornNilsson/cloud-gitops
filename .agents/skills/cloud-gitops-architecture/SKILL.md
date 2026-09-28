@@ -89,6 +89,12 @@ components/<category>/<component>/
    - `dependsOn: - name: system-<component>`
 5. Flux waits until `system-<component>` is healthy and ready, then applies the `config/` resources.
 
+> [!WARNING]
+> **Circular Deadlock Prevention (`wait: false` on Parents)**:
+> If `system-<component>.yaml` deploys `system-<component>-config.yaml`, the parent `system-<component>.yaml` **MUST set `wait: false`** (or omit `wait: true`).
+> If `wait: true` is set on the parent, Flux waits for all applied resources—including `system-<component>-config`—to be Ready before marking the parent Ready. Because the child has `dependsOn: system-<component>`, neither can ever become ready.
+> Always configure both Kustomizations with `timeout: 5m0s` and `retryInterval: 1m0s` to prevent transient timeouts during container image pulls and initial webhook setups.
+
 ---
 
 ## 4. Thorough Dependency Management (`dependsOn`)
@@ -143,7 +149,7 @@ graph TD
 5. **`system-kyverno-config`**:
    - `dependsOn: [system-kyverno]`
 6. **`system-victoriametrics`**:
-   - `dependsOn: [system-traefik]`
+   - Reconciles independently (provides foundational Prometheus CRDs required by other components).
 7. **`system-grafana`**:
    - `dependsOn: [system-victoriametrics, system-traefik]`
 8. **`system-authentik`**:

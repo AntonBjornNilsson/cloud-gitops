@@ -13,6 +13,8 @@ spec:
   dependsOn:
     - name: system-cloudflare
     - name: secrets-kustomization
+  retryInterval: 1m0s
+  timeout: 5m0s
   wait: true
   postBuild:
     substituteFrom:
