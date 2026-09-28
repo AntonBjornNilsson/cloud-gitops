@@ -40,6 +40,15 @@ spec:
       general:
         format: json
         level: TRACE
+    metrics:
+      prometheus:
+        entryPoint: metrics
+        addServicesLabels: true
+        addEntryPointsLabels: true
+        service:
+          enabled: true
+        serviceMonitor:
+          enabled: true
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute

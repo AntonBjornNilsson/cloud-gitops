@@ -1,20 +1,18 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: system-authentik
+  name: system-victoriametrics
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/security/authentik
+  path: ./components/observability/victoriametrics
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
-  # dependsOn:
-  #   - name: system-traefik
-  #   - name: system-longhorn-post-install
-  #   - name: secrets-kustomization
   wait: true
+  dependsOn:
+    - name: system-traefik
   postBuild:
     substituteFrom:
       - kind: Secret

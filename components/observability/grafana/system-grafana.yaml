@@ -1,17 +1,18 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: system-holmesgpt-post-install
+  name: system-grafana
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/observability/holmesgpt/post-install
+  path: ./components/observability/grafana
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: system-holmesgpt
+    - name: system-victoriametrics
+    - name: system-traefik
   wait: true
   postBuild:
     substituteFrom:

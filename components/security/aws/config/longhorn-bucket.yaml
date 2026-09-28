@@ -1,0 +1,26 @@
+apiVersion: s3.services.k8s.aws/v1alpha1
+kind: Bucket
+metadata:
+  name: longhorn-backup-bucket
+  namespace: ack-system
+spec:
+  name: "${longhorn_backup_bucket}"
+  createBucketConfiguration:
+    locationConstraint: "${aws_region}"
+  publicAccessBlock:
+    blockPublicAcls: true
+    blockPublicPolicy: true
+    ignorePublicAcls: true
+    restrictPublicBuckets: true
+  serverSideEncryptionConfiguration:
+    rules:
+      - applyServerSideEncryptionByDefault:
+          sseAlgorithm: "AES256"
+  tagging:
+    tagSet:
+      - key: "Service"
+        value: "longhorn"
+      - key: "Purpose"
+        value: "storage-backups"
+      - key: "ManagedBy"
+        value: "ack-s3-controller"

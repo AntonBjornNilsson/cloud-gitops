@@ -1,35 +1,22 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: kyverno
-  namespace: kyverno
+  name: ack-controllers
+  namespace: ack-system
 spec:
-  endpointSelector:
-    matchLabels:
-      app.kubernetes.io/instance: kyverno
+  endpointSelector: {}
   ingress:
-    # Admission webhook calls from kube-apiserver
-    - fromEntities:
-        - kube-apiserver
-        - host
-        - remote-node
-        - cluster
-      toPorts:
-        - ports:
-            - port: "9443"
-              protocol: TCP
-    # Health and liveness probes
+    # Health checks and Prometheus metrics scraping
     - fromEntities:
         - host
         - remote-node
         - health
-        - cluster
       toPorts:
         - ports:
-            - port: "8000"
+            - port: "8080"
               protocol: TCP
   egress:
-    # DNS resolution
+    # 1. Cluster DNS resolution
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: kube-system
@@ -38,14 +25,14 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # Kubernetes API Server
+    # 2. Kubernetes API Server communication
     - toEntities:
         - kube-apiserver
       toPorts:
         - ports:
             - port: "6443"
               protocol: TCP
-    # OCI image registries and signature verification
+    # 3. AWS Global and Regional API Endpoints (STS, IAM, S3 via HTTPS)
     - toEntities:
         - world
       toPorts:

@@ -1,0 +1,64 @@
+apiVersion: networking.cfargotunnel.com/v1alpha2
+kind: ClusterTunnel
+metadata:
+  name: dropout-cluster
+  namespace: cloudflare-operator-system
+spec:
+  # Option A: Connect to an existing tunnel created in Cloudflare dashboard
+  existingTunnel:
+    id: ${cloudflare_tunnel_id}
+    name: dropout-tunnel
+  # Option B: Create and manage a brand new tunnel automatically (mutually exclusive with existingTunnel)
+  # newTunnel:
+  #   name: dropout-cluster-tunnel
+
+  cloudflare:
+    domain: ${domain}
+    accountId: ${cloudflare_account_id}
+    secret: cloudflare-secrets
+    CLOUDFLARE_API_TOKEN: CLOUDFLARE_API_TOKEN
+    CLOUDFLARE_TUNNEL_CREDENTIAL_FILE: credentials.json
+
+  # Tunnel transport protocol: "auto", "quic" (UDP 7844), or "http2" (TCP 443)
+  protocol: auto
+
+  # Ingress options
+  noTlsVerify: true
+  fallbackTarget: http_status:404
+
+  # Deployment customizations for cloudflared pods (high availability and resource safety)
+  deployPatch: |
+    spec:
+      replicas: 2
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxSurge: 1
+          maxUnavailable: 0
+      template:
+        metadata:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "2000"
+        spec:
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchExpressions:
+                        - key: app.kubernetes.io/name
+                          operator: In
+                          values:
+                            - cloudflared
+                    topologyKey: kubernetes.io/hostname
+          containers:
+            - name: cloudflared
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi

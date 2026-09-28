@@ -1,0 +1,102 @@
+# ==============================================================================
+# AWS IAM Resources for Longhorn S3 Backups
+# ==============================================================================
+# Provides least-privilege IAM permissions restricted strictly to the Longhorn
+# backup bucket and its contents. Supports both:
+# 1. OIDC / Web Identity IRSA role (assumed by longhorn-system service account)
+# 2. Dedicated IAM User with the policy attached (for static credentials secret)
+# ==============================================================================
+
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Policy
+metadata:
+  name: longhorn-backup-policy
+  namespace: ack-system
+spec:
+  name: "LonghornBackupS3Policy"
+  description: "Least-privilege IAM policy for Longhorn volume backups to S3"
+  policyDocument: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Sid": "LonghornBucketLevelAccess",
+          "Effect": "Allow",
+          "Action": [
+            "s3:GetBucketLocation",
+            "s3:ListBucket",
+            "s3:ListBucketMultipartUploads"
+          ],
+          "Resource": "arn:aws:s3:::${longhorn_backup_bucket}"
+        },
+        {
+          "Sid": "LonghornObjectLevelAccess",
+          "Effect": "Allow",
+          "Action": [
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:DeleteObject",
+            "s3:ListMultipartUploadParts",
+            "s3:AbortMultipartUpload"
+          ],
+          "Resource": "arn:aws:s3:::${longhorn_backup_bucket}/*"
+        }
+      ]
+    }
+  tags:
+    - key: "Service"
+      value: "longhorn"
+    - key: "ManagedBy"
+      value: "ack-iam-controller"
+---
+# IAM Role assumed by Longhorn ServiceAccount via OIDC WebIdentity
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Role
+metadata:
+  name: longhorn-backup-role
+  namespace: ack-system
+spec:
+  name: "LonghornBackupRole"
+  description: "IAM Role assumed by Longhorn via OIDC Web Identity for S3 backups"
+  assumeRolePolicyDocument: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Federated": "arn:aws:iam::${aws_account_id}:oidc-provider/${oidc_issuer_host}"
+          },
+          "Action": "sts:AssumeRoleWithWebIdentity",
+          "Condition": {
+            "StringEquals": {
+              "${oidc_issuer_host}:sub": "system:serviceaccount:longhorn-system:longhorn-service-account",
+              "${oidc_issuer_host}:aud": "sts.amazonaws.com"
+            }
+          }
+        }
+      ]
+    }
+  policies:
+    - "arn:aws:iam::${aws_account_id}:policy/LonghornBackupS3Policy"
+  tags:
+    - key: "Service"
+      value: "longhorn"
+    - key: "ManagedBy"
+      value: "ack-iam-controller"
+---
+# IAM User for Longhorn backup target (when using static secret credentials)
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: User
+metadata:
+  name: longhorn-backup-user
+  namespace: ack-system
+spec:
+  name: "longhorn-backup-user"
+  policies:
+    - "arn:aws:iam::${aws_account_id}:policy/LonghornBackupS3Policy"
+  tags:
+    - key: "Service"
+      value: "longhorn"
+    - key: "ManagedBy"
+      value: "ack-iam-controller"

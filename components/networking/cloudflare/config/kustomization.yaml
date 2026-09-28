@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: cloudflare-operator-system
+resources:
+  - cluster-tunnel.yaml
+  - tunnel-bindings.yaml
+  - access-applications.yaml

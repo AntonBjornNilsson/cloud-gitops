@@ -4,37 +4,11 @@ resources:
   - gotk-components.yaml
   - gotk-sync.yaml
 
-  # Hardware
-  # - system-amd-drivers.yaml
-
-  # Networking
-  # - system-adguard-home.yaml
-  - system-cilium.yaml
-  - system-metallb.yaml
-  - system-metallb-post-install.yaml
-  - system-traefik.yaml
-
-  # Observability
-  # - system-holmesgpt.yaml
-  # - system-holmesgpt-post-install.yaml
-  # - system-jaeger.yaml
-  - system-victoriametrics.yaml
-
-  # Security
-  - system-authentik.yaml
-  # - system-authelia.yaml
-  - system-cert-manager.yaml
-  - system-cert-manager-post-install.yaml
-  - system-kyverno.yaml
-  - system-kyverno-post-install.yaml
-  - system-oauth2-proxy.yaml
-
-  # Storage
-  - system-longhorn.yaml
-  - system-longhorn-post-install.yaml
-
   # Secrets
   - secrets-repo.yaml
+
+  # Components
+  - flux-components.yaml
 
   # Services
   - flux-services.yaml

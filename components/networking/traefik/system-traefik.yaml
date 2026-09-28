@@ -1,21 +1,19 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: flux-services
+  name: system-traefik
   namespace: flux-system
 spec:
-  interval: 30s
-  path: ./services
+  interval: 2m0s
+  path: ./components/networking/traefik
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
-  dependsOn:
-    - name: flux-components
-    - name: system-traefik
-    - name: system-cert-manager-config
-    - name: system-longhorn
   wait: true
+  dependsOn:
+    - name: system-metallb-config
+    - name: system-cert-manager-config
   postBuild:
     substituteFrom:
       - kind: Secret

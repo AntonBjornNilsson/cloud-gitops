@@ -1,19 +1,18 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: system-oauth2-proxy
+  name: system-kyverno-config
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/security/oauth2-proxy
+  path: ./components/security/kyverno/config
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
+  dependsOn:
+    - name: system-kyverno
   wait: true
-  # dependsOn:
-  #   - name: system-traefik
-  #   - name: secrets-kustomization
   postBuild:
     substituteFrom:
       - kind: Secret

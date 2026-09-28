@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Hardware
+  # - hardware/amd-gpu/system-amd-drivers.yaml
+
+  # Networking
+  # - networking/adguard-home/system-adguard-home.yaml
+  # - networking/cloudflare/system-cloudflare.yaml
+  - networking/cilium/system-cilium.yaml
+  - networking/metallb/system-metallb.yaml
+  - networking/traefik/system-traefik.yaml
+
+  # Observability
+  # - observability/holmesgpt/system-holmesgpt.yaml
+  # - observability/jaeger/system-jaeger.yaml
+  - observability/victoriametrics/system-victoriametrics.yaml
+  - observability/grafana/system-grafana.yaml
+
+  # Security
+  - security/authentik/system-authentik.yaml
+  # - security/authelia/system-authelia.yaml
+  # - security/aws/system-aws.yaml
+  - security/cert-manager/system-cert-manager.yaml
+  - security/kyverno/system-kyverno.yaml
+  - security/oauth2-proxy/system-oauth2-proxy.yaml
+
+  # Storage
+  - storage/longhorn/system-longhorn.yaml

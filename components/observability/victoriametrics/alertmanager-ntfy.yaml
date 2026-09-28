@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager-ntfy
+  namespace: victoriametrics
+  labels:
+    app: alertmanager-ntfy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager-ntfy
+  template:
+    metadata:
+      labels:
+        app: alertmanager-ntfy
+    spec:
+      containers:
+        - name: alertmanager-ntfy
+          image: ghcr.io/alexbakker/alertmanager-ntfy:latest
+          env:
+            - name: NTFY_TOPIC
+              value: "https://ntfy.sh/homelab-alerts-${domain}"
+            - name: NTFY_DEFAULT_PRIORITY
+              value: "default"
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-ntfy
+  namespace: victoriametrics
+  labels:
+    app: alertmanager-ntfy
+spec:
+  selector:
+    app: alertmanager-ntfy
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

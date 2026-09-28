@@ -3,3 +3,5 @@ kind: Kustomization
 namespace: cloudflare-operator-system
 resources:
   - https://github.com/adyanth/cloudflare-operator/releases/download/v0.13.1/cloudflare-operator.yaml
+  - cilium-policy.yaml
+  - system-cloudflare-config.yaml

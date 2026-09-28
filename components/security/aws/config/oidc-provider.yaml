@@ -1,0 +1,20 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: OpenIDConnectProvider
+metadata:
+  name: cluster-oidc-provider
+  namespace: ack-system
+spec:
+  # OIDC issuer URL (e.g. Authentik OIDC or cluster OIDC endpoint)
+  url: "https://${oidc_issuer_host}"
+  # Client IDs allowed to authenticate against this provider
+  clientIDList:
+    - "sts.amazonaws.com"
+    - "kubelogin"
+  # Server certificate thumbprint for the OIDC issuer host
+  thumbprintList:
+    - "${oidc_issuer_thumbprint}"
+  tags:
+    - key: "ManagedBy"
+      value: "ack-iam-controller"
+    - key: "Environment"
+      value: "cluster"

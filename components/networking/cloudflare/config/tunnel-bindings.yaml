@@ -1,0 +1,46 @@
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: TunnelBinding
+metadata:
+  name: traefik-wildcard
+  namespace: cloudflare-operator-system
+spec:
+  tunnelRef:
+    kind: ClusterTunnel
+    name: dropout-cluster
+    # When disableDNSUpdates is false, the operator automatically provisions and
+    # syncs Cloudflare CNAME DNS records pointing each FQDN to the tunnel hostname.
+    disableDNSUpdates: false
+  subjects:
+    # 1. Wildcard DNS: all *.${domain} traffic routes to Traefik ingress controller
+    - name: wildcard-ingress
+      spec:
+      fqdn: "*.${domain}"
+      target: https://traefik.traefik.svc.cluster.local:443
+      protocol: https
+      noTlsVerify: true
+    # 2. Apex domain: ${domain} traffic routes to Traefik ingress controller
+    - name: apex-ingress
+      spec:
+      fqdn: "${domain}"
+      target: https://traefik.traefik.svc.cluster.local:443
+      protocol: https
+      noTlsVerify: true
+---
+# Example: Direct Service Binding without going through Traefik
+# The operator manages DNS records and forwards traffic straight to the target service.
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: TunnelBinding
+metadata:
+  name: direct-services
+  namespace: cloudflare-operator-system
+spec:
+  tunnelRef:
+    kind: ClusterTunnel
+    name: dropout-cluster
+    disableDNSUpdates: false
+  subjects:
+    - name: auth-direct
+      spec:
+      fqdn: "auth.${domain}"
+      target: http://authentik-server.authentik.svc.cluster.local:80
+      protocol: http

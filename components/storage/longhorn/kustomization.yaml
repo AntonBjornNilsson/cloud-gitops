@@ -3,3 +3,5 @@ kind: Kustomization
 resources:
   - longhorn.yaml
   - cilium-policy.yaml
+  - servicemonitor.yaml
+  - system-longhorn-config.yaml

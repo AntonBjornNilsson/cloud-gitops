@@ -1,0 +1,67 @@
+# ==============================================================================
+# Cloudflare Zero Trust Access & User-Authenticated Applications
+# ==============================================================================
+# This manifest defines Cloudflare Access integration for secure user access
+# and service-to-service zero-trust authentication.
+#
+# User Access Workflow:
+# 1. Edge Authentication: User navigates to https://<app>.${domain}
+# 2. Cloudflare Access Challenge: User must authenticate via configured IdP
+#    (e.g., Authentik OIDC, GitHub, Google, or Email OTP) before reaching origin.
+# 3. Secure Transport: Once verified, Cloudflare edge sends request through
+#    ClusterTunnel to cluster ingress.
+# 4. Service Tokens: Non-browser clients (automation, APIs) authenticate using
+#    Cloudflare Access Service Tokens (CF-Access-Client-Id / Secret).
+# ==============================================================================
+
+# AccessTunnel for Zero Trust TCP/SSH/Admin Service Access
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: AccessTunnel
+metadata:
+  name: cluster-management-access
+  namespace: cloudflare-operator-system
+spec:
+  target:
+    fqdn: "k8s-mgmt.${domain}"
+    protocol: tcp
+    svc:
+      name: management-proxy
+      port: 8443
+  serviceToken:
+    secretRef: cloudflare-access-tokens
+    CLOUDFLARE_ACCESS_SERVICE_TOKEN_ID: CLOUDFLARE_ACCESS_SERVICE_TOKEN_ID
+    CLOUDFLARE_ACCESS_SERVICE_TOKEN_TOKEN: CLOUDFLARE_ACCESS_SERVICE_TOKEN_TOKEN
+---
+# Dedicated TunnelBinding for Protected Access Applications
+apiVersion: networking.cfargotunnel.com/v1alpha1
+kind: TunnelBinding
+metadata:
+  name: access-protected-apps
+  namespace: cloudflare-operator-system
+spec:
+  tunnelRef:
+    kind: ClusterTunnel
+    name: dropout-cluster
+    disableDNSUpdates: false
+  subjects:
+    # Management Dashboard (e.g. Headlamp / Homepage / Longhorn)
+    - name: headlamp
+      spec:
+      fqdn: "headlamp.${domain}"
+      target: https://traefik.traefik.svc.cluster.local:443
+      protocol: https
+      noTlsVerify: true
+    # VictoriaMetrics / Grafana Monitoring
+    - name: grafana
+      spec:
+      fqdn: "grafana.${domain}"
+      target: https://traefik.traefik.svc.cluster.local:443
+      protocol: https
+      noTlsVerify: true
+    # Vaultwarden Password Manager
+    - name: vaultwarden
+      spec:
+      fqdn: "vault.${domain}"
+      target: https://traefik.traefik.svc.cluster.local:443
+      protocol: https
+      noTlsVerify: true

@@ -1,0 +1,165 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: services-health
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Detailed CPU, memory, restarts, and network metrics for application pods and workloads.",
+       "panels": [
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\"}[5m]))",
+                   "legendFormat": "{{namespace}}"
+                }
+             ],
+             "title": "CPU Usage by Namespace (cores)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+             },
+             "id": 2,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\"})",
+                   "legendFormat": "{{namespace}}"
+                }
+             ],
+             "title": "Memory Usage by Namespace (bytes)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 8
+             },
+             "id": 3,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (namespace, pod) (increase(kube_pod_container_status_restarts_total[1h])) > 0",
+                   "legendFormat": "{{namespace}} / {{pod}}"
+                }
+             ],
+             "title": "Container Restarts by Pod",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "Bps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 8
+             },
+             "id": 4,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (namespace) (rate(container_network_receive_bytes_total[5m]))",
+                   "legendFormat": "rx: {{namespace}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (namespace) (rate(container_network_transmit_bytes_total[5m]))",
+                   "legendFormat": "tx: {{namespace}}"
+                }
+             ],
+             "title": "Pod Network Traffic (Receive / Transmit)",
+             "type": "timeseries"
+          }
+       ],
+       "refresh": "30s",
+       "schemaVersion": 39,
+       "tags": [
+          "kubernetes",
+          "services",
+          "workloads",
+          "gitops"
+       ],
+       "time": {
+          "from": "now-1h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Kubernetes Workloads & Services Health",
+       "uid": "k8s-services-health"
+    }

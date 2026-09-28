@@ -1,17 +1,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: system-kyverno-post-install
+  name: system-cloudflare
   namespace: flux-system
 spec:
   interval: 2m0s
-  path: ./components/security/kyverno/post-install
+  path: ./components/networking/cloudflare
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
-  # dependsOn:
-  #   - name: system-kyverno
   wait: true
   postBuild:
     substituteFrom:

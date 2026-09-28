@@ -1,0 +1,78 @@
+# ==============================================================================
+# AWS IAM Identities for OIDC and kubelogin
+# ==============================================================================
+# This manifest creates AWS IAM Roles with trust relationships allowing users
+# authenticated via OIDC (e.g. Authentik, Google, Okta) using `kubelogin` to
+# assume AWS identities via AssumeRoleWithWebIdentity.
+# ==============================================================================
+
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Role
+metadata:
+  name: kubelogin-admin-role
+  namespace: ack-system
+spec:
+  name: "KubeloginClusterAdminRole"
+  description: "IAM Role assumed by cluster administrators authenticated via OIDC kubelogin"
+  maxSessionDuration: 43200 # 12 hours
+  assumeRolePolicyDocument: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Federated": "arn:aws:iam::${aws_account_id}:oidc-provider/${oidc_issuer_host}"
+          },
+          "Action": "sts:AssumeRoleWithWebIdentity",
+          "Condition": {
+            "StringEquals": {
+              "${oidc_issuer_host}:aud": "kubelogin"
+            }
+          }
+        }
+      ]
+    }
+  policies:
+    - "arn:aws:iam::aws:policy/ReadOnlyAccess"
+  tags:
+    - key: "Purpose"
+      value: "kubelogin-oidc-auth"
+    - key: "ManagedBy"
+      value: "ack-iam-controller"
+---
+# Read-Only Identity for Cluster Developers / Viewers via kubelogin
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Role
+metadata:
+  name: kubelogin-developer-role
+  namespace: ack-system
+spec:
+  name: "KubeloginClusterDeveloperRole"
+  description: "IAM Role assumed by developers authenticated via OIDC kubelogin"
+  maxSessionDuration: 28800 # 8 hours
+  assumeRolePolicyDocument: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {
+            "Federated": "arn:aws:iam::${aws_account_id}:oidc-provider/${oidc_issuer_host}"
+          },
+          "Action": "sts:AssumeRoleWithWebIdentity",
+          "Condition": {
+            "StringEquals": {
+              "${oidc_issuer_host}:aud": "kubelogin"
+            }
+          }
+        }
+      ]
+    }
+  policies:
+    - "arn:aws:iam::aws:policy/ViewOnlyAccess"
+  tags:
+    - key: "Purpose"
+      value: "kubelogin-oidc-auth"
+    - key: "ManagedBy"
+      value: "ack-iam-controller"

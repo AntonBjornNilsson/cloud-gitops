@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - kyverno.yaml
   - cilium-policy.yaml
+  - system-kyverno-config.yaml

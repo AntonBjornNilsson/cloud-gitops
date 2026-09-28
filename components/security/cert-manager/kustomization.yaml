@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - cert-manager.yaml
   - cilium-policy.yaml
+  - system-cert-manager-config.yaml

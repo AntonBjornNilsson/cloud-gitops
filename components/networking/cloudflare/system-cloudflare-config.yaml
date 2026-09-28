@@ -1,20 +1,18 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: flux-services
+  name: system-cloudflare-config
   namespace: flux-system
 spec:
-  interval: 30s
-  path: ./services
+  interval: 2m0s
+  path: ./components/networking/cloudflare/config
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: flux-components
-    - name: system-traefik
-    - name: system-cert-manager-config
-    - name: system-longhorn
+    - name: system-cloudflare
+    - name: secrets-kustomization
   wait: true
   postBuild:
     substituteFrom:

@@ -1,0 +1,69 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  namespace: grafana
+  labels:
+    dashboards: "grafana"
+spec:
+  persistentVolumeClaim:
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+  config:
+    server:
+      root_url: "https://grafana.${domain}"
+    auth:
+      signout_redirect_url: "${victoriametrics_auth_redirect_url}"
+      oauth_auto_login: "true"
+    "auth.generic_oauth":
+      name: "authentik"
+      enabled: "true"
+      client_id: "${victoriametrics_client_id}"
+      client_secret: "${victoriametrics_client_secret}"
+      scopes: "openid profile email"
+      auth_url: "${victoriametrics_auth_url}"
+      token_url: "${victoriametrics_token_url}"
+      api_url: "${victoriametrics_api_url}"
+      role_attribute_path: "contains(groups, 'Grafana Admins') && 'Admin' || contains(groups, 'Grafana Editors') && 'Editor' || 'Viewer'"
+  ingress:
+    metadata:
+      annotations:
+        kubernetes.io/ingress.class: traefik
+    spec:
+      ingressClassName: traefik
+      rules:
+        - host: grafana.${domain}
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: grafana-service
+                    port:
+                      number: 3000
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: victoriametrics
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  datasource:
+    name: VictoriaMetrics
+    type: prometheus
+    access: proxy
+    url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s

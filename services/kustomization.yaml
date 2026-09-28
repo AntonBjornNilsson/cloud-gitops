@@ -34,3 +34,6 @@ resources:
   # Security
   # - security/tailscale
   # - security/vaultwarden
+
+  # Game Servers
+  # - game-servers/skyrim-server

@@ -3,3 +3,5 @@ kind: Kustomization
 resources:
   - victoriametrics.yaml
   - cilium-policy.yaml
+  - alerts.yaml
+  - alertmanager-ntfy.yaml

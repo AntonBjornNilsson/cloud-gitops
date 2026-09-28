@@ -54,6 +54,16 @@ spec:
       replicas: 1
       tolerations:
         - operator: Exists
+      prometheus:
+        enabled: true
+        serviceMonitor:
+          enabled: true
+
+    # Prometheus Metrics & ServiceMonitors
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: true
 
     # IPAM configuration matching cluster pod CIDRs
     ipam:
