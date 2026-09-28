@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
   - authelia.yaml
-  # - cilium-policy.yaml
+  - cilium-policy.yaml

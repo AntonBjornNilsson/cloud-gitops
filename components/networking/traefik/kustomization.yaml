@@ -3,4 +3,4 @@ kind: Kustomization
 
 resources:
   - traefik.yaml
-  # - cilium-policy.yaml
+  - cilium-policy.yaml
