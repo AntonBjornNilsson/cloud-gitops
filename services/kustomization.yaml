@@ -28,8 +28,9 @@ resources:
 
   # Management
   # - management/headlamp
-  # - management/homepage
+  - management/homepage
   # - management/github-runners
+  - management/ntfy
 
   # Security
   # - security/tailscale

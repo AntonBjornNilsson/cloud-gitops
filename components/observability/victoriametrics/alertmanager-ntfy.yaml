@@ -8,7 +8,7 @@ data:
     http:
       addr: :8080
     ntfy:
-      baseurl: https://ntfy.sh
+      baseurl: http://ntfy.ntfy.svc.cluster.local:80
       notification:
         topic: homelab-alerts-${domain}
         priority: |
