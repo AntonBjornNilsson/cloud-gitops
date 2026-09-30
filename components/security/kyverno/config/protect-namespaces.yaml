@@ -1,19 +1,18 @@
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
-  name: add-pvc-annotations
+  name: protect-namespaces
 spec:
   validationFailureAction: Audit
   background: true
   rules:
-  - name: add-helm-resource-policy
+  - name: add-flux-prune-disabled
     match:
       resources:
         kinds:
-        - PersistentVolumeClaim
+        - Namespace
     mutate:
       patchStrategicMerge:
         metadata:
           annotations:
-            +(helm.sh/resource-policy): keep
             +(kustomize.toolkit.fluxcd.io/prune): disabled

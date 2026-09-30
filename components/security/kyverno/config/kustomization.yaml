@@ -4,3 +4,4 @@ resources:
   - ingress-tls.yaml
   - flux-substitution.yaml
   - pvc.yaml
+  - protect-namespaces.yaml

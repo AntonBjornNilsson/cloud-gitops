@@ -5,7 +5,7 @@ description: Architecture, organization, and dependency guidelines for component
 
 # Cloud-GitOps Architecture Guide
 
-This guide describes the architectural layout, component vs. service distinction, Flux Kustomization hierarchy, and dependency resolution rules for the `cloud-gitops` repository. Any LLM or developer working with this repository must adhere to these patterns.
+This guide describes the architectural layout, component vs. service distinction, Flux Kustomization hierarchy, and dependency resolution rules for the `cloud-gitops` repository. Any LLM or developer working with this repository must adhere to these patterns. An LLM should almost never use kubctl with modify access. All changes should be performed by pushing to git and having flux reconcile the changes.
 
 ---
 
@@ -227,3 +227,22 @@ When adding an end-user service (e.g. `valheim-server` under `game-servers`):
    ```
 4. **Do NOT create a separate Flux Kustomization**:
    Services are aggregated and reconciled as a unit under `flux-services`. Only use separate Flux Kustomizations for infrastructure components that other resources depend on.
+
+---
+
+## 7. Protection Against Accidental Deletion / Pruning
+
+To prevent namespaces and persistent volumes from being deleted during Flux garbage collection / pruning or git refactors:
+
+1. **Namespace Manifests**:
+   Every `Namespace` definition MUST include the annotation:
+   ```yaml
+   metadata:
+     name: <name>
+     annotations:
+       kustomize.toolkit.fluxcd.io/prune: disabled
+   ```
+2. **ClusterPolicy Enforcement**:
+   - Kyverno ClusterPolicy `protect-namespaces` automatically mutates all namespaces to ensure `kustomize.toolkit.fluxcd.io/prune: disabled` is present.
+   - ClusterPolicy `add-pvc-annotations` ensures both `helm.sh/resource-policy: keep` and `kustomize.toolkit.fluxcd.io/prune: disabled` are added to all PVCs.
+
