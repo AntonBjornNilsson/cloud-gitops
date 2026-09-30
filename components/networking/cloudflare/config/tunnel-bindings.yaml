@@ -42,5 +42,5 @@ spec:
     - name: auth-direct
       spec:
       fqdn: "auth.${domain}"
-      target: http://authentik-server.authentik.svc.cluster.local:80
+      target: http://authelia.authelia.svc.cluster.local:80
       protocol: http

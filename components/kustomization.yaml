@@ -19,7 +19,7 @@ resources:
 
   # Security
   - security/authentik/system-authentik.yaml
-  # - security/authelia/system-authelia.yaml
+  - security/authelia/system-authelia.yaml
   # - security/aws/system-aws.yaml
   - security/cert-manager/system-cert-manager.yaml
   - security/kyverno/system-kyverno.yaml

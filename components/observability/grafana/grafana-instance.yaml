@@ -21,11 +21,11 @@ spec:
       signout_redirect_url: "${victoriametrics_auth_redirect_url}"
       oauth_auto_login: "true"
     "auth.generic_oauth":
-      name: "authentik"
+      name: "authelia"
       enabled: "true"
       client_id: "${victoriametrics_client_id}"
       client_secret: "${victoriametrics_client_secret}"
-      scopes: "openid profile email"
+      scopes: "openid profile email groups"
       auth_url: "${victoriametrics_auth_url}"
       token_url: "${victoriametrics_token_url}"
       api_url: "${victoriametrics_api_url}"

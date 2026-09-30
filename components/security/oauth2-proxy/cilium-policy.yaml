@@ -32,7 +32,7 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # Internal OIDC provider (Authentik)
+    # Internal OIDC provider (Authelia / Authentik)
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: authentik
@@ -41,6 +41,15 @@ spec:
             - port: "9000"
               protocol: TCP
             - port: "9443"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: authelia
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+            - port: "9091"
               protocol: TCP
     # External OIDC providers, cluster endpoints, and token validation
     - toCIDR:

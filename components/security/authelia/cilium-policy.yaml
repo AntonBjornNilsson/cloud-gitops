@@ -18,6 +18,8 @@ spec:
         - ports:
             - port: "9091"
               protocol: TCP
+            - port: "80"
+              protocol: TCP
     # Health checks and probes
     - fromEntities:
         - host
