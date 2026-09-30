@@ -1,0 +1,31 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-ingress-oauth2-proxy
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+  - name: add-oauth2-proxy-middleware
+    match:
+      resources:
+        kinds:
+        - Ingress
+    exclude:
+      resources:
+        namespaces:
+        - authentik
+        - oauth2-proxy
+    preconditions:
+      all:
+      - key: "{{ request.object.metadata.annotations.\"cert-manager.io/cluster-issuer\" || 'cloudflare-wildcard-issuer' }}"
+        operator: Equals
+        value: "cloudflare-wildcard-issuer"
+      - key: "{{ request.object.metadata.labels.\"enable-oauth\" || 'true' }}"
+        operator: Equals
+        value: "true"
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          annotations:
+            +(traefik.ingress.kubernetes.io/router.middlewares): "authentik-traefik-auth-forward@kubernetescrd"
