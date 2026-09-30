@@ -42,12 +42,18 @@ spec:
               protocol: TCP
             - port: "9443"
               protocol: TCP
-    # External OIDC providers and token validation
+    # External OIDC providers, cluster endpoints, and token validation
     - toEntities:
         - world
+        - cluster
+        - host
+        - remote-node
+      toCIDR:
+        - 192.168.21.0/24
       toPorts:
         - ports:
             - port: "443"
               protocol: TCP
             - port: "80"
               protocol: TCP
+
