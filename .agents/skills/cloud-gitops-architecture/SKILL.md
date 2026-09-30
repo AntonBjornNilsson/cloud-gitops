@@ -31,7 +31,6 @@ This guide describes the architectural layout, component vs. service distinction
 >   - `flux reconcile source git <source>`
 >   - `flux reconcile kustomization <kustomization>`
 >   - `flux reconcile helmrelease <release>`
->
 > ### 3. The Standard LLM Change Workflow
 > When asked to fix, deploy, modify, or delete any resource in the cluster, follow this exact sequence:
 > 1. **Diagnose**: Inspect read-only cluster state (`kubectl get`, `kubectl logs`, etc.).
@@ -40,6 +39,21 @@ This guide describes the architectural layout, component vs. service distinction
 > 4. **Commit & Push**: Commit the change with a descriptive message and push to the Git remote.
 > 5. **Reconcile**: Trigger Flux reconciliation (`flux reconcile kustomization ...`).
 > 6. **Verify**: Use read-only commands to confirm pods/resources reach `Ready` state.
+>
+> ### 4. Zero Plaintext Secrets or Domains (Kustomization Substitution Only)
+> - **DO NOT write out any secrets, credentials, or private domain names in plaintext**:
+>   - Never hardcode API keys, PATs, tokens, passwords, private domain names (e.g. `bonjwa.cloud`, `antonbjornnilsson.com`), or personal URLs in manifests, ConfigMaps, or container scripts.
+>   - Never hardcode domain or credential fallbacks in application code or scripts (e.g., `os.environ.get("URL", "https://ntfy.bonjwa.cloud")` is strictly prohibited; use `os.environ.get("URL", "")` and require injection via environment variables).
+> - **Wrap in a Flux Kustomization with `postBuild.substituteFrom`**:
+>   - All components and services must be wrapped in a Flux Kustomization CR (`kustomize.toolkit.fluxcd.io/v1`) that includes:
+>     ```yaml
+>     postBuild:
+>       substituteFrom:
+>         - kind: Secret
+>           name: flux-substitutions
+>     ```
+>   - In manifests and container specs, use variable placeholders: `${domain}`, `${auth_domain}`, `${admin_email}`, `${github_repo}`, `${<custom_secret>}`.
+>   - All actual secret values and domain mappings must reside exclusively in the separate private repository `cloud-gitops-secrets` (`flux-substitutions.yaml`).
 
 ---
 
