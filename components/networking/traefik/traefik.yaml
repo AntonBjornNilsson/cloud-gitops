@@ -55,6 +55,10 @@ spec:
         addEntryPointsLabels: true
         service:
           enabled: true
+          spec:
+            loadBalancerIP: 192.168.21.25
+          annotations:
+            metallb.io/address-pool: external-pool
         serviceMonitor:
           enabled: true
 ---

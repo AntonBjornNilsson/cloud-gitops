@@ -43,12 +43,7 @@ spec:
             - port: "9443"
               protocol: TCP
     # External OIDC providers, cluster endpoints, and token validation
-    - toEntities:
-        - world
-        - cluster
-        - host
-        - remote-node
-      toCIDR:
+    - toCIDR:
         - 192.168.21.0/24
       toPorts:
         - ports:
@@ -56,4 +51,31 @@ spec:
               protocol: TCP
             - port: "80"
               protocol: TCP
+    - toEntities:
+        - world
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP
+    # Traefik ingress controller (when resolving in-cluster via LoadBalancer VIP or Service)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+            app.kubernetes.io/name: traefik
+      toPorts:
+        - ports:
+            - port: "8443"
+              protocol: TCP
+            - port: "8000"
+              protocol: TCP
+            - port: "443"
+              protocol: TCP
+            - port: "80"
+              protocol: TCP
+
 
