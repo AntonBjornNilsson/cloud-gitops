@@ -63,6 +63,10 @@ spec:
             metallb.io/address-pool: external-pool
         serviceMonitor:
           enabled: true
+    ports:
+      web:
+        redirectTo:
+          port: websecure
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
@@ -72,6 +76,7 @@ metadata:
 spec:
   entryPoints:
     - web
+    - websecure
   routes:
     - match: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
       kind: Rule
