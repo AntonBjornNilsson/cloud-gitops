@@ -4,3 +4,5 @@ resources:
   - ingress.yaml
   - backup-jobs.yaml
   - backup-credentials.yaml
+  - backup-sync.yaml
+  - restore/
