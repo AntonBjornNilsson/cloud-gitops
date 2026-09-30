@@ -42,8 +42,8 @@ This guide describes the architectural layout, component vs. service distinction
 >
 > ### 4. Zero Plaintext Secrets or Domains (Kustomization Substitution Only)
 > - **DO NOT write out any secrets, credentials, or private domain names in plaintext**:
->   - Never hardcode API keys, PATs, tokens, passwords, private domain names (e.g. `bonjwa.cloud`, `antonbjornnilsson.com`), or personal URLs in manifests, ConfigMaps, or container scripts.
->   - Never hardcode domain or credential fallbacks in application code or scripts (e.g., `os.environ.get("URL", "https://ntfy.bonjwa.cloud")` is strictly prohibited; use `os.environ.get("URL", "")` and require injection via environment variables).
+>   - Never hardcode API keys, PATs, tokens, passwords, private domain names (e.g. `<redacted>`), or personal URLs in manifests, ConfigMaps, or container scripts.
+>   - Never hardcode domain or credential fallbacks in application code or scripts (e.g., `os.environ.get("URL", "https://ntfy.<redacted>")` is strictly prohibited; use `os.environ.get("URL", "")` and require injection via environment variables).
 > - **Wrap in a Flux Kustomization with `postBuild.substituteFrom`**:
 >   - All components and services must be wrapped in a Flux Kustomization CR (`kustomize.toolkit.fluxcd.io/v1`) that includes:
 >     ```yaml

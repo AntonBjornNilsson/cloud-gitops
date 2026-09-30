@@ -2,27 +2,34 @@
 apiVersion: holmesgpt.dev/v1alpha1
 kind: ScheduledHealthCheck
 metadata:
-  name: daily-cluster-investigation
+  name: cluster-health-investigation
   namespace: holmesgpt
 spec:
-  schedule: "0 6 * * *"
+  schedule: "0 */6 * * *"
+  mode: alert
+  timeout: 180
+  destinations:
+    - type: slack
+      config:
+        webhook_url: "http://holmes-remediation.holmesgpt.svc.cluster.local:8080/webhook"
   query: >-
-    Investigate the entire Kubernetes cluster across all namespaces for active problems,
-    crashlooping pods, warning events, failing jobs, OOM kills, resource exhaustion, and security misconfigurations.
-    For each identified problem:
-    1. If a clear remediating code, manifest, or configuration fix can be identified,
-       open a Pull Request in the GitHub repository AntonBjornNilsson/cloud-gitops with the proposed fix and explanation.
-    2. If a problem is identified but no automated solution or PR can be determined,
-       open an Issue in the GitHub repository AntonBjornNilsson/cloud-gitops describing the symptoms, affected resources,
-       relevant log snippets, and suggested troubleshooting steps.
+    Investigate the entire Kubernetes cluster across all namespaces for active issues,
+    crashlooping pods, warning events, degraded volumes, and failing jobs.
+    If you detect any issues:
+    1. Detail the exact problem, affected resources, and root cause.
+    2. Propose a specific fix. If a Kubernetes manifest or configuration in cloud-gitops can resolve it,
+       specify the exact file path and complete updated content in a code fence formatted as:
+       ```yaml:path/to/file.yaml
+       <updated content>
+       ```
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: daily-holmesgpt-investigation
+  name: trigger-holmesgpt-investigation
   namespace: holmesgpt
 spec:
-  schedule: "0 6 * * *"
+  schedule: "0 */6 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -32,13 +39,26 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: investigator
+            - name: trigger
               image: curlimages/curl:latest
               command:
                 - /bin/sh
                 - -c
                 - |
-                  echo "Triggering daily HolmesGPT cluster investigation..."
-                  curl -s -X POST http://holmesgpt-holmes:80/api/investigate \
+                  echo "Requesting health check execution via Holmes API..."
+                  curl -s -X POST http://holmesgpt-holmes:80/api/checks/execute \
                     -H "Content-Type: application/json" \
-                    -d '{"prompt": "Investigate the entire Kubernetes cluster across all namespaces for problems, crashlooping pods, warning events, and security issues. If a solution is identified, open a PR in GitHub repository AntonBjornNilsson/cloud-gitops. If no solution can be determined, open an Issue in GitHub repository AntonBjornNilsson/cloud-gitops."}'
+                    -d '{
+                      "name": "cluster-scheduled-check",
+                      "query": "Check all pods and nodes across all namespaces. Report any failing, CrashLoopBackOff, or unhealthy resources. If a fix can be made to manifests, provide the relative file path and new file content in a code block ```yaml:path/to/file.yaml.",
+                      "mode": "alert",
+                      "timeout": 180,
+                      "destinations": [
+                        {
+                          "type": "slack",
+                          "config": {
+                            "webhook_url": "http://holmes-remediation.holmesgpt.svc.cluster.local:8080/webhook"
+                          }
+                        }
+                      ]
+                    }'

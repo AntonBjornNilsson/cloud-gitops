@@ -9,13 +9,24 @@ spec:
     # Internal communication among holmes, holmes-operator, and github-mcp-server
     - fromEndpoints:
         - {}
-    # Internal cluster communication to Holmes API
+    # Internal cluster communication to Holmes API & Remediation Service
     - fromEntities:
         - cluster
       toPorts:
         - ports:
             - port: "80"
               protocol: TCP
+            - port: "8080"
+              protocol: TCP
+    # Web ingress from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+
     # Health checks and probes
     - fromEntities:
         - host

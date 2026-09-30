@@ -1,0 +1,503 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: holmes-remediation-script
+  namespace: holmesgpt
+data:
+  controller.py: |
+    import os
+    import sys
+    import json
+    import time
+    import uuid
+    import re
+    import base64
+    import ssl
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import urllib.request
+    import urllib.error
+
+    NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "homelab-alerts")
+    NTFY_SERVER = os.environ.get("NTFY_SERVER", "http://ntfy.ntfy.svc.cluster.local").rstrip("/")
+    NTFY_WEB_URL = os.environ.get("NTFY_WEB_URL", "").rstrip("/")
+    BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+    GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
+    GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
+    K8S_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    K8S_CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    K8S_API = "https://kubernetes.default.svc"
+
+    # Pending remediations: token -> { id, title, description, fixes: [{path, content}], created_at, status }
+    remediations = {}
+    processed_checks = set()
+
+    def send_ntfy_notification(title, message, token):
+        action_url = f"{BASE_URL}/remediate/{token}"
+        actions_header = f"http, Yes (Push Fix), {action_url}, method=POST; view, No (Dismiss), {NTFY_WEB_URL}/{NTFY_TOPIC}"
+        
+        payload = {
+            "topic": NTFY_TOPIC,
+            "title": f"HolmesGPT: {title[:100]}",
+            "message": message[:4000],
+            "tags": ["warning", "robot"],
+            "actions": [
+                {
+                    "action": "http",
+                    "label": "Yes (Apply Fix)",
+                    "url": action_url,
+                    "method": "POST"
+                },
+                {
+                    "action": "view",
+                    "label": "No (Dismiss)",
+                    "url": f"{NTFY_WEB_URL}/{NTFY_TOPIC}"
+                }
+            ]
+        }
+        
+        try:
+            req = urllib.request.Request(
+                f"{NTFY_SERVER}/{NTFY_TOPIC}",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Actions": actions_header
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"[ntfy] Notification sent, status {resp.status}")
+        except Exception as e:
+            print(f"[ntfy] Failed to send notification: {e}", file=sys.stderr)
+
+    def send_ntfy_followup(title, message):
+        try:
+            req = urllib.request.Request(
+                f"{NTFY_SERVER}/{NTFY_TOPIC}",
+                data=message.encode("utf-8"),
+                headers={
+                    "Title": title,
+                    "Tags": "white_check_mark"
+                },
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"[ntfy] Follow-up sent, status {resp.status}")
+        except Exception as e:
+            print(f"[ntfy] Failed to send follow-up: {e}", file=sys.stderr)
+
+    def extract_remediation_fixes(text):
+        """
+        Parses code blocks or json in the format:
+        ```yaml:path/to/file.yaml
+        ...
+        ```
+        or explicit json:
+        {"files": [{"path": "...", "content": "..."}]}
+        """
+        fixes = []
+        if not text:
+            return fixes
+
+        # 1. Check for JSON block
+        json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
+        if json_match:
+            try:
+                data = json.loads(json_match.group(1))
+                if "files" in data and isinstance(data["files"], list):
+                    for f in data["files"]:
+                        if "path" in f and "content" in f:
+                            fixes.append({"path": f["path"].strip("/"), "content": f["content"]})
+                elif "path" in data and "content" in data:
+                    fixes.append({"path": data["path"].strip("/"), "content": data["content"]})
+            except Exception:
+                pass
+
+        if fixes:
+            return fixes
+
+        # 2. Check for filename annotation on code fence: ```yaml:services/foo/bar.yaml
+        fence_matches = re.finditer(r'```(?:yaml|yml)?:([a-zA-Z0-9_\-\.\/]+)\n(.*?)```', text, re.DOTALL)
+        for m in fence_matches:
+            path = m.group(1).strip()
+            content = m.group(2)
+            fixes.append({"path": path.strip("/"), "content": content})
+
+        # 3. Check for File: path/to/file\n```yaml ... ```
+        file_prefix_matches = re.finditer(r'(?:File|Path):\s*`?([a-zA-Z0-9_\-\.\/]+)`?\s*\n```(?:yaml|yml)?\n(.*?)```', text, re.DOTALL | re.IGNORECASE)
+        for m in file_prefix_matches:
+            path = m.group(1).strip()
+            content = m.group(2)
+            fixes.append({"path": path.strip("/"), "content": content})
+
+        return fixes
+
+    def get_github_file(path):
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}?ref={GITHUB_BRANCH}"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": f"Bearer {GITHUB_TOKEN}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "HolmesGPT-Remediation"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data.get("sha"), base64.b64decode(data.get("content", "")).decode("utf-8")
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None, None
+            raise
+
+    def push_github_file(path, content, message, sha=None):
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+        payload = {
+            "message": message,
+            "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
+            "branch": GITHUB_BRANCH
+        }
+        if sha:
+            payload["sha"] = sha
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {GITHUB_TOKEN}",
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json",
+                "User-Agent": "HolmesGPT-Remediation"
+            },
+            method="PUT"
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            return data.get("commit", {}).get("html_url") or data.get("commit", {}).get("sha")
+
+    def execute_git_remediation(remediation_item):
+        fixes = remediation_item.get("fixes", [])
+        if not fixes:
+            # If no parsed file fixes, create a remediation tracking issue / commit
+            return None, "No specific file changes could be automatically extracted from Holmes findings."
+
+        results = []
+        for fix in fixes:
+            path = fix["path"]
+            new_content = fix["content"]
+            sha, _ = get_github_file(path)
+            commit_msg = f"fix(holmesgpt): {remediation_item['title']}\n\nAutomated remediation by HolmesGPT on user confirmation."
+            commit_info = push_github_file(path, new_content, commit_msg, sha=sha)
+            results.append(f"{path} ({commit_info})")
+
+        return results, None
+
+    class RequestHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path in ("/healthz", "/readyz"):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status": "ok"}')
+            elif self.path == "/remediations":
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({k: v for k, v in remediations.items()}).encode("utf-8"))
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):
+            content_length = int(self.headers.get("Content-Length", 0))
+            body_bytes = self.rfile.read(content_length) if content_length > 0 else b""
+            
+            # Remediate confirmation endpoint: /remediate/<token>
+            if self.path.startswith("/remediate/"):
+                token = self.path[len("/remediate/"):].split("?")[0].strip()
+                if token not in remediations:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "text/plain")
+                    self.end_headers()
+                    self.wfile.write(b"Remediation request not found or expired.\n")
+                    return
+
+                item = remediations[token]
+                if item["status"] == "applied":
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain")
+                    self.end_headers()
+                    self.wfile.write(b"Remediation was already applied.\n")
+                    return
+
+                try:
+                    res, err = execute_git_remediation(item)
+                    if err:
+                        self.send_response(400)
+                        self.send_header("Content-Type", "text/plain")
+                        self.end_headers()
+                        self.wfile.write(f"Error applying remediation: {err}\n".encode("utf-8"))
+                        return
+
+                    item["status"] = "applied"
+                    send_ntfy_followup(
+                        "HolmesGPT Fix Pushed to Git",
+                        f"Remediation for '{item['title']}' applied successfully!\nPushed to {GITHUB_REPO} on {GITHUB_BRANCH}.\nFiles: {', '.join(res)}"
+                    )
+
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain")
+                    self.end_headers()
+                    self.wfile.write(f"Fix successfully pushed to {GITHUB_REPO} ({GITHUB_BRANCH})!\n".encode("utf-8"))
+                except Exception as e:
+                    print(f"Error in remediation execution: {e}", file=sys.stderr)
+                    self.send_response(500)
+                    self.send_header("Content-Type", "text/plain")
+                    self.end_headers()
+                    self.wfile.write(f"Failed to push git change: {e}\n".encode("utf-8"))
+                return
+
+            # Webhook receiver from Holmes / Alertmanager / Cron
+            if self.path == "/webhook":
+                try:
+                    data = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
+                except Exception:
+                    data = {}
+
+                # Extract text from slack-formatted webhook or raw json
+                text = ""
+                title = "Incident Detected"
+                if "attachments" in data and data["attachments"]:
+                    att = data["attachments"][0]
+                    title = att.get("title", title)
+                    text = att.get("text", "")
+                elif "text" in data:
+                    text = data.get("text", "")
+                elif "message" in data:
+                    text = data.get("message", "")
+                    title = data.get("name", title)
+
+                token = str(uuid.uuid4())[:8]
+                fixes = extract_remediation_fixes(text)
+                
+                remediations[token] = {
+                    "id": token,
+                    "title": title,
+                    "description": text,
+                    "fixes": fixes,
+                    "created_at": time.time(),
+                    "status": "pending"
+                }
+
+                send_ntfy_notification(title, text, token)
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "received", "token": token, "fixes": len(fixes)}).encode("utf-8"))
+                return
+
+            self.send_response(404)
+            self.end_headers()
+
+    def k8s_healthcheck_watcher():
+        """Periodically checks HealthCheck CRs in the holmesgpt namespace."""
+        if not os.path.exists(K8S_TOKEN_PATH):
+            print("[watcher] Running outside cluster or missing serviceaccount token, watcher inactive.")
+            return
+
+        with open(K8S_TOKEN_PATH, "r") as f:
+            token = f.read().strip()
+
+        ssl_ctx = ssl.create_default_context(cafile=K8S_CA_PATH)
+
+        while True:
+            try:
+                url = f"{K8S_API}/apis/holmesgpt.dev/v1alpha1/namespaces/holmesgpt/healthchecks"
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Accept": "application/json"
+                    }
+                )
+                with urllib.request.urlopen(req, context=ssl_ctx, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    items = data.get("items", [])
+                    for item in items:
+                        name = item.get("metadata", {}).get("name")
+                        status = item.get("status", {})
+                        result = status.get("result")
+                        
+                        if result == "fail" and name not in processed_checks:
+                            processed_checks.add(name)
+                            message = status.get("message") or status.get("rationale") or "Health check failure detected."
+                            token_id = str(uuid.uuid4())[:8]
+                            fixes = extract_remediation_fixes(message)
+                            
+                            remediations[token_id] = {
+                                "id": token_id,
+                                "title": f"HealthCheck Failed: {name}",
+                                "description": message,
+                                "fixes": fixes,
+                                "created_at": time.time(),
+                                "status": "pending"
+                            }
+                            
+                            print(f"[watcher] Found failed healthcheck '{name}', notifying ntfy...")
+                            send_ntfy_notification(f"HealthCheck Failed: {name}", message, token_id)
+            except Exception as e:
+                # Silently catch and retry after delay
+                pass
+
+            time.sleep(15)
+
+    def main():
+        print(f"Starting Holmes Remediation Service on :8080")
+        print(f"Target repository: {GITHUB_REPO} ({GITHUB_BRANCH})")
+        print(f"ntfy topic: {NTFY_TOPIC}")
+
+        t = threading.Thread(target=k8s_healthcheck_watcher, daemon=True)
+        t.start()
+
+        server = HTTPServer(("0.0.0.0", 8080), RequestHandler)
+        server.serve_forever()
+
+    if __name__ == "__main__":
+        main()
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: holmes-remediation
+  namespace: holmesgpt
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: holmes-remediation-role
+  namespace: holmesgpt
+rules:
+  - apiGroups: ["holmesgpt.dev"]
+    resources: ["healthchecks", "scheduledhealthchecks"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: holmes-remediation-binding
+  namespace: holmesgpt
+subjects:
+  - kind: ServiceAccount
+    name: holmes-remediation
+    namespace: holmesgpt
+roleRef:
+  kind: Role
+  name: holmes-remediation-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: holmes-remediation
+  namespace: holmesgpt
+  labels:
+    app: holmes-remediation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: holmes-remediation
+  template:
+    metadata:
+      labels:
+        app: holmes-remediation
+    spec:
+      serviceAccountName: holmes-remediation
+      containers:
+        - name: remediation-controller
+          image: python:3.11-alpine
+          command: ["python3", "-u", "/app/controller.py"]
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: NTFY_TOPIC
+              value: "homelab-alerts-${domain}"
+            - name: NTFY_SERVER
+              value: "http://ntfy.ntfy.svc.cluster.local"
+            - name: NTFY_WEB_URL
+              value: "https://ntfy.${domain}"
+            - name: BASE_URL
+              value: "https://holmes-remediation.${domain}"
+            - name: GITHUB_REPO
+              value: "${github_repo}"
+            - name: GITHUB_BRANCH
+              value: "main"
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: holmes-github-token
+                  key: token
+          volumeMounts:
+            - name: script
+              mountPath: /app
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 15
+      volumes:
+        - name: script
+          configMap:
+            name: holmes-remediation-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: holmes-remediation
+  namespace: holmesgpt
+  labels:
+    app: holmes-remediation
+spec:
+  selector:
+    app: holmes-remediation
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: holmes-remediation
+  namespace: holmesgpt
+spec:
+  rules:
+    - host: holmes-remediation.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: holmes-remediation
+                port:
+                  number: 8080

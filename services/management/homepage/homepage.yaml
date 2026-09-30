@@ -52,7 +52,7 @@ spec:
                 pathType: Prefix
     config:
       settings:
-        title: bonjwa.cloud Dashboard
+        title: Homelab Dashboard
       bookmarks:
         - Developer:
             - Github:
