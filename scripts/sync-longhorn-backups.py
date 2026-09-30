@@ -120,6 +120,9 @@ def generate_restore_yaml(pvcs, pvs, backups):
 
         summary_lines.append(f"  - {ns}/{name}: backup {backup['name']} ({backup['created']})")
 
+        csi_attrs = pv.get("spec", {}).get("csi", {}).get("volumeAttributes") or {"numberOfReplicas": "3"}
+        formatted_attrs = "\n".join(f"      {k}: \"{v}\"" for k, v in sorted(csi_attrs.items()))
+
         block = f"""# PVC: {ns}/{name}
 # Volume: {vol}
 # Backup: {backup["name"]} ({backup["created"]})
@@ -157,7 +160,7 @@ spec:
     fsType: ext4
     volumeHandle: {vol}
     volumeAttributes:
-      numberOfReplicas: "3"
+{formatted_attrs}
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
