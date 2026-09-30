@@ -1,11 +1,45 @@
 ---
 name: cloud-gitops-architecture
-description: Architecture, organization, and dependency guidelines for components and services in the cloud-gitops repository. Explains the distinction between cluster components (infrastructure/foundational) and services (user-facing applications), how Flux Kustomizations are structured, config separation, and dependsOn dependency management.
+description: Architecture, organization, and dependency guidelines for components and services in the cloud-gitops repository. Explains the distinction between cluster components (infrastructure/foundational) and services (user-facing applications), how Flux Kustomizations are structured, config separation, dependsOn dependency management, and strict declarative GitOps enforcement (no imperative kubectl mutations).
 ---
 
 # Cloud-GitOps Architecture Guide
 
-This guide describes the architectural layout, component vs. service distinction, Flux Kustomization hierarchy, and dependency resolution rules for the `cloud-gitops` repository. Any LLM or developer working with this repository must adhere to these patterns. An LLM should almost never use kubctl with modify access. All changes should be performed by pushing to git and having flux reconcile the changes.
+This guide describes the architectural layout, component vs. service distinction, Flux Kustomization hierarchy, and dependency resolution rules for the `cloud-gitops` repository. Any LLM or developer working with this repository must adhere to these patterns.
+
+---
+
+> [!CRITICAL]
+> ## Core Rule for LLMs: Pure Declarative GitOps (No Imperative Mutations)
+>
+> An LLM or automated agent working on this cluster **MUST NOT** use `kubectl` with modify/write access. All changes to cluster state must be made by editing manifests in the Git repository, pushing the commit to Git, and allowing Flux to reconcile the changes.
+>
+> ### 1. Strict Prohibitions
+> - **DO NOT** run imperative mutation commands against the cluster:
+>   - `kubectl apply -f ...` (Bypasses GitOps source of truth)
+>   - `kubectl delete ...` (Causes immediate disruption and fights Flux reconciliation)
+>   - `kubectl edit ...` or `kubectl patch ...` (Introduces silent configuration drift)
+>   - `kubectl create ...` (Except when testing harmless local client-side dry-runs)
+>   - `kubectl scale ...` (State will be overwritten on the next Flux sync)
+>   - `helm install / upgrade / uninstall` (Helm releases must be managed solely via Flux `HelmRelease` manifests)
+>
+> ### 2. Permitted Actions
+> - **Read-Only Diagnostics**:
+>   - `kubectl get ...`, `kubectl describe ...`, `kubectl logs ...`, `kubectl top ...`
+>   - `kubectl kustomize <path>` (Client-side validation of manifests prior to commit)
+> - **Flux Synchronization**:
+>   - `flux reconcile source git <source>`
+>   - `flux reconcile kustomization <kustomization>`
+>   - `flux reconcile helmrelease <release>`
+>
+> ### 3. The Standard LLM Change Workflow
+> When asked to fix, deploy, modify, or delete any resource in the cluster, follow this exact sequence:
+> 1. **Diagnose**: Inspect read-only cluster state (`kubectl get`, `kubectl logs`, etc.).
+> 2. **Modify Code**: Edit the appropriate manifest(s) in `cloud-gitops` or `cloud-gitops-secrets`.
+> 3. **Validate**: Run client-side validation (`kubectl kustomize <path>`).
+> 4. **Commit & Push**: Commit the change with a descriptive message and push to the Git remote.
+> 5. **Reconcile**: Trigger Flux reconciliation (`flux reconcile kustomization ...`).
+> 6. **Verify**: Use read-only commands to confirm pods/resources reach `Ready` state.
 
 ---
 
