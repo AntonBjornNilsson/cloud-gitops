@@ -57,7 +57,11 @@ metadata:
   namespace: headlamp
   labels:
     enable-oauth: "false"
+  annotations:
+    cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
+    traefik.ingress.kubernetes.io/router.middlewares: ""
 spec:
+  ingressClassName: traefik
   rules:
   - host: headlamp.${domain}
     http:
@@ -69,6 +73,10 @@ spec:
             name: headlamp
             port:
               number: 80
+  tls:
+  - hosts:
+    - headlamp.${domain}
+    secretName: headlamp-tls
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
