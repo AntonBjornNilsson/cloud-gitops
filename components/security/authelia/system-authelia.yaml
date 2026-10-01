@@ -13,7 +13,8 @@ spec:
   dependsOn:
     - name: system-traefik
     - name: system-longhorn-config
-    - name: secrets-kustomization
+    - name: authelia-config
+    - name: cloudflare-cert
   retryInterval: 1m0s
   timeout: 5m0s
   wait: true
