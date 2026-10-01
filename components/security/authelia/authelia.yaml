@@ -98,7 +98,7 @@ spec:
       session:
         name: authelia_session
         same_site: "lax"
-        expiration: "1 hour"
+        expiration: "8 hour"
         inactivity: "5 minutes"
         remember_me: "1 month"
         encryption_key:
