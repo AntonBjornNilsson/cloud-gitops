@@ -41,10 +41,10 @@ spec:
       name: RetryOnFailure
       retryInterval: 3m
   values:
-    strategy:
-      type: Recreate
     pod:
       kind: Deployment
+      strategy:
+        type: Recreate
       extraVolumes:
         - name: users-database
           secret:
