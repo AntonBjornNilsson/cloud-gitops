@@ -74,7 +74,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwo
-  fromBackup: "${s3_bucket_longhorn}?backup=backup-ba1f5830006b4e2c&volume=pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96"
+  fromBackup: ""
   frontend: blockdev
   numberOfReplicas: 3
   size: "1073741824"
