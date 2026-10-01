@@ -43,6 +43,7 @@ spec:
   values:
     pod:
       kind: Deployment
+      replicas: 1
       strategy:
         type: Recreate
       extraVolumes:
@@ -186,6 +187,29 @@ spec:
                 - openid
                 - profile
                 - email
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              userinfo_signed_response_alg: none
+
+            - client_id: k8s-cluster
+              client_name: Kubernetes Cluster
+              public: true
+              authorization_policy: one_factor
+              consent_mode: implicit
+              redirect_uris:
+                - "http://localhost:8000"
+                - "http://localhost:18000"
+                - "http://127.0.0.1:8000"
+                - "http://127.0.0.1:18000"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
                 - offline_access
               grant_types:
                 - authorization_code
