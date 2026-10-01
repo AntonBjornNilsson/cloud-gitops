@@ -20,7 +20,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwo
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-a637912ce6344817&volume=pvc-cbb254fe-1be8-402a-8906-758457ade992"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-a637912ce6344817&volume=pvc-cbb254fe-1be8-402a-8906-758457ade992"
   frontend: blockdev
   numberOfReplicas: 3
   size: "5368709120"
@@ -74,7 +74,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwo
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-ba1f5830006b4e2c&volume=pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-ba1f5830006b4e2c&volume=pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96"
   frontend: blockdev
   numberOfReplicas: 3
   size: "1073741824"
@@ -128,7 +128,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwx
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-18fe0801080e41f9&volume=pvc-06dd9847-4327-4ba5-841e-0cb677e678e8"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-18fe0801080e41f9&volume=pvc-06dd9847-4327-4ba5-841e-0cb677e678e8"
   frontend: blockdev
   numberOfReplicas: 3
   size: "10737418240"
@@ -174,7 +174,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwx
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-521236a26d024969&volume=pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-521236a26d024969&volume=pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a"
   frontend: blockdev
   numberOfReplicas: 3
   size: "5368709120"
@@ -220,7 +220,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwx
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-dec6152cc1bd46d5&volume=pvc-34633aec-998c-4d2f-950c-683fcb5e65bd"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-dec6152cc1bd46d5&volume=pvc-34633aec-998c-4d2f-950c-683fcb5e65bd"
   frontend: blockdev
   numberOfReplicas: 3
   size: "10737418240"
@@ -266,7 +266,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwx
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-efb704d4af0641c5&volume=pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-efb704d4af0641c5&volume=pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168"
   frontend: blockdev
   numberOfReplicas: 3
   size: "5368709120"
@@ -312,7 +312,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwo
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-2c8dcf2725c140c9&volume=pvc-296931e2-c993-499e-aaa2-583732c2f5ec"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-2c8dcf2725c140c9&volume=pvc-296931e2-c993-499e-aaa2-583732c2f5ec"
   frontend: blockdev
   numberOfReplicas: 3
   size: "5368709120"
@@ -366,7 +366,7 @@ metadata:
     recurring-job-group.longhorn.io/default: enabled
 spec:
   accessMode: rwo
-  fromBackup: "s3://longhorn-387164269239-eu-north-1-an@eu-north-1/?backup=backup-715cd3237fd74899&volume=pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3"
+  fromBackup: "${s3_bucket_longhorn}?backup=backup-715cd3237fd74899&volume=pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3"
   frontend: blockdev
   numberOfReplicas: 3
   size: "21474836480"

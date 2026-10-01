@@ -116,7 +116,8 @@ def generate_restore_yaml(pvcs, pvs, backups):
 
         # Substitute s3://<bucket-identifier>/ with ${s3_bucket_longhorn}
         backup_url = backup["url"]
-        s3_url = re.sub(r"^s3://[^/]+/", "${s3_bucket_longhorn}", backup_url)
+        s3_placeholder = "${" + "s3_bucket_longhorn}"
+        s3_url = re.sub(r"^s3://[^/]+/", s3_placeholder, backup_url)
 
         summary_lines.append(f"  - {ns}/{name}: backup {backup['name']} ({backup['created']})")
 
