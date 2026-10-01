@@ -31,7 +31,7 @@ spec:
         name: headlamp
         namespace: headlamp
       interval: 12h
-  timeout: 30s
+  timeout: 5m
   install:
     strategy:
       name: RetryOnFailure
@@ -47,6 +47,7 @@ spec:
         clientSecret: ${headlamp_client_secret}
         issuerURL: ${headlamp_issuer_url}
         scopes: ${headlamp_scopes}
+        callbackURL: "https://headlamp.${domain}/oidc-callback"
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -55,7 +56,7 @@ metadata:
   name: headlamp
   namespace: headlamp
   labels:
-    enable-oauth: "true"
+    enable-oauth: "false"
 spec:
   rules:
   - host: headlamp.${domain}
@@ -87,6 +88,8 @@ spec:
               protocol: TCP
             - port: "4466"
               protocol: TCP
+          rules:
+            http: [{}]
     # Health checks and probes
     - fromEntities:
         - host
@@ -102,6 +105,9 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
     # Kubernetes API Server (Headlamp queries Kubernetes API)
     - toEntities:
         - kube-apiserver

@@ -137,6 +137,7 @@ spec:
                 - groups
                 - preferred_username
                 - email
+              id_token_audience_mode: 'experimental-merged'
           clients:
             - client_id: grafana
               client_name: Grafana
@@ -167,6 +168,10 @@ spec:
               public: false
               authorization_policy: one_factor
               consent_mode: implicit
+              claims_policy: k8s
+              audience:
+                - k8s-cluster
+              requested_audience_mode: implicit
               redirect_uris:
                 - "https://headlamp.${domain}/oidc-callback"
               scopes:
@@ -237,6 +242,7 @@ spec:
                 - "http://localhost:18000"
                 - "http://127.0.0.1:8000"
                 - "http://127.0.0.1:18000"
+                - "https://headlamp.${domain}/oidc-callback"
               scopes:
                 - openid
                 - profile
