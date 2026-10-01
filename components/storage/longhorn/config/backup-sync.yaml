@@ -120,8 +120,8 @@ data:
             longhorn_access_mode = "rwx" if "ReadWriteMany" in access_modes else "rwo"
 
             backup_url = backup["url"]
-            # Construct placeholder dynamically so Flux does not substitute it when applying this ConfigMap
-            s3_placeholder = "${" + "s3_bucket_longhorn}"
+            # Construct placeholder dynamically using chr(36) so Flux envsubst does not parse or substitute it
+            s3_placeholder = chr(36) + "{s3_bucket_longhorn}"
             s3_url = re.sub(r"^s3://[^/]+/", s3_placeholder, backup_url)
 
             summary_lines.append(f"  - {ns}/{name}: backup {backup['name']} ({backup['created']})")
