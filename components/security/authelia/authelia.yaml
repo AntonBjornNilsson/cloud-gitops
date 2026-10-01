@@ -131,6 +131,12 @@ spec:
               use: sig
               key:
                 path: "/secrets/jwks/key.pem"
+          claims_policies:
+            k8s:
+              id_token:
+                - groups
+                - preferred_username
+                - email
           clients:
             - client_id: grafana
               client_name: Grafana
@@ -202,6 +208,7 @@ spec:
               public: true
               authorization_policy: one_factor
               consent_mode: implicit
+              claims_policy: k8s
               redirect_uris:
                 - "http://localhost:8000"
                 - "http://localhost:18000"
