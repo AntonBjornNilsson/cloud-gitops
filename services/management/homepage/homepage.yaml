@@ -31,7 +31,7 @@ spec:
         name: jameswynn
         namespace: homepage
       interval: 12h
-  timeout: 30s
+  timeout: 5m0s
   install:
     strategy:
       name: RetryOnFailure
@@ -41,10 +41,33 @@ spec:
       name: RetryOnFailure
       retryInterval: 3m
   values:
+    env:
+      - name: HOMEPAGE_ALLOWED_HOSTS
+        value: "homepage.${domain},${domain}"
+      - name: HOMEPAGE_AUTH_ENABLED
+        value: "true"
+      - name: HOMEPAGE_AUTH_SECRET
+        value: "${homepage_auth_secret}"
+      - name: HOMEPAGE_EXTERNAL_URL
+        value: "https://homepage.${domain}"
+      - name: HOMEPAGE_OIDC_ISSUER
+        value: "https://auth.${domain}"
+      - name: HOMEPAGE_OIDC_CLIENT_ID
+        value: "homepage"
+      - name: HOMEPAGE_OIDC_CLIENT_SECRET
+        value: "${homepage_client_secret}"
+      - name: HOMEPAGE_OIDC_SCOPE
+        value: "openid email profile groups"
+      - name: HOMEPAGE_OIDC_NAME
+        value: "Authelia"
+      - name: HOMEPAGE_OIDC_AUTO_LOGIN
+        value: "true"
     ingress:
       main:
         enabled: true
         ingressClassName: "traefik"
+        labels:
+          enable-oauth: "true"
         hosts:
           - host: homepage.${domain}
             paths:

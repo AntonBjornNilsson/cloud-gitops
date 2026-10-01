@@ -203,6 +203,29 @@ spec:
                 - code
               userinfo_signed_response_alg: none
 
+            - client_id: homepage
+              client_name: Homepage
+              client_secret:
+                value: "${authelia_homepage_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              redirect_uris:
+                - "https://homepage.${domain}/api/auth/callback/homepage-oidc"
+                - "https://homepage.${domain}/api/auth/callback/oidc"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              userinfo_signed_response_alg: none
+
             - client_id: k8s-cluster
               client_name: Kubernetes Cluster
               public: true
