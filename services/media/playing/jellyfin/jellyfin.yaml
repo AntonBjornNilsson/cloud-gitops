@@ -31,7 +31,7 @@ spec:
         name: jellyfin
         namespace: jellyfin
       interval: 12h
-  timeout: 30s
+  timeout: 5m0s
   values:
     replicaCount: 1
     resources:
