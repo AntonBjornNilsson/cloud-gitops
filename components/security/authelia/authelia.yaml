@@ -68,8 +68,11 @@ spec:
     ingress:
       enabled: true
       className: traefik
+      labels:
+        enable-oauth: "false"
       annotations:
         cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
+        traefik.ingress.kubernetes.io/router.middlewares: ""
     configMap:
       theme: dark
       totp:

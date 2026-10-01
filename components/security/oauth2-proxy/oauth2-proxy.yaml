@@ -29,7 +29,7 @@ spec:
         kind: HelmRepository
         name: oauth2-proxy
       interval: 12h
-  timeout: 30s
+  timeout: 5m
   values:
     config:
       clientID: ${oauth_client_id}
