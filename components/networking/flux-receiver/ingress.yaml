@@ -1,0 +1,54 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flux-webhook
+  namespace: flux-system
+  labels:
+    enable-oauth: "false"
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
+spec:
+  rules:
+    - host: flux-webhook.${domain}
+      http:
+        paths:
+          - path: /hook
+            pathType: Prefix
+            backend:
+              service:
+                name: webhook-receiver
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - flux-webhook.${domain}
+      secretName: flux-webhook-tls
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flux-webhook-auth-domain
+  namespace: flux-system
+  labels:
+    enable-oauth: "false"
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-wildcard-issuer
+spec:
+  rules:
+    - host: flux-webhook.${auth_domain}
+      http:
+        paths:
+          - path: /hook
+            pathType: Prefix
+            backend:
+              service:
+                name: webhook-receiver
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - flux-webhook.${auth_domain}
+      secretName: flux-webhook-auth-domain-tls

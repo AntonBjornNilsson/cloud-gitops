@@ -1,0 +1,23 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-flux-receiver
+  namespace: flux-system
+spec:
+  interval: 2m0s
+  path: ./components/networking/flux-receiver
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  retryInterval: 1m0s
+  timeout: 5m0s
+  wait: true
+  dependsOn:
+    - name: system-traefik
+    - name: secrets-kustomization
+    - name: cloudflare-cert
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions
