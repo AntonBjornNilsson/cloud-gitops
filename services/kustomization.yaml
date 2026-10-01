@@ -27,7 +27,7 @@ resources:
   # - home-automation/homeassistant
 
   # Management
-  # - management/headlamp
+  - management/headlamp
   - management/homepage
   # - management/github-runners
   - management/ntfy
