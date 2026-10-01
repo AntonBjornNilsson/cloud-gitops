@@ -1,12 +1,12 @@
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
-  name: add-ingress-oauth2-proxy
+  name: add-ingress-authelia
 spec:
   validationFailureAction: Audit
   background: true
   rules:
-  - name: add-oauth2-proxy-middleware
+  - name: add-authelia-middleware
     match:
       resources:
         kinds:
@@ -15,7 +15,7 @@ spec:
       resources:
         namespaces:
         - authelia
-        - oauth2-proxy
+        - traefik
     preconditions:
       all:
       - key: "{{ request.object.metadata.annotations.\"cert-manager.io/cluster-issuer\" || 'cloudflare-wildcard-issuer' }}"
@@ -28,4 +28,4 @@ spec:
       patchStrategicMerge:
         metadata:
           annotations:
-            (traefik.ingress.kubernetes.io/router.middlewares): "oauth2-proxy-traefik-auth-forward@kubernetescrd"
+            traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-forward-auth@kubernetescrd"

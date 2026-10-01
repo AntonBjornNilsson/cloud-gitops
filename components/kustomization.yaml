@@ -22,7 +22,6 @@ resources:
   # - security/aws/system-aws.yaml
   - security/cert-manager/system-cert-manager.yaml
   - security/kyverno/system-kyverno.yaml
-  - security/oauth2-proxy/system-oauth2-proxy.yaml
   # - security/trivy-operator/system-trivy-operator.yaml
 
   # Storage

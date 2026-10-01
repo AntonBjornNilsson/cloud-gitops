@@ -155,7 +155,6 @@ Flux Kustomizations (`kustomize.toolkit.fluxcd.io/v1`) must declare explicit dep
 graph TD
     secrets[secrets-kustomization] --> cert_cfg[system-cert-manager-config]
     secrets --> auth[system-authelia]
-    secrets --> oauth[system-oauth2-proxy]
 
     cilium[system-cilium]
     
@@ -174,8 +173,6 @@ graph TD
     
     traefik --> auth
     longhorn_cfg --> auth
-    
-    traefik --> oauth
     
     kyverno[system-kyverno] --> kyverno_cfg[system-kyverno-config]
     
@@ -204,9 +201,7 @@ graph TD
    - `dependsOn: [system-victoriametrics, system-traefik]`
 9. **`system-authelia`**:
    - `dependsOn: [system-traefik, system-longhorn-config, secrets-kustomization]`
-10. **`system-oauth2-proxy`**:
-   - `dependsOn: [system-traefik, secrets-kustomization]`
-11. **`flux-services`**:
+10. **`flux-services`**:
     - `dependsOn: [flux-components, system-traefik, system-cert-manager-config, system-longhorn]`
 
 ---

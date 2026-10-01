@@ -191,29 +191,6 @@ spec:
               response_types:
                 - code
               userinfo_signed_response_alg: none
-
-            - client_id: oauth2-proxy
-              client_name: OAuth2 Proxy
-              client_secret:
-                value: "${authelia_oauth_client_secret_hash}"
-              public: false
-              authorization_policy: one_factor
-              consent_mode: implicit
-              redirect_uris:
-                - "https://oauth2-proxy.${auth_domain}/oauth2/callback"
-                - "https://oauth2-proxy.${domain}/oauth2/callback"
-              scopes:
-                - openid
-                - profile
-                - email
-                - groups
-                - offline_access
-              grant_types:
-                - authorization_code
-                - refresh_token
-              response_types:
-                - code
-              userinfo_signed_response_alg: none
 ---
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
