@@ -122,16 +122,7 @@ spec:
         - ports:
             - port: "11434"
               protocol: TCP
-    # Identity Provider OIDC (Authelia / Authentik)
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: authentik
-      toPorts:
-        - ports:
-            - port: "9000"
-              protocol: TCP
-            - port: "9443"
-              protocol: TCP
+    # Identity Provider OIDC (Authelia)
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: authelia

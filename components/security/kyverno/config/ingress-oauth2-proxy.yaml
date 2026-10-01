@@ -14,7 +14,6 @@ spec:
     exclude:
       resources:
         namespaces:
-        - authentik
         - authelia
         - oauth2-proxy
     preconditions:
@@ -29,4 +28,4 @@ spec:
       patchStrategicMerge:
         metadata:
           annotations:
-            +(traefik.ingress.kubernetes.io/router.middlewares): "oauth2-proxy-traefik-auth-forward@kubernetescrd"
+            (traefik.ingress.kubernetes.io/router.middlewares): "oauth2-proxy-traefik-auth-forward@kubernetescrd"

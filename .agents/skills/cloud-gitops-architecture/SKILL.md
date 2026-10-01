@@ -63,7 +63,7 @@ Everything deployed into the cluster falls strictly into one of two tiers:
 
 | Tier | Purpose | Characteristics | Examples |
 |---|---|---|---|
-| **Components** | **Foundational Infrastructure** | Parts the cluster cannot function without, or should not function without. Enables base networking, storage, security, policy, and monitoring. | Cilium, MetalLB, Traefik, Cert-Manager, Longhorn, VictoriaMetrics, Grafana, Kyverno, Authentik |
+| **Components** | **Foundational Infrastructure** | Parts the cluster cannot function without, or should not function without. Enables base networking, storage, security, policy, and monitoring. | Cilium, MetalLB, Traefik, Cert-Manager, Longhorn, VictoriaMetrics, Grafana, Kyverno, Authelia |
 | **Services** | **End-User Value** | Applications and workloads that deliver value to the end user. They rely on the foundational infrastructure provided by components. | Jellyfin, Dispatcharr, Radarr, Sonarr, Skyrim Server, Home Assistant, Ollama, Open-WebUI, Vaultwarden |
 
 ---
@@ -154,7 +154,7 @@ Flux Kustomizations (`kustomize.toolkit.fluxcd.io/v1`) must declare explicit dep
 ```mermaid
 graph TD
     secrets[secrets-kustomization] --> cert_cfg[system-cert-manager-config]
-    secrets --> auth[system-authentik]
+    secrets --> auth[system-authelia]
     secrets --> oauth[system-oauth2-proxy]
 
     cilium[system-cilium]
@@ -202,7 +202,7 @@ graph TD
    - Reconciles independently (provides foundational Prometheus CRDs required by other components).
 8. **`system-grafana`**:
    - `dependsOn: [system-victoriametrics, system-traefik]`
-9. **`system-authentik`**:
+9. **`system-authelia`**:
    - `dependsOn: [system-traefik, system-longhorn-config, secrets-kustomization]`
 10. **`system-oauth2-proxy`**:
    - `dependsOn: [system-traefik, secrets-kustomization]`

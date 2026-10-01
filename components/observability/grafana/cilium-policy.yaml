@@ -50,7 +50,7 @@ spec:
         - ports:
             - port: "8428"
               protocol: TCP
-    # Authentik OIDC authentication & external resources
+    # Authelia OIDC authentication & external resources
     - toEntities:
         - world
         - cluster

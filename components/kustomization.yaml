@@ -18,7 +18,6 @@ resources:
   - observability/grafana/system-grafana.yaml
 
   # Security
-  - security/authentik/system-authentik.yaml
   - security/authelia/system-authelia.yaml
   # - security/aws/system-aws.yaml
   - security/cert-manager/system-cert-manager.yaml
