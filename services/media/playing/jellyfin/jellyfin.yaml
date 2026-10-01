@@ -55,6 +55,8 @@ spec:
       config:
         enabled: true
         accessMode: ReadWriteMany
+        annotations:
+          backup.longhorn.io/enabled: "true"
       media:
         enabled: true
         type: hostPath

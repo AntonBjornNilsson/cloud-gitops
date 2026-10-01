@@ -11,6 +11,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: dispatcharr-data
   namespace: dispatcharr
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteMany
@@ -25,6 +27,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: dispatcharr-db
   namespace: dispatcharr
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteMany

@@ -11,6 +11,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: adguard-home-data
   namespace: adguard-home
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce

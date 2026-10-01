@@ -31,10 +31,12 @@ This guide describes the architectural layout, component vs. service distinction
 > - **Read-Only Diagnostics**:
 >   - `kubectl --context=oidc-user get ...`, `kubectl --context=oidc-user describe ...`, `kubectl --context=oidc-user logs ...`, `kubectl --context=oidc-user top ...`
 >   - `kubectl kustomize <path>` (Client-side validation of manifests prior to commit)
-> - **Flux Synchronization**:
->   - `flux reconcile source git <source>`
->   - `flux reconcile kustomization <kustomization>`
->   - `flux reconcile helmrelease <release>`
+> - **Flux Synchronization (Permitted for oidc-user)**:
+>   - The `oidc-user` role possesses RBAC patch/update permissions on all Flux API groups (`source.toolkit.fluxcd.io`, `kustomize.toolkit.fluxcd.io`, `helm.toolkit.fluxcd.io`, `notification.toolkit.fluxcd.io`, `image.toolkit.fluxcd.io`).
+>   - LLMs can and should run:
+>     - `flux reconcile source git <source>`
+>     - `flux reconcile kustomization <kustomization>`
+>     - `flux reconcile helmrelease <release>`
 > ### 3. The Standard LLM Change Workflow
 > When asked to fix, deploy, modify, or delete any resource in the cluster, follow this exact sequence:
 > 1. **Diagnose**: Inspect read-only cluster state (`kubectl get`, `kubectl logs`, etc.).
@@ -292,4 +294,37 @@ To prevent namespaces and persistent volumes from being deleted during Flux garb
 2. **ClusterPolicy Enforcement**:
    - Kyverno ClusterPolicy `protect-namespaces` automatically mutates all namespaces to ensure `kustomize.toolkit.fluxcd.io/prune: disabled` is present.
    - ClusterPolicy `add-pvc-annotations` ensures both `helm.sh/resource-policy: keep` and `kustomize.toolkit.fluxcd.io/prune: disabled` are added to all PVCs.
+
+---
+
+## 8. PVC Backup Strategy (Opt-in via Label or Annotation)
+
+By default, PersistentVolumeClaims (PVCs) are **NOT** backed up automatically to avoid consuming backup storage on ephemeral, scratch, or cache volumes (e.g. transcode caches).
+
+### How to Opt a PVC into Daily Backups:
+Add the label or annotation `backup.longhorn.io/enabled: "true"` to the PVC metadata:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-app-data
+  namespace: my-app
+  labels:
+    backup.longhorn.io/enabled: "true"
+```
+Or via annotations:
+```yaml
+metadata:
+  annotations:
+    backup.longhorn.io/enabled: "true"
+```
+
+### Automation & Flow:
+1. **Kyverno Mutation**: ClusterPolicy `add-pvc-annotations` detects `backup.longhorn.io/enabled: "true"` (or `recurring-job-group.longhorn.io/default: enabled`) and applies:
+   - `recurring-job.longhorn.io/source: enabled`
+   - `recurring-job-group.longhorn.io/default: enabled`
+2. **Longhorn RecurringJob**: Longhorn attaches the volume to the `daily-backup` recurring job group (runs daily at 02:00, backed up to S3).
+3. **Backup Sync CronJob**: `sync-longhorn-backups.py` only indexes and manifests volumes whose PVCs are explicitly opted into backups, keeping `components/storage/longhorn/config/restore/volumes.yaml` clean and cache-free.
+
 

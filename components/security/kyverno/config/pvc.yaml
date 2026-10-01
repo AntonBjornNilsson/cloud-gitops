@@ -17,3 +17,40 @@ spec:
           annotations:
             +(helm.sh/resource-policy): keep
             +(kustomize.toolkit.fluxcd.io/prune): disabled
+  - name: enable-longhorn-pvc-backup
+    match:
+      any:
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          selector:
+            matchLabels:
+              backup.longhorn.io/enabled: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          selector:
+            matchLabels:
+              backup: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          annotations:
+            backup.longhorn.io/enabled: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          annotations:
+            backup: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          annotations:
+            recurring-job-group.longhorn.io/default: enabled
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          labels:
+            +(recurring-job.longhorn.io/source): enabled
+            +(recurring-job-group.longhorn.io/default): enabled
+

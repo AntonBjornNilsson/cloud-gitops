@@ -103,6 +103,20 @@ data:
             if not vol:
                 continue
 
+            labels = pvc.get("metadata", {}).get("labels") or {}
+            annotations = pvc.get("metadata", {}).get("annotations") or {}
+            backup_enabled = (
+                labels.get("recurring-job-group.longhorn.io/default") == "enabled"
+                or labels.get("backup.longhorn.io/enabled") == "true"
+                or labels.get("backup") == "true"
+                or annotations.get("recurring-job-group.longhorn.io/default") == "enabled"
+                or annotations.get("backup.longhorn.io/enabled") == "true"
+                or annotations.get("backup") == "true"
+            )
+            if not backup_enabled:
+                print(f"[-] Backup not enabled for PVC {ns}/{name} - skipping")
+                continue
+
             if vol not in vol_to_latest_backup:
                 print(f"[-] No completed backup found for PVC {ns}/{name} (Volume: {vol}) - skipping")
                 continue

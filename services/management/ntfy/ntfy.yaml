@@ -28,6 +28,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: ntfy-data
   namespace: ntfy
+  labels:
+    backup.longhorn.io/enabled: "true"
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:

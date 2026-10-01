@@ -61,6 +61,8 @@ spec:
       enabled: true
       storageClass: longhorn
       size: 1Gi
+      annotations:
+        backup.longhorn.io/enabled: "true"
     secret:
       additionalSecrets:
         authelia-jwks:

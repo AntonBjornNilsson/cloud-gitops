@@ -207,52 +207,6 @@ spec:
     namespace: dispatcharr
     name: dispatcharr-db
 ---
-# PVC: jellyfin/jellyfin-cache
-# Volume: pvc-34633aec-998c-4d2f-950c-683fcb5e65bd
-# Backup: backup-dec6152cc1bd46d5 (2026-10-01T02:02:20Z)
-apiVersion: longhorn.io/v1beta2
-kind: Volume
-metadata:
-  name: pvc-34633aec-998c-4d2f-950c-683fcb5e65bd
-  namespace: longhorn-system
-  labels:
-    longhornvolume: pvc-34633aec-998c-4d2f-950c-683fcb5e65bd
-    recurring-job-group.longhorn.io/default: enabled
-spec:
-  accessMode: rwx
-  fromBackup: "${s3_bucket_longhorn}?backup=backup-dec6152cc1bd46d5&volume=pvc-34633aec-998c-4d2f-950c-683fcb5e65bd"
-  frontend: blockdev
-  numberOfReplicas: 3
-  size: "10737418240"
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: pvc-34633aec-998c-4d2f-950c-683fcb5e65bd
-  annotations:
-    pv.kubernetes.io/bound-by-controller: "yes"
-spec:
-  capacity:
-    storage: 10Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: longhorn
-  volumeMode: Filesystem
-  csi:
-    driver: driver.longhorn.io
-    fsType: ext4
-    volumeHandle: pvc-34633aec-998c-4d2f-950c-683fcb5e65bd
-    volumeAttributes:
-      migratable: "true"
-      numberOfReplicas: "3"
-      share: "true"
-  claimRef:
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    namespace: jellyfin
-    name: jellyfin-cache
----
 # PVC: jellyfin/jellyfin-config
 # Volume: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
 # Backup: backup-efb704d4af0641c5 (2026-10-01T02:03:59Z)
