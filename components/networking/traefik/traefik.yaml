@@ -78,7 +78,7 @@ spec:
     - web
     - websecure
   routes:
-    - match: PathPrefix(`/dashboard`) || PathPrefix(`/api`)
+    - match: (Host(`traefik.${domain}`) || Host(`traefik.${auth_domain}`)) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
       kind: Rule
       services:
         - name: api@internal
