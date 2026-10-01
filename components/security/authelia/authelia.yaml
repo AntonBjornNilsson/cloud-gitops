@@ -41,6 +41,8 @@ spec:
       name: RetryOnFailure
       retryInterval: 3m
   values:
+    strategy:
+      type: Recreate
     pod:
       kind: Deployment
       extraVolumes:
