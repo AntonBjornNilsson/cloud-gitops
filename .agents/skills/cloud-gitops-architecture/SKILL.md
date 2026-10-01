@@ -23,9 +23,13 @@ This guide describes the architectural layout, component vs. service distinction
 >   - `kubectl scale ...` (State will be overwritten on the next Flux sync)
 >   - `helm install / upgrade / uninstall` (Helm releases must be managed solely via Flux `HelmRelease` manifests)
 >
-> ### 2. Permitted Actions
+> ### 2. Permitted Actions & Mandatory OIDC Context
+> - **LLM Authentication & Context**:
+>   - LLMs and automated tools **MUST ALWAYS** use the `oidc-user` context (e.g. `kubectl --context=oidc-user ...` or ensure the active context is `oidc-user`).
+>   - The `oidc-user` role is strictly bound to `oidc-read-only` (`get`, `list`, `watch`), ensuring the LLM cannot accidentally mutate or destroy persistent cluster resources.
+>   - Never use `admin` or `oidc-admin` contexts for automated LLM queries.
 > - **Read-Only Diagnostics**:
->   - `kubectl get ...`, `kubectl describe ...`, `kubectl logs ...`, `kubectl top ...`
+>   - `kubectl --context=oidc-user get ...`, `kubectl --context=oidc-user describe ...`, `kubectl --context=oidc-user logs ...`, `kubectl --context=oidc-user top ...`
 >   - `kubectl kustomize <path>` (Client-side validation of manifests prior to commit)
 > - **Flux Synchronization**:
 >   - `flux reconcile source git <source>`
