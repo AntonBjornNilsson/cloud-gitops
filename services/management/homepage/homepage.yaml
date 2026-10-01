@@ -132,6 +132,8 @@ spec:
         - ports:
             - port: "3000"
               protocol: TCP
+          rules:
+            http: [{}]
     # Health checks and probes
     - fromEntities:
         - host
@@ -147,6 +149,9 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
     # Internal cluster services queried by dashboard widgets
     - toEntities:
         - cluster

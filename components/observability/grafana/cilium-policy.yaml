@@ -14,6 +14,8 @@ spec:
         - ports:
             - port: "3000"
               protocol: TCP
+          rules:
+            http: [{}]
     # Intra-namespace traffic (operator talking to grafana, etc.)
     - fromEndpoints:
         - {}
@@ -32,6 +34,9 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
     # Kubernetes API Server (operator)
     - toEntities:
         - kube-apiserver
@@ -50,6 +55,8 @@ spec:
         - ports:
             - port: "8428"
               protocol: TCP
+          rules:
+            http: [{}]
     # Authelia OIDC authentication & external resources
     - toEntities:
         - world

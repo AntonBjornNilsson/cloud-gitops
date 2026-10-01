@@ -20,6 +20,8 @@ spec:
               protocol: TCP
             - port: "80"
               protocol: TCP
+          rules:
+            http: [{}]
     # Health checks and probes
     - fromEntities:
         - host
@@ -36,6 +38,9 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
     # Internal communication within authelia namespace
     - toEndpoints:
         - matchLabels:

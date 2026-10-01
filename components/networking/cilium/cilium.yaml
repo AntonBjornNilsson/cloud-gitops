@@ -57,13 +57,14 @@ spec:
       prometheus:
         enabled: true
         serviceMonitor:
-          enabled: false
+          enabled: true
 
     # Prometheus Metrics & ServiceMonitors
     prometheus:
       enabled: true
       serviceMonitor:
-        enabled: false
+        enabled: true
+        trustCRDsExist: true
 
     # IPAM configuration matching cluster pod CIDRs
     ipam:
@@ -72,13 +73,42 @@ spec:
     # Automatically restart pods when config updates
     rollOutCiliumPods: true
 
+    # Layer 7 Proxy
+    l7Proxy: true
+
     # Hubble observability & UI
     hubble:
       enabled: true
       relay:
         enabled: true
+      # Redact sensitive headers & credentials in L7 flows
+      redact:
+        enabled: true
+        http:
+          urlQuery: false
+          userInfo: true
+          headers:
+            deny:
+              - "Authorization"
+              - "Proxy-Authorization"
+              - "Cookie"
+              - "Set-Cookie"
+      # L7 & flow metrics exported to Prometheus / VictoriaMetrics
+      metrics:
+        enabled:
+          - dns:query;ignoreAAAA
+          - drop
+          - tcp
+          - flow
+          - port-distribution
+          - icmp
+          - httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction
+        enableOpenMetrics: true
+        serviceMonitor:
+          enabled: true
       ui:
         enabled: true
+        rollOutPods: true
         ingress:
           enabled: true
           annotations:
