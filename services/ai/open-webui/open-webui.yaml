@@ -31,7 +31,7 @@ spec:
         name: open-webui
         namespace: open-webui
       interval: 12h
-  timeout: 30s
+  timeout: 10m
   install:
     strategy:
       name: RetryOnFailure
@@ -51,7 +51,7 @@ spec:
         providerUrl: ${open_webui_provider_url}
         providerName: ${open_webui_provider_name}
         scopes: ${open_webui_scopes}
-    replicaCount: 2
+    replicaCount: 1
 
     ollama:
       enabled: false
