@@ -31,7 +31,7 @@ spec:
         name: ollama
         namespace: ollama
       interval: 12h
-  timeout: 30s
+  timeout: 15m
   install:
     strategy:
       name: RetryOnFailure
@@ -48,7 +48,7 @@ spec:
         number: 1
       models:
         pull:
-          - "llama2:13b"
+          - "llama3.1:8b"
     service:
       type: LoadBalancer
     image:
@@ -90,7 +90,7 @@ spec:
                 annotations:
                   meta.helm.sh/release-name: ollama
                   meta.helm.sh/release-namespace: ollama
-                  metallb.io/loadBalancerIPs: "192.168.21.41"
+                  metallb.io/loadBalancerIPs: "192.168.21.42"
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy

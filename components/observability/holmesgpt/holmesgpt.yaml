@@ -53,19 +53,17 @@ spec:
       retryInterval: 3m
   values:
     # Model configuration using self-hosted Ollama inside cluster
+    # llama3.1:8b is used because it supports tool calling (required by HolmesGPT)
+    # llama2:13b does NOT support tools and will error
     modelList:
-      llama2-13b:
-        model: ollama_chat/llama2:13b
-        api_base: "http://ollama.ollama.svc.cluster.local:11434"
-        api_key: "not-needed"
-      "llama2:13b":
-        model: ollama_chat/llama2:13b
+      llama3-8b:
+        model: ollama_chat/llama3.1:8b
         api_base: "http://ollama.ollama.svc.cluster.local:11434"
         api_key: "not-needed"
 
     additionalEnvVars:
       - name: MODEL
-        value: "llama2-13b"
+        value: "llama3-8b"
 
     # Enable Holmes Operator for continuous investigations
     operator:
