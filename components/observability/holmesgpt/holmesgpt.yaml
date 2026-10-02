@@ -64,6 +64,12 @@ spec:
     additionalEnvVars:
       - name: MODEL
         value: "llama3-8b"
+      # llama3.1:8b has a 128K context window (131,072 tokens)
+      # Without these, HolmesGPT defaults to 200,000 input / 64,000 output
+      - name: OVERRIDE_MAX_CONTENT_SIZE
+        value: "131072"
+      - name: OVERRIDE_MAX_OUTPUT_TOKEN
+        value: "8192"
 
     # Enable Holmes Operator for continuous investigations
     operator:
