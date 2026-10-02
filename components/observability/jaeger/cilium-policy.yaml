@@ -13,7 +13,11 @@ spec:
         - remote-node
       toPorts:
         - ports:
+            - port: "80"
+              protocol: TCP
             - port: "16686"
+              protocol: TCP
+            - port: "16685"
               protocol: TCP
     # Trace ingestion from cluster services (OTLP gRPC/HTTP, Jaeger Thrift, Zipkin)
     - fromEntities:
@@ -24,18 +28,33 @@ spec:
               protocol: TCP
             - port: "4318"
               protocol: TCP
+            - port: "14250"
+              protocol: TCP
             - port: "14268"
+              protocol: TCP
+            - port: "9411"
               protocol: TCP
             - port: "6831"
               protocol: UDP
-    # Intra-namespace communication (Cassandra cluster, Collector -> Cassandra, Query -> Cassandra)
-    - fromEndpoints:
-        - {}
+            - port: "5778"
+              protocol: TCP
+    # Admin and metrics scraping
+    - fromEntities:
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "14269"
+              protocol: TCP
     # Health checks and probes
     - fromEntities:
         - host
         - remote-node
         - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
   egress:
     # DNS resolution
     - toEndpoints:

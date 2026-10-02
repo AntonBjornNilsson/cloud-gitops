@@ -25,20 +25,59 @@ spec:
   chart:
     spec:
       chart: jaeger
-      version: "1.x"
+      version: "3.x"
       sourceRef:
         kind: HelmRepository
         name: jaegertracing
         namespace: jaeger
       interval: 12h
-  timeout: 30s
+  timeout: 5m
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
   values:
-
-
-    # Ingress configuration for Jaeger UI
-    ingress:
+    provisionDataStore:
+      cassandra: false
+      elasticsearch: false
+      kafka: false
+    storage:
+      type: memory
+    allInOne:
       enabled: true
-      # To enable:
-      ingressClassName: traefik
-      hosts:
-        - jaeger.${domain}
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1024Mi
+      service:
+        headless: false
+        collector:
+          otlp:
+            grpc:
+              name: otlp-grpc
+              port: 4317
+            http:
+              name: otlp-http
+              port: 4318
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        hosts:
+          - jaeger.${domain}
+    agent:
+      enabled: false
+    collector:
+      enabled: false
+    query:
+      enabled: false
