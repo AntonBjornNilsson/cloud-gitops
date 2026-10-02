@@ -18,90 +18,81 @@ data:
     import urllib.request
     import urllib.error
 
-    NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "homelab-alerts")
-    NTFY_SERVER = os.environ.get("NTFY_SERVER", "http://ntfy.ntfy.svc.cluster.local").rstrip("/")
-    NTFY_WEB_URL = os.environ.get("NTFY_WEB_URL", "").rstrip("/")
-    BASE_URL = os.environ.get("BASE_URL", "").rstrip("/")
-    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-    GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
+    NTFY_TOPIC    = os.environ.get("NTFY_TOPIC", "homelab-alerts")
+    NTFY_SERVER   = os.environ.get("NTFY_SERVER", "http://ntfy.ntfy.svc.cluster.local").rstrip("/")
+    NTFY_WEB_URL  = os.environ.get("NTFY_WEB_URL", "").rstrip("/")
+    BASE_URL      = os.environ.get("BASE_URL", "").rstrip("/")
+    GITHUB_TOKEN  = os.environ.get("GITHUB_TOKEN", "")
+    GITHUB_REPO   = os.environ.get("GITHUB_REPO", "")
     GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
     K8S_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-    K8S_CA_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-    K8S_API = "https://kubernetes.default.svc"
+    K8S_CA_PATH    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+    K8S_API        = "https://kubernetes.default.svc"
 
-    # Pending remediations: token -> { id, title, description, fixes: [{path, content}], created_at, status }
-    remediations = {}
+    # In-memory store: token -> remediation item
+    remediations   = {}
     processed_checks = set()
 
-    def send_ntfy_notification(title, message, token):
-        action_url = f"{BASE_URL}/remediate/{token}"
-        actions_header = f"http, Yes (Push Fix), {action_url}, method=POST; view, No (Dismiss), {NTFY_WEB_URL}/{NTFY_TOPIC}"
-        
-        payload = {
-            "topic": NTFY_TOPIC,
-            "title": f"HolmesGPT: {title[:100]}",
-            "message": message[:4000],
-            "tags": ["warning", "robot"],
-            "actions": [
-                {
-                    "action": "http",
-                    "label": "Yes (Apply Fix)",
-                    "url": action_url,
-                    "method": "POST"
-                },
-                {
-                    "action": "view",
-                    "label": "No (Dismiss)",
-                    "url": f"{NTFY_WEB_URL}/{NTFY_TOPIC}"
-                }
-            ]
-        }
-        
+    # ─── ntfy ────────────────────────────────────────────────────────────────
+
+    def _post_ntfy(payload):
         try:
             req = urllib.request.Request(
                 f"{NTFY_SERVER}/{NTFY_TOPIC}",
                 data=json.dumps(payload).encode("utf-8"),
-                headers={
-                    "Content-Type": "application/json",
-                    "Actions": actions_header
-                },
+                headers={"Content-Type": "application/json"},
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
-                print(f"[ntfy] Notification sent, status {resp.status}")
+                print(f"[ntfy] Sent '{payload.get('title','?')}', status {resp.status}")
         except Exception as e:
-            print(f"[ntfy] Failed to send notification: {e}", file=sys.stderr)
+            print(f"[ntfy] Failed: {e}", file=sys.stderr)
 
-    def send_ntfy_followup(title, message):
-        try:
-            req = urllib.request.Request(
-                f"{NTFY_SERVER}/{NTFY_TOPIC}",
-                data=message.encode("utf-8"),
-                headers={
-                    "Title": title,
-                    "Tags": "white_check_mark"
-                },
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                print(f"[ntfy] Follow-up sent, status {resp.status}")
-        except Exception as e:
-            print(f"[ntfy] Failed to send follow-up: {e}", file=sys.stderr)
+    def send_ntfy_pr_notification(title, message, token, pr_number, pr_url):
+        """Notification with Merge PR / Reject PR action buttons."""
+        _post_ntfy({
+            "topic":   NTFY_TOPIC,
+            "title":   f"🔧 HolmesGPT Fix Ready: {title[:80]}",
+            "message": f"{message[:3000]}\n\n🔗 PR #{pr_number}: {pr_url}",
+            "tags":    ["warning", "robot"],
+            "actions": [
+                {"action": "http",  "label": "✅ Merge PR",  "url": f"{BASE_URL}/merge/{token}",  "method": "POST"},
+                {"action": "http",  "label": "❌ Reject PR", "url": f"{BASE_URL}/reject/{token}", "method": "POST"},
+                {"action": "view",  "label": "👁 View PR",   "url": pr_url}
+            ]
+        })
+
+    def send_ntfy_failure(title, message):
+        """Plain high-priority alert — no actionable fix was found."""
+        _post_ntfy({
+            "topic":    NTFY_TOPIC,
+            "title":    f"🚨 HolmesGPT Alert: {title[:80]}",
+            "message":  message[:4000],
+            "tags":     ["rotating_light", "robot"],
+            "priority": "high"
+        })
+
+    def send_ntfy_followup(title, message, tags=None):
+        _post_ntfy({
+            "topic":   NTFY_TOPIC,
+            "title":   title,
+            "message": message[:2000],
+            "tags":    tags or ["white_check_mark"]
+        })
+
+    # ─── Fix extraction ───────────────────────────────────────────────────────
 
     def extract_remediation_fixes(text):
         """
-        Parses code blocks or json in the format:
-        ```yaml:path/to/file.yaml
-        ...
-        ```
-        or explicit json:
-        {"files": [{"path": "...", "content": "..."}]}
+        Parses code blocks in the format:
+          ```yaml:path/to/file.yaml ... ```
+        or explicit JSON blocks.
         """
         fixes = []
         if not text:
             return fixes
 
-        # 1. Check for JSON block
+        # 1. JSON block
         json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
         if json_match:
             try:
@@ -114,257 +105,288 @@ data:
                     fixes.append({"path": data["path"].strip("/"), "content": data["content"]})
             except Exception:
                 pass
-
         if fixes:
             return fixes
 
-        # 2. Check for filename annotation on code fence: ```yaml:services/foo/bar.yaml
-        fence_matches = re.finditer(r'```(?:yaml|yml)?:([a-zA-Z0-9_\-\.\/]+)\n(.*?)```', text, re.DOTALL)
-        for m in fence_matches:
-            path = m.group(1).strip()
-            content = m.group(2)
-            fixes.append({"path": path.strip("/"), "content": content})
+        # 2. Filename-annotated code fence: ```yaml:services/foo/bar.yaml
+        for m in re.finditer(r'```(?:yaml|yml)?:([a-zA-Z0-9_\-\.\/]+)\n(.*?)```', text, re.DOTALL):
+            fixes.append({"path": m.group(1).strip().strip("/"), "content": m.group(2)})
 
-        # 3. Check for File: path/to/file\n```yaml ... ```
-        file_prefix_matches = re.finditer(r'(?:File|Path):\s*`?([a-zA-Z0-9_\-\.\/]+)`?\s*\n```(?:yaml|yml)?\n(.*?)```', text, re.DOTALL | re.IGNORECASE)
-        for m in file_prefix_matches:
-            path = m.group(1).strip()
-            content = m.group(2)
-            fixes.append({"path": path.strip("/"), "content": content})
+        # 3. File:/Path: prefix then ```yaml block
+        for m in re.finditer(
+            r'(?:File|Path):\s*`?([a-zA-Z0-9_\-\.\/]+)`?\s*\n```(?:yaml|yml)?\n(.*?)```',
+            text, re.DOTALL | re.IGNORECASE
+        ):
+            fixes.append({"path": m.group(1).strip().strip("/"), "content": m.group(2)})
 
         return fixes
 
-    def get_github_file(path):
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}?ref={GITHUB_BRANCH}"
-        req = urllib.request.Request(
-            url,
+    # ─── GitHub API helpers ───────────────────────────────────────────────────
+
+    def _github(method, path, payload=None):
+        url  = f"https://api.github.com/repos/{GITHUB_REPO}{path}"
+        data = json.dumps(payload).encode("utf-8") if payload else None
+        req  = urllib.request.Request(
+            url, data=data,
             headers={
                 "Authorization": f"Bearer {GITHUB_TOKEN}",
-                "Accept": "application/vnd.github+json",
-                "User-Agent": "HolmesGPT-Remediation"
-            }
+                "Accept":        "application/vnd.github+json",
+                "Content-Type":  "application/json",
+                "User-Agent":    "HolmesGPT-Remediation"
+            },
+            method=method
         )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def get_github_file(path, ref=None):
+        qs = f"?ref={ref or GITHUB_BRANCH}"
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                return data.get("sha"), base64.b64decode(data.get("content", "")).decode("utf-8")
+            d = _github("GET", f"/contents/{path}{qs}")
+            return d.get("sha"), base64.b64decode(d.get("content", "")).decode("utf-8")
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return None, None
             raise
 
-    def push_github_file(path, content, message, sha=None):
-        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}"
+    def get_branch_sha(branch):
+        return _github("GET", f"/git/ref/heads/{branch}")["object"]["sha"]
+
+    def create_branch(name, sha):
+        _github("POST", "/git/refs", {"ref": f"refs/heads/{name}", "sha": sha})
+
+    def push_file(path, content, branch, message, sha=None):
         payload = {
             "message": message,
             "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
-            "branch": GITHUB_BRANCH
+            "branch":  branch
         }
         if sha:
             payload["sha"] = sha
+        _github("PUT", f"/contents/{path}", payload)
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "Authorization": f"Bearer {GITHUB_TOKEN}",
-                "Accept": "application/vnd.github+json",
-                "Content-Type": "application/json",
-                "User-Agent": "HolmesGPT-Remediation"
-            },
-            method="PUT"
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            return data.get("commit", {}).get("html_url") or data.get("commit", {}).get("sha")
+    def create_pr(branch, title, body):
+        d = _github("POST", "/pulls", {
+            "title": title, "body": body,
+            "head": branch, "base": GITHUB_BRANCH
+        })
+        return d["number"], d["html_url"]
 
-    def execute_git_remediation(remediation_item):
-        fixes = remediation_item.get("fixes", [])
+    def merge_pr(number):
+        _github("PUT", f"/pulls/{number}/merge", {
+            "merge_method":  "squash",
+            "commit_title":  f"fix(holmesgpt): auto-merge remediation PR #{number}"
+        })
+
+    def close_pr(number):
+        _github("PATCH", f"/pulls/{number}", {"state": "closed"})
+
+    # ─── Remediation flow ─────────────────────────────────────────────────────
+
+    def open_remediation_pr(item):
+        """Creates a branch, pushes fix files, opens a PR. Returns (pr_number, pr_url)."""
+        fixes = item.get("fixes", [])
         if not fixes:
-            # If no parsed file fixes, create a remediation tracking issue / commit
-            return None, "No specific file changes could be automatically extracted from Holmes findings."
+            return None, None
 
-        results = []
+        branch = f"holmesgpt/fix-{item['id']}"
+        create_branch(branch, get_branch_sha(GITHUB_BRANCH))
+
+        msg = f"fix(holmesgpt): {item['title']}\n\nAuto-generated by HolmesGPT. Token: {item['id']}"
         for fix in fixes:
-            path = fix["path"]
-            new_content = fix["content"]
-            sha, _ = get_github_file(path)
-            commit_msg = f"fix(holmesgpt): {remediation_item['title']}\n\nAutomated remediation by HolmesGPT on user confirmation."
-            commit_info = push_github_file(path, new_content, commit_msg, sha=sha)
-            results.append(f"{path} ({commit_info})")
+            sha, _ = get_github_file(fix["path"])
+            push_file(fix["path"], fix["content"], branch, msg, sha=sha)
 
-        return results, None
+        body = (
+            f"## HolmesGPT Automated Remediation\n\n"
+            f"**Check:** {item['title']}\n\n"
+            f"<details><summary>Holmes findings</summary>\n\n"
+            f"```\n{item['description'][:3000]}\n```\n</details>\n\n"
+            f"**Files changed:** {', '.join(f['path'] for f in fixes)}\n\n"
+            f"_Auto-generated. Approve via ntfy or review manually._"
+        )
+        return create_pr(branch, f"fix(holmesgpt): {item['title'][:72]}", body)
+
+    def _handle_result(item):
+        """Shared logic: open PR if fixes exist, else plain failure ntfy."""
+        if item["fixes"]:
+            try:
+                pr_num, pr_url = open_remediation_pr(item)
+                item["pr_number"] = pr_num
+                item["pr_url"]    = pr_url
+                send_ntfy_pr_notification(item["title"], item["description"], item["id"], pr_num, pr_url)
+            except Exception as e:
+                print(f"[pr] Failed: {e}", file=sys.stderr)
+                send_ntfy_failure(item["title"], f"{item['description'][:2000]}\n\n⚠️ PR creation failed: {e}")
+        else:
+            send_ntfy_failure(item["title"], item["description"] or "No details available.")
+
+    # ─── HTTP handler ─────────────────────────────────────────────────────────
 
     class RequestHandler(BaseHTTPRequestHandler):
+        def log_message(self, fmt, *args):
+            print(f"[http] {self.address_string()} {fmt % args}")
+
+        def _json(self, code, obj):
+            body = json.dumps(obj).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _text(self, code, text):
+            self.send_response(code)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(text.encode("utf-8"))
+
         def do_GET(self):
             if self.path in ("/healthz", "/readyz"):
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(b'{"status": "ok"}')
+                self._json(200, {"status": "ok"})
             elif self.path == "/remediations":
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({k: v for k, v in remediations.items()}).encode("utf-8"))
+                self._json(200, remediations)
             else:
-                self.send_response(404)
-                self.end_headers()
+                self.send_response(404); self.end_headers()
 
         def do_POST(self):
-            content_length = int(self.headers.get("Content-Length", 0))
-            body_bytes = self.rfile.read(content_length) if content_length > 0 else b""
-            
-            # Remediate confirmation endpoint: /remediate/<token>
-            if self.path.startswith("/remediate/"):
-                token = self.path[len("/remediate/"):].split("?")[0].strip()
-                if token not in remediations:
-                    self.send_response(404)
-                    self.send_header("Content-Type", "text/plain")
-                    self.end_headers()
-                    self.wfile.write(b"Remediation request not found or expired.\n")
-                    return
+            length = int(self.headers.get("Content-Length", 0))
+            body   = self.rfile.read(length) if length > 0 else b""
 
-                item = remediations[token]
-                if item["status"] == "applied":
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/plain")
-                    self.end_headers()
-                    self.wfile.write(b"Remediation was already applied.\n")
-                    return
-
+            # /merge/<token>
+            if self.path.startswith("/merge/"):
+                token = self.path[7:].split("?")[0]
+                item  = remediations.get(token)
+                if not item:
+                    self._text(404, "Not found.\n"); return
+                if not item.get("pr_number"):
+                    self._text(400, "No PR for this token.\n"); return
+                if item["status"] in ("merged", "rejected"):
+                    self._text(200, f"Already {item['status']}.\n"); return
                 try:
-                    res, err = execute_git_remediation(item)
-                    if err:
-                        self.send_response(400)
-                        self.send_header("Content-Type", "text/plain")
-                        self.end_headers()
-                        self.wfile.write(f"Error applying remediation: {err}\n".encode("utf-8"))
-                        return
-
-                    item["status"] = "applied"
-                    send_ntfy_followup(
-                        "HolmesGPT Fix Pushed to Git",
-                        f"Remediation for '{item['title']}' applied successfully!\nPushed to {GITHUB_REPO} on {GITHUB_BRANCH}.\nFiles: {', '.join(res)}"
-                    )
-
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/plain")
-                    self.end_headers()
-                    self.wfile.write(f"Fix successfully pushed to {GITHUB_REPO} ({GITHUB_BRANCH})!\n".encode("utf-8"))
+                    merge_pr(item["pr_number"])
+                    item["status"] = "merged"
+                    send_ntfy_followup("✅ PR Merged",
+                        f"PR #{item['pr_number']} for '{item['title']}' merged into {GITHUB_BRANCH}.\n{item.get('pr_url','')}",
+                        tags=["white_check_mark"])
+                    self._text(200, f"PR #{item['pr_number']} merged.\n")
                 except Exception as e:
-                    print(f"Error in remediation execution: {e}", file=sys.stderr)
-                    self.send_response(500)
-                    self.send_header("Content-Type", "text/plain")
-                    self.end_headers()
-                    self.wfile.write(f"Failed to push git change: {e}\n".encode("utf-8"))
+                    self._text(500, f"Merge failed: {e}\n")
                 return
 
-            # Webhook receiver from Holmes / Alertmanager / Cron
+            # /reject/<token>
+            if self.path.startswith("/reject/"):
+                token = self.path[8:].split("?")[0]
+                item  = remediations.get(token)
+                if not item:
+                    self._text(404, "Not found.\n"); return
+                if not item.get("pr_number"):
+                    self._text(400, "No PR for this token.\n"); return
+                if item["status"] in ("merged", "rejected"):
+                    self._text(200, f"Already {item['status']}.\n"); return
+                try:
+                    close_pr(item["pr_number"])
+                    item["status"] = "rejected"
+                    send_ntfy_followup("❌ PR Rejected",
+                        f"PR #{item['pr_number']} for '{item['title']}' closed without merging.",
+                        tags=["x"])
+                    self._text(200, f"PR #{item['pr_number']} closed.\n")
+                except Exception as e:
+                    self._text(500, f"Reject failed: {e}\n")
+                return
+
+            # /webhook — Holmes result receiver
             if self.path == "/webhook":
                 try:
-                    data = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
+                    data = json.loads(body.decode("utf-8")) if body else {}
                 except Exception:
                     data = {}
 
-                # Extract text from slack-formatted webhook or raw json
-                text = ""
+                text  = ""
                 title = "Incident Detected"
                 if "attachments" in data and data["attachments"]:
-                    att = data["attachments"][0]
+                    att   = data["attachments"][0]
                     title = att.get("title", title)
-                    text = att.get("text", "")
+                    text  = att.get("text", "")
                 elif "text" in data:
-                    text = data.get("text", "")
+                    text = data["text"]
                 elif "message" in data:
-                    text = data.get("message", "")
+                    text  = data["message"]
                     title = data.get("name", title)
 
-                token = str(uuid.uuid4())[:8]
-                fixes = extract_remediation_fixes(text)
-                
-                remediations[token] = {
-                    "id": token,
-                    "title": title,
+                token_id = str(uuid.uuid4())[:8]
+                fixes    = extract_remediation_fixes(text)
+                item = {
+                    "id":          token_id,
+                    "title":       title,
                     "description": text,
-                    "fixes": fixes,
-                    "created_at": time.time(),
-                    "status": "pending"
+                    "fixes":       fixes,
+                    "pr_number":   None,
+                    "pr_url":      None,
+                    "created_at":  time.time(),
+                    "status":      "pending"
                 }
+                remediations[token_id] = item
+                _handle_result(item)
 
-                send_ntfy_notification(title, text, token)
-                
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"status": "received", "token": token, "fixes": len(fixes)}).encode("utf-8"))
+                self._json(200, {
+                    "status":     "pr_created" if item.get("pr_number") else "notified_no_fixes",
+                    "token":      token_id,
+                    "fixes":      len(fixes),
+                    "pr_number":  item.get("pr_number"),
+                    "pr_url":     item.get("pr_url")
+                })
                 return
 
-            self.send_response(404)
-            self.end_headers()
+            self.send_response(404); self.end_headers()
+
+    # ─── K8s HealthCheck watcher ──────────────────────────────────────────────
 
     def k8s_healthcheck_watcher():
-        """Periodically checks HealthCheck CRs in the holmesgpt namespace."""
         if not os.path.exists(K8S_TOKEN_PATH):
-            print("[watcher] Running outside cluster or missing serviceaccount token, watcher inactive.")
+            print("[watcher] No serviceaccount token — inactive.")
             return
-
-        with open(K8S_TOKEN_PATH, "r") as f:
-            token = f.read().strip()
-
+        with open(K8S_TOKEN_PATH) as f:
+            k8s_token = f.read().strip()
         ssl_ctx = ssl.create_default_context(cafile=K8S_CA_PATH)
 
         while True:
             try:
-                url = f"{K8S_API}/apis/holmesgpt.dev/v1alpha1/namespaces/holmesgpt/healthchecks"
                 req = urllib.request.Request(
-                    url,
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Accept": "application/json"
-                    }
+                    f"{K8S_API}/apis/holmesgpt.dev/v1alpha1/namespaces/holmesgpt/healthchecks",
+                    headers={"Authorization": f"Bearer {k8s_token}", "Accept": "application/json"}
                 )
                 with urllib.request.urlopen(req, context=ssl_ctx, timeout=10) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    items = data.get("items", [])
-                    for item in items:
-                        name = item.get("metadata", {}).get("name")
-                        status = item.get("status", {})
-                        result = status.get("result")
-                        
-                        if result == "fail" and name not in processed_checks:
+                    for hc in json.loads(resp.read().decode("utf-8")).get("items", []):
+                        name   = hc.get("metadata", {}).get("name", "unknown")
+                        status = hc.get("status", {})
+                        if status.get("result") == "fail" and name not in processed_checks:
                             processed_checks.add(name)
-                            message = status.get("message") or status.get("rationale") or "Health check failure detected."
+                            message  = status.get("message") or status.get("rationale") or "Health check failure."
                             token_id = str(uuid.uuid4())[:8]
-                            fixes = extract_remediation_fixes(message)
-                            
-                            remediations[token_id] = {
-                                "id": token_id,
-                                "title": f"HealthCheck Failed: {name}",
+                            item = {
+                                "id":          token_id,
+                                "title":       f"HealthCheck Failed: {name}",
                                 "description": message,
-                                "fixes": fixes,
-                                "created_at": time.time(),
-                                "status": "pending"
+                                "fixes":       extract_remediation_fixes(message),
+                                "pr_number":   None,
+                                "pr_url":      None,
+                                "created_at":  time.time(),
+                                "status":      "pending"
                             }
-                            
-                            print(f"[watcher] Found failed healthcheck '{name}', notifying ntfy...")
-                            send_ntfy_notification(f"HealthCheck Failed: {name}", message, token_id)
+                            remediations[token_id] = item
+                            print(f"[watcher] '{name}' failed — fixes: {len(item['fixes'])}")
+                            _handle_result(item)
             except Exception as e:
-                # Silently catch and retry after delay
-                pass
-
+                print(f"[watcher] Error: {e}", file=sys.stderr)
             time.sleep(15)
 
+    # ─── Entrypoint ───────────────────────────────────────────────────────────
+
     def main():
-        print(f"Starting Holmes Remediation Service on :8080")
-        print(f"Target repository: {GITHUB_REPO} ({GITHUB_BRANCH})")
-        print(f"ntfy topic: {NTFY_TOPIC}")
-
-        t = threading.Thread(target=k8s_healthcheck_watcher, daemon=True)
-        t.start()
-
-        server = HTTPServer(("0.0.0.0", 8080), RequestHandler)
-        server.serve_forever()
+        print(f"[startup] Holmes Remediation :8080  repo={GITHUB_REPO}  branch={GITHUB_BRANCH}")
+        print(f"[startup] ntfy={NTFY_SERVER}/{NTFY_TOPIC}  base_url={BASE_URL}")
+        threading.Thread(target=k8s_healthcheck_watcher, daemon=True).start()
+        HTTPServer(("0.0.0.0", 8080), RequestHandler).serve_forever()
 
     if __name__ == "__main__":
         main()
