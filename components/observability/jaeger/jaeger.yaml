@@ -39,11 +39,13 @@ spec:
     remediation:
       retries: 3
   upgrade:
+    force: true
+    remediation:
+      retries: 3
+      strategy: uninstall
     strategy:
       name: RetryOnFailure
       retryInterval: 2m
-    remediation:
-      retries: 3
   values:
     provisionDataStore:
       cassandra: false
