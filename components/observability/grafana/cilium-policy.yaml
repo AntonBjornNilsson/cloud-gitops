@@ -57,6 +57,16 @@ spec:
               protocol: TCP
           rules:
             http: [{}]
+    # Jaeger tracing queries
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jaeger
+      toPorts:
+        - ports:
+            - port: "16686"
+              protocol: TCP
+          rules:
+            http: [{}]
     # Authelia OIDC authentication & external resources
     - toEntities:
         - world

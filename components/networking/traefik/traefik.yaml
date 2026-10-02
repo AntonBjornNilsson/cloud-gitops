@@ -67,6 +67,13 @@ spec:
       web:
         redirectTo:
           port: websecure
+    tracing:
+      addInternals: true
+      otlp:
+        enabled: true
+        http:
+          enabled: true
+          endpoint: http://jaeger-collector.jaeger.svc.cluster.local:4318/v1/traces
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
