@@ -46,9 +46,10 @@ spec:
         enabled: true
         type: "amd"
         number: 1
-      models:
-        pull:
-          - "llama3.1:8b"
+      # models.pull is intentionally omitted — the pull Job runs on every helm
+      # upgrade and causes Flux health checks to time out. Models are persisted
+      # on the PVC and survive pod restarts. Pull new models imperatively via:
+      #   kubectl exec -n ollama deploy/ollama -- ollama pull <model>
     service:
       type: LoadBalancer
     image:
