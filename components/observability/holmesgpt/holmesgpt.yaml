@@ -63,8 +63,8 @@ spec:
   values:
     # Model configuration using Gemini
     modelList:
-      gemini-2.5-flash:
-        model: gemini/gemini-2.5-flash
+      gemini-3.1-flash-lite:
+        model: gemini/gemini-3.1-flash-lite
         api_key: envRef:GEMINI_API_KEY
 
     # Supply Gemini API key to Holmes
@@ -75,7 +75,7 @@ spec:
             name: holmes-secrets
             key: gemini-api-key
       - name: MODEL
-        value: "gemini-2.5-flash"
+        value: "gemini-3.1-flash-lite"
 
     # Enable Holmes Operator for continuous investigations
     operator:

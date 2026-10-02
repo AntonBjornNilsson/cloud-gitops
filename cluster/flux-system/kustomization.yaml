@@ -12,4 +12,4 @@ resources:
 
   # Services
   - flux-services.yaml
-  # - ../cluster-oidc-admin.yaml
+
