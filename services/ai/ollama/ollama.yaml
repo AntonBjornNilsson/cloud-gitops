@@ -40,10 +40,15 @@ spec:
     strategy:
       name: RetryOnFailure
       retryInterval: 3m
-
-
   values:
-
+    ollama:
+      gpu:
+        enabled: true
+        type: "amd"
+        number: 1
+      models:
+        pull:
+          - "llama2:13b"
     service:
       type: LoadBalancer
     image:
@@ -127,6 +132,14 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+    # Intra-namespace communication (model pull job <-> ollama server)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ollama
+      toPorts:
+        - ports:
+            - port: "11434"
+              protocol: TCP
     # Model downloads from ollama library / huggingface
     - toEntities:
         - world
