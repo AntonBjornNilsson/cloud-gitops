@@ -100,10 +100,12 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # API requests from open-webui, cluster clients, and local network via LoadBalancer
+    # API requests from open-webui, holmesgpt, cluster clients, and local network via LoadBalancer
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: open-webui
+        - matchLabels:
+            io.kubernetes.pod.namespace: holmesgpt
       toPorts:
         - ports:
             - port: "11434"

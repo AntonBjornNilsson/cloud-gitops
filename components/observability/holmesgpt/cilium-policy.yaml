@@ -69,3 +69,11 @@ spec:
         - ports:
             - port: "8428"
               protocol: TCP
+    # Ollama LLM access
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ollama
+      toPorts:
+        - ports:
+            - port: "11434"
+              protocol: TCP

@@ -9,15 +9,6 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: holmes-secrets
-  namespace: holmesgpt
-type: Opaque
-stringData:
-  gemini-api-key: "${google_ai_token}"
----
-apiVersion: v1
-kind: Secret
-metadata:
   name: holmes-github-token
   namespace: holmesgpt
 type: Opaque
@@ -61,21 +52,20 @@ spec:
       name: RetryOnFailure
       retryInterval: 3m
   values:
-    # Model configuration using Gemini
+    # Model configuration using self-hosted Ollama inside cluster
     modelList:
-      gemini-3.1-flash-lite:
-        model: gemini/gemini-3.1-flash-lite
-        api_key: envRef:GEMINI_API_KEY
+      llama2-13b:
+        model: ollama_chat/llama2:13b
+        api_base: "http://ollama.ollama.svc.cluster.local:11434"
+        api_key: "not-needed"
+      "llama2:13b":
+        model: ollama_chat/llama2:13b
+        api_base: "http://ollama.ollama.svc.cluster.local:11434"
+        api_key: "not-needed"
 
-    # Supply Gemini API key to Holmes
     additionalEnvVars:
-      - name: GEMINI_API_KEY
-        valueFrom:
-          secretKeyRef:
-            name: holmes-secrets
-            key: gemini-api-key
       - name: MODEL
-        value: "gemini-3.1-flash-lite"
+        value: "llama2-13b"
 
     # Enable Holmes Operator for continuous investigations
     operator:
