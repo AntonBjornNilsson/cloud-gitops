@@ -39,17 +39,17 @@ spec:
       root_url: "https://grafana.${domain}"
     auth:
       signout_redirect_url: "${victoriametrics_auth_redirect_url}"
-      oauth_auto_login: "true"
     "auth.generic_oauth":
       name: "authelia"
       enabled: "true"
+      auto_login: "true"
       client_id: "${victoriametrics_client_id}"
       client_secret: "${victoriametrics_client_secret}"
       scopes: "openid profile email groups"
       auth_url: "${victoriametrics_auth_url}"
       token_url: "${victoriametrics_token_url}"
       api_url: "${victoriametrics_api_url}"
-      role_attribute_path: "contains(groups, 'Grafana Admins') && 'Admin' || contains(groups, 'Grafana Editors') && 'Editor' || 'Viewer'"
+      role_attribute_path: "contains(groups, 'admin') && 'Admin' || 'Viewer'"
   ingress:
     metadata:
       annotations:

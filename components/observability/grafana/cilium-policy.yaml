@@ -73,7 +73,20 @@ spec:
               protocol: TCP
           rules:
             http: [{}]
-    # Authelia OIDC authentication & external resources
+    # OIDC token exchange with Authelia via the public auth hostname. It
+    # resolves to the Traefik LoadBalancer IP, which Cilium translates to the
+    # Traefik pod, so the policy sees the container ports, not 80/443.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+            app.kubernetes.io/name: traefik
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+            - port: "8443"
+              protocol: TCP
+    # External resources (plugins, grafana.com dashboards)
     - toEntities:
         - world
         - cluster

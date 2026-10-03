@@ -98,6 +98,8 @@ spec:
         file:
           enabled: true
           path: "/etc/authelia/users_database.yml"
+          # Reload users when the authelia-users Secret changes
+          watch: true
       access_control:
         default_policy: "one_factor"
       session:
