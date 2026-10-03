@@ -20,7 +20,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-cbb254fe-1be8-402a-8906-758457ade992
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwo
   fromBackup: "${s3_bucket_longhorn}?backup=backup-a637912ce6344817&volume=pvc-cbb254fe-1be8-402a-8906-758457ade992"
@@ -79,7 +79,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwo
   fromBackup: "${s3_bucket_longhorn}?backup=backup-ed8f87476f5b4921&volume=pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96"
@@ -138,7 +138,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwx
   fromBackup: "${s3_bucket_longhorn}?backup=backup-465b5562073d4b3e&volume=pvc-06dd9847-4327-4ba5-841e-0cb677e678e8"
@@ -189,7 +189,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwx
   fromBackup: "${s3_bucket_longhorn}?backup=backup-61519e37534a415a&volume=pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a"
@@ -240,7 +240,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwx
   fromBackup: "${s3_bucket_longhorn}?backup=backup-be130b51800b4e42&volume=pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168"
@@ -291,7 +291,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-296931e2-c993-499e-aaa2-583732c2f5ec
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwo
   fromBackup: "${s3_bucket_longhorn}?backup=backup-2c8dcf2725c140c9&volume=pvc-296931e2-c993-499e-aaa2-583732c2f5ec"
@@ -350,7 +350,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: rwo
   fromBackup: "${s3_bucket_longhorn}?backup=backup-58239e3f018046d2&volume=pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3"

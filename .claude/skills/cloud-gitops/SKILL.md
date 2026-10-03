@@ -93,6 +93,7 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
 ## Storage & backups (Longhorn)
 
 - PVCs are NOT backed up by default. Opt in with label or annotation `backup.longhorn.io/enabled: "true"`.
+  Kyverno turns that into the Longhorn `backup` recurring-job group. Never schedule backups on the `default` group (Longhorn auto-adds every unlabeled volume to it).
 - Daily backup 02:00 to S3; CronJob `longhorn-backup-sync` at 03:00 commits updates to
   `components/storage/longhorn/config/restore/volumes.yaml` ("chore(longhorn): update latest PVC backup tags ... [skip ci]").
   **That bot pushes to main daily — `git pull --rebase` before pushing.** Do not hand-edit `volumes.yaml` except to remove entries.

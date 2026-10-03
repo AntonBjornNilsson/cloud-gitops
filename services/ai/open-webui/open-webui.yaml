@@ -52,6 +52,9 @@ spec:
         providerName: ${open_webui_provider_name}
         scopes: ${open_webui_scopes}
     replicaCount: 1
+    persistence:
+      labels:
+        backup.longhorn.io/enabled: "true"
 
     ollama:
       enabled: false

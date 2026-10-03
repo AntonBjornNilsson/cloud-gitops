@@ -101,10 +101,10 @@ def generate_restore_yaml(pvcs, pvs, backups):
         labels = pvc.get("metadata", {}).get("labels") or {}
         annotations = pvc.get("metadata", {}).get("annotations") or {}
         backup_enabled = (
-            labels.get("recurring-job-group.longhorn.io/default") == "enabled"
+            labels.get("recurring-job-group.longhorn.io/backup") == "enabled"
             or labels.get("backup.longhorn.io/enabled") == "true"
             or labels.get("backup") == "true"
-            or annotations.get("recurring-job-group.longhorn.io/default") == "enabled"
+            or annotations.get("recurring-job-group.longhorn.io/backup") == "enabled"
             or annotations.get("backup.longhorn.io/enabled") == "true"
             or annotations.get("backup") == "true"
         )
@@ -151,7 +151,7 @@ metadata:
     kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
   labels:
     longhornvolume: {vol}
-    recurring-job-group.longhorn.io/default: enabled
+    recurring-job-group.longhorn.io/backup: enabled
 spec:
   accessMode: {longhorn_access_mode}
   fromBackup: "{s3_url}"

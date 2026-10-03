@@ -10,9 +10,11 @@ spec:
   task: backup
   # Keep the last 7 backups
   retain: 7
-  # Run on all volumes with matching labels
+  # Only volumes opted in via the "backup" group (see kyverno add-pvc-annotations).
+  # Do NOT use "default": Longhorn auto-adds every volume without recurring-job
+  # labels to the default group, which would back up everything.
   groups:
-    - default
+    - backup
   # Concurrency limit: how many volumes to backup simultaneously
   concurrency: 2
   # Labels to apply to created backups

@@ -321,10 +321,12 @@ metadata:
 ```
 
 ### Automation & Flow:
-1. **Kyverno Mutation**: ClusterPolicy `add-pvc-annotations` detects `backup.longhorn.io/enabled: "true"` (or `recurring-job-group.longhorn.io/default: enabled`) and applies:
+1. **Kyverno Mutation**: ClusterPolicy `add-pvc-annotations` detects `backup.longhorn.io/enabled: "true"` (or `backup: "true"`) and applies:
    - `recurring-job.longhorn.io/source: enabled`
-   - `recurring-job-group.longhorn.io/default: enabled`
-2. **Longhorn RecurringJob**: Longhorn attaches the volume to the `daily-backup` recurring job group (runs daily at 02:00, backed up to S3).
+   - `recurring-job-group.longhorn.io/backup: enabled`
+   A second rule (`mutateExistingOnPolicyUpdate`) applies the same labels to PVCs that already exist.
+2. **Longhorn RecurringJob**: the `daily-backup` RecurringJob runs on the `backup` group only (daily at 02:00, to S3).
+   Never put the backup job in the `default` group: Longhorn auto-assigns `default` to every volume without recurring-job labels, so it would back up all volumes (caches, model stores, ...).
 3. **Backup Sync CronJob**: `sync-longhorn-backups.py` only indexes and manifests volumes whose PVCs are explicitly opted into backups, keeping `components/storage/longhorn/config/restore/volumes.yaml` clean and cache-free.
 
 

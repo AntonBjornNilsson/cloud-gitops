@@ -17,6 +17,9 @@ spec:
           annotations:
             +(helm.sh/resource-policy): keep
             +(kustomize.toolkit.fluxcd.io/prune): disabled
+  # Opt-in PVCs join the Longhorn "backup" recurring-job group (daily-backup).
+  # Not "default": Longhorn puts every volume without recurring-job labels in
+  # the default group, so using it would back up everything.
   - name: enable-longhorn-pvc-backup
     match:
       any:
@@ -42,15 +45,47 @@ spec:
           - PersistentVolumeClaim
           annotations:
             backup: "true"
-      - resources:
-          kinds:
-          - PersistentVolumeClaim
-          annotations:
-            recurring-job-group.longhorn.io/default: enabled
     mutate:
       patchStrategicMerge:
         metadata:
           labels:
             +(recurring-job.longhorn.io/source): enabled
-            +(recurring-job-group.longhorn.io/default): enabled
-
+            +(recurring-job-group.longhorn.io/backup): enabled
+  # Same as above for PVCs that already exist when the policy changes.
+  - name: enable-longhorn-pvc-backup-existing
+    match:
+      any:
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          selector:
+            matchLabels:
+              backup.longhorn.io/enabled: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          selector:
+            matchLabels:
+              backup: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          annotations:
+            backup.longhorn.io/enabled: "true"
+      - resources:
+          kinds:
+          - PersistentVolumeClaim
+          annotations:
+            backup: "true"
+    mutate:
+      mutateExistingOnPolicyUpdate: true
+      targets:
+      - apiVersion: v1
+        kind: PersistentVolumeClaim
+        name: "{{ request.object.metadata.name }}"
+        namespace: "{{ request.object.metadata.namespace }}"
+      patchStrategicMerge:
+        metadata:
+          labels:
+            +(recurring-job.longhorn.io/source): enabled
+            +(recurring-job-group.longhorn.io/backup): enabled

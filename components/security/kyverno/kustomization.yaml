@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - kyverno.yaml
   - cilium-policy.yaml
+  - rbac-background-controller.yaml
   - system-kyverno-config.yaml
