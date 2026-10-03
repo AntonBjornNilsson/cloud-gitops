@@ -7,11 +7,17 @@ metadata:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: ntfy-config
   namespace: ntfy
-data:
+type: Opaque
+stringData:
+  # ntfy does its own auth (not Authelia) so the mobile apps can log in.
+  # Users, ACLs and tokens are provisioned from the secrets repo on startup:
+  #   ntfy_admin_user / ntfy_admin_password_hash  -> you (phone, web app)
+  #   ntfy_alertmanager_password_hash / ntfy_alertmanager_token -> alert bridge
+  # Hashes: `ntfy user hash`; token: `ntfy token generate` (tk_..., 32 chars).
   server.yml: |
     base-url: "https://ntfy.${domain}"
     listen-http: ":80"
@@ -24,6 +30,16 @@ data:
     upstream-base-url: "https://ntfy.sh"
     # Prometheus metrics on a separate port (not reachable via the Ingress)
     metrics-listen-http: ":9090"
+    auth-file: "/var/lib/ntfy/user.db"
+    auth-default-access: "deny-all"
+    enable-login: true
+    auth-users:
+      - "${ntfy_admin_user}:${ntfy_admin_password_hash}:admin"
+      - "alertmanager:${ntfy_alertmanager_password_hash}:user"
+    auth-access:
+      - "alertmanager:homelab-alerts:wo"
+    auth-tokens:
+      - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -60,6 +76,9 @@ spec:
     metadata:
       labels:
         app: ntfy
+      annotations:
+        # Bump to restart ntfy after changing server.yml
+        config-version: "1"
     spec:
       containers:
         - name: ntfy
@@ -98,8 +117,8 @@ spec:
             periodSeconds: 15
       volumes:
         - name: config
-          configMap:
-            name: ntfy-config
+          secret:
+            secretName: ntfy-config
         - name: data
           persistentVolumeClaim:
             claimName: ntfy-data
@@ -124,6 +143,11 @@ kind: Ingress
 metadata:
   name: ntfy
   namespace: ntfy
+  # ntfy authenticates itself; Authelia would block the mobile apps
+  labels:
+    enable-oauth: "false"
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: ""
 spec:
   rules:
     - host: ntfy.${domain}

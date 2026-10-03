@@ -12,6 +12,9 @@ stringData:
       addr: :8080
     ntfy:
       baseurl: http://ntfy.ntfy.svc.cluster.local:80
+      # Write-only token for the homelab-alerts topic (see ntfy server.yml)
+      auth:
+        token: "${ntfy_alertmanager_token}"
       notification:
         # ntfy topics only allow [-_A-Za-z0-9]
         topic: homelab-alerts
