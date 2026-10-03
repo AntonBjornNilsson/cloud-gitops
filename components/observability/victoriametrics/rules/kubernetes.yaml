@@ -12,10 +12,16 @@ spec:
     - name: workloads
       rules:
         - alert: ContainerOOMKilled
+          # Aggregate away kube-state-metrics' own instance/pod labels so a
+          # restart of kube-state-metrics does not look like container restarts.
           expr: |
-            (kube_pod_container_status_restarts_total - kube_pod_container_status_restarts_total offset 15m >= 1)
-            and ignoring(reason)
-            min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[15m]) == 1
+            (
+              sum by (namespace, pod, container) (kube_pod_container_status_restarts_total)
+              - sum by (namespace, pod, container) (kube_pod_container_status_restarts_total offset 15m)
+              >= 1
+            )
+            and on(namespace, pod, container)
+            max by (namespace, pod, container) (max_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[15m])) == 1
           labels:
             severity: warning
           annotations:
@@ -23,7 +29,10 @@ spec:
             description: "The container hit its memory limit and was killed in the last 15 minutes. Raise the limit or find the leak."
 
         - alert: ContainerRestartingOften
-          expr: increase(kube_pod_container_status_restarts_total[1h]) > 3
+          expr: |
+            sum by (namespace, pod, container) (kube_pod_container_status_restarts_total)
+            - sum by (namespace, pod, container) (kube_pod_container_status_restarts_total offset 1h)
+            > 3
           labels:
             severity: warning
           annotations:

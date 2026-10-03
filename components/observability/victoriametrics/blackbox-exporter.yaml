@@ -31,6 +31,12 @@ spec:
       retries: 3
   values:
     fullnameOverride: blackbox-exporter
+    # Unprivileged ICMP (ping sockets) for the internet latency/loss probes;
+    # a NET_RAW capability is not effective for a non-root process.
+    podSecurityContext:
+      sysctls:
+        - name: net.ipv4.ping_group_range
+          value: "0 2147483647"
     securityContext:
       runAsUser: 1000
       runAsGroup: 1000
@@ -39,8 +45,6 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-        # ICMP probes (internet latency / packet loss)
-        add: ["NET_RAW"]
     resources:
       requests:
         cpu: 10m
@@ -56,14 +60,15 @@ spec:
             valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
             follow_redirects: true
             preferred_ip_protocol: ip4
-        # Public endpoints served by Traefik: must be HTTPS. Redirects to the
-        # Authelia portal are followed, so a 2xx means Traefik + Authelia +
-        # cert are all fine.
+        # Public endpoints served by Traefik: must be HTTPS. Authelia answers
+        # non-browser requests to protected apps with 401, which still proves
+        # Traefik, TLS and Authelia all responded.
         http_ingress:
           prober: http
           timeout: 10s
           http:
             valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            valid_status_codes: [200, 204, 401]
             follow_redirects: true
             fail_if_not_ssl: true
             preferred_ip_protocol: ip4
@@ -183,8 +188,8 @@ spec:
       labels:
         probe_group: dns
       targets:
-        # LAN resolver
-        - adguard-home-dns.adguard-home.svc.cluster.local:53
+        # LAN resolver (re-add when adguard-home is enabled again)
+        # - adguard-home-dns.adguard-home.svc.cluster.local:53
         # Public resolvers (upstream health / WAN DNS latency)
         - 1.1.1.1:53
         - 8.8.8.8:53

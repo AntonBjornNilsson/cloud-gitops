@@ -27,6 +27,17 @@ spec:
               protocol: TCP
             - port: "10428"
               protocol: TCP
+    # VictoriaMetrics operator admission webhook, called by the API server
+    # (reaches the pod via konnectivity-agent on k0s)
+    - fromEntities:
+        - kube-apiserver
+        - cluster
+        - host
+        - remote-node
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
     # Intra-namespace component traffic (vmagent, vmalert, vmalertmanager, grafana, node-exporter)
     - fromEndpoints:
         - {}
