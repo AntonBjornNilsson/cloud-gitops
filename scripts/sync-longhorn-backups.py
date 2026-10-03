@@ -146,6 +146,8 @@ kind: Volume
 metadata:
   name: {vol}
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: {vol}
     recurring-job-group.longhorn.io/default: enabled
@@ -161,6 +163,7 @@ kind: PersistentVolume
 metadata:
   name: {vol}
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:

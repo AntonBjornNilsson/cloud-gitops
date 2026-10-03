@@ -15,6 +15,8 @@ kind: Volume
 metadata:
   name: pvc-cbb254fe-1be8-402a-8906-758457ade992
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-cbb254fe-1be8-402a-8906-758457ade992
     recurring-job-group.longhorn.io/default: enabled
@@ -30,6 +32,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-cbb254fe-1be8-402a-8906-758457ade992
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
@@ -69,6 +72,8 @@ kind: Volume
 metadata:
   name: pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96
     recurring-job-group.longhorn.io/default: enabled
@@ -84,6 +89,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-76eaadd8-02d4-43d6-ab4f-1a50b9735d96
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
@@ -123,6 +129,8 @@ kind: Volume
 metadata:
   name: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
     recurring-job-group.longhorn.io/default: enabled
@@ -138,6 +146,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-06dd9847-4327-4ba5-841e-0cb677e678e8
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
@@ -169,6 +178,8 @@ kind: Volume
 metadata:
   name: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
     recurring-job-group.longhorn.io/default: enabled
@@ -184,6 +195,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
@@ -215,6 +227,8 @@ kind: Volume
 metadata:
   name: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
     recurring-job-group.longhorn.io/default: enabled
@@ -230,6 +244,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
@@ -261,6 +276,8 @@ kind: Volume
 metadata:
   name: pvc-296931e2-c993-499e-aaa2-583732c2f5ec
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-296931e2-c993-499e-aaa2-583732c2f5ec
     recurring-job-group.longhorn.io/default: enabled
@@ -276,6 +293,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-296931e2-c993-499e-aaa2-583732c2f5ec
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
@@ -315,6 +333,8 @@ kind: Volume
 metadata:
   name: pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3
   namespace: longhorn-system
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     longhornvolume: pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3
     recurring-job-group.longhorn.io/default: enabled
@@ -330,6 +350,7 @@ kind: PersistentVolume
 metadata:
   name: pvc-7cb0262a-76f8-4e92-bf22-f8ce75b163c3
   annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:
