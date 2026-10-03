@@ -148,6 +148,7 @@ metadata:
   namespace: longhorn-system
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
   labels:
     longhornvolume: {vol}
     recurring-job-group.longhorn.io/default: enabled
@@ -164,6 +165,7 @@ metadata:
   name: {vol}
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
+    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
     pv.kubernetes.io/bound-by-controller: "yes"
 spec:
   capacity:

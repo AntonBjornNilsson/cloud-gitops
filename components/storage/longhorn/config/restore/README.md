@@ -16,6 +16,15 @@ This directory contains declarative Kubernetes and Longhorn custom resources use
    - When Flux deploys `services/`, each application's `PersistentVolumeClaim` immediately binds to the pre-restored PV instead of provisioning an empty disk.
    - Workloads start with 100% of their backed-up state intact.
 
+## Live-Cluster Safety
+
+Every generated `Volume` and `PersistentVolume` carries two Flux annotations:
+
+- `kustomize.toolkit.fluxcd.io/ssa: IfNotPresent` — Flux only *creates* them (bootstrap / DR) and never updates existing ones. Setting `fromBackup` on an existing, empty-provisioned volume makes Longhorn start a restore on it, which leaves the volume stuck "not ready for workloads".
+- `kustomize.toolkit.fluxcd.io/prune: disabled` — dropping an entry from `volumes.yaml` never deletes the live volume or its data.
+
+The nightly commits therefore only keep the DR snapshot in Git up to date; they do not change the running cluster.
+
 ## Manual Trigger
 
 To trigger an immediate backup sync from your workstation without waiting for the nightly CronJob:
