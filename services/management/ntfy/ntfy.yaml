@@ -78,7 +78,7 @@ spec:
         app: ntfy
       annotations:
         # Bump to restart ntfy after changing server.yml
-        config-version: "1"
+        config-version: "2"
     spec:
       containers:
         - name: ntfy

@@ -42,7 +42,11 @@ spec:
     #   snapshotterReplicaCount: 1
     defaultSettings:
       # defaultReplicaCount: 1
-      storageOverProvisioningPercentage: 100
+      # Volumes are thin-provisioned and mostly empty; at 100% the full size
+      # of every volume counts against each disk, so new replicas could not be
+      # scheduled on node-sized disks. storageMinimalAvailablePercentage still
+      # keeps real usage from filling a disk.
+      storageOverProvisioningPercentage: 200
       storageMinimalAvailablePercentage: 10
       taintToleration: "GPU=true:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
 
