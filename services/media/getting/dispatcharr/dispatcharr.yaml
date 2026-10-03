@@ -180,6 +180,11 @@ spec:
               value: "9191"
             - name: IP6TABLES
               value: "off"
+            # Gluetun otherwise rewrites the pod-shared resolv.conf to its own
+            # forwarder, which is dead whenever the tunnel is down, so web/celery
+            # cannot resolve dispatcharr-db/redis. Keep cluster DNS instead.
+            - name: DNS_KEEP_NAMESERVER
+              value: "on"
           ports:
             - name: http
               containerPort: 9191
@@ -203,6 +208,13 @@ spec:
               value: dispatcharr-redis
             - name: DISPATCHARR_LOG_LEVEL
               value: info
+          # nginx answers 502 on / until the Django backend (and thus DB/Redis) is up
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9191
+            periodSeconds: 10
+            failureThreshold: 3
           volumeMounts:
             - name: data
               mountPath: /data
