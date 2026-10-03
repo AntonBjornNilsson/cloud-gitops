@@ -1,0 +1,264 @@
+---
+# Ingress, DNS, CNI, synthetic probes and WAN.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: networking
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: probes
+      rules:
+        - alert: EndpointDown
+          expr: probe_success{probe_group="ingress"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.ingress }} is unreachable"
+            description: "HTTPS probe of {{ $labels.instance }} has failed for 5 minutes."
+
+        - alert: EndpointSlow
+          expr: avg_over_time(probe_duration_seconds{probe_group="ingress"}[10m]) > 3
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.ingress }} responds slowly"
+            description: "Average end-to-end probe time is {{ $value | humanizeDuration }} for {{ $labels.instance }}."
+
+        - alert: EndpointCertificateExpiring
+          expr: (probe_ssl_earliest_cert_expiry{probe_group="ingress"} - time()) < 14 * 86400
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Certificate served for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+        - alert: InternalServiceDown
+          expr: probe_success{probe_group="internal"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.instance }} health check failing"
+            description: "This service is part of the auth or alerting path."
+
+        - alert: ClusterDNSFailing
+          expr: probe_success{probe_group="dns", instance=~".*\\.svc\\.cluster\\.local:53"} == 0
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "DNS server {{ $labels.instance }} is not answering"
+            description: "Name resolution through this server has failed for 3 minutes."
+
+        - alert: UpstreamDNSFailing
+          expr: probe_success{probe_group="dns", instance!~".*\\.svc\\.cluster\\.local:53"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Public DNS resolver {{ $labels.instance }} is not answering"
+
+        - alert: DNSResolutionSlow
+          expr: avg_over_time(probe_dns_lookup_time_seconds{probe_group="dns"}[10m]) > 0.5
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "DNS lookups via {{ $labels.instance }} are slow"
+            description: "Average lookup time {{ $value | humanizeDuration }}."
+
+    - name: internet
+      rules:
+        - alert: InternetDown
+          expr: max(probe_success{probe_group="internet"}) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Internet connectivity lost"
+            description: "All ICMP and HTTPS probes to public hosts are failing."
+
+        - alert: InternetPacketLoss
+          expr: 1 - avg by (instance) (avg_over_time(probe_success{job="blackbox-internet-icmp"}[10m])) > 0.1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanizePercentage }} packet loss to {{ $labels.instance }}"
+
+        - alert: InternetLatencyHigh
+          expr: avg by (instance) (avg_over_time(probe_icmp_duration_seconds{phase="rtt"}[10m])) > 0.1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Round-trip time to {{ $labels.instance }} is {{ $value | humanizeDuration }}"
+
+    - name: traefik
+      rules:
+        - alert: TraefikDown
+          expr: sum(kube_deployment_status_replicas_available{namespace="traefik", deployment="traefik"}) == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Traefik has no available replicas"
+            description: "Every ingress is down."
+
+        - alert: TraefikConfigReloadFailing
+          expr: traefik_config_last_reload_success == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Traefik failed to apply its latest configuration"
+
+        - alert: TraefikServiceErrorRate
+          expr: |
+            (
+              sum by (exported_service) (rate(traefik_service_requests_total{code=~"5.."}[5m]))
+              / sum by (exported_service) (rate(traefik_service_requests_total[5m]))
+            ) > 0.05
+            and sum by (exported_service) (rate(traefik_service_requests_total[5m])) > 0.02
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.exported_service }}: {{ $value | humanizePercentage }} of requests fail with 5xx"
+        - alert: TraefikServiceErrorRate
+          expr: |
+            (
+              sum by (exported_service) (rate(traefik_service_requests_total{code=~"5.."}[5m]))
+              / sum by (exported_service) (rate(traefik_service_requests_total[5m]))
+            ) > 0.25
+            and sum by (exported_service) (rate(traefik_service_requests_total[5m])) > 0.02
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.exported_service }}: {{ $value | humanizePercentage }} of requests fail with 5xx"
+
+        # Long-lived requests (streams, websockets, server-sent events, long
+        # polling) are excluded: their "duration" is the session length.
+        - alert: TraefikServiceSlow
+          expr: |
+            histogram_quantile(0.95, sum by (exported_service, le) (rate(traefik_service_request_duration_seconds_bucket{exported_service!~"(ntfy|jellyfin|dispatcharr|open-webui|ollama|headlamp|kube-system-hubble-ui).*"}[10m]))) > 2
+            and sum by (exported_service) (rate(traefik_service_requests_total[10m])) > 0.02
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.exported_service }} p95 latency is {{ $value | humanizeDuration }}"
+
+    - name: coredns
+      rules:
+        - alert: CoreDNSDown
+          expr: absent(up{job="core-dns"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "No CoreDNS instance is up"
+        - alert: CoreDNSErrorsHigh
+          expr: |
+            sum(rate(coredns_dns_responses_total{rcode="SERVFAIL"}[5m]))
+            / sum(rate(coredns_dns_responses_total[5m])) > 0.03
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CoreDNS returns SERVFAIL for {{ $value | humanizePercentage }} of queries"
+            description: "Usually an upstream resolver problem."
+        - alert: CoreDNSLatencyHigh
+          expr: histogram_quantile(0.99, sum by (le) (rate(coredns_dns_request_duration_seconds_bucket[5m]))) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CoreDNS p99 latency is {{ $value | humanizeDuration }}"
+        - alert: CoreDNSForwardUnhealthy
+          expr: sum by (to) (increase(coredns_forward_healthcheck_broken_total[10m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "CoreDNS considers all upstream resolvers unhealthy"
+
+    - name: cilium
+      rules:
+        - alert: CiliumAgentUnavailable
+          expr: kube_daemonset_status_number_unavailable{namespace="kube-system", daemonset="cilium"} > 0
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $value }} Cilium agent(s) unavailable"
+            description: "Pod networking and policy on the affected node(s) are broken."
+        - alert: CiliumUnreachableNodes
+          expr: cilium_unreachable_nodes > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cilium on {{ $labels.node }} cannot reach {{ $value }} node(s)"
+        - alert: CiliumUnreachableHealthEndpoints
+          expr: cilium_unreachable_health_endpoints > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cilium on {{ $labels.node }} cannot reach {{ $value }} health endpoint(s)"
+        - alert: CiliumEndpointRegenerationFailing
+          expr: sum by (node) (increase(cilium_endpoint_regenerations_total{outcome="fail"}[15m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cilium on {{ $labels.node }} failed to program pod endpoints"
+        - alert: CiliumPolicyImportFailing
+          expr: sum by (node) (increase(cilium_policy_change_total{outcome="fail"}[15m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cilium on {{ $labels.node }} rejected a network policy change"
+            description: "A CiliumNetworkPolicy is invalid; check `kubectl get cnp -A` (VALID column)."
+        - alert: CiliumControllersFailing
+          expr: cilium_controllers_failing > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} Cilium controller(s) failing on {{ $labels.node }}"
+        - alert: CiliumBPFMapPressure
+          expr: cilium_bpf_map_pressure > 0.9
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "BPF map {{ $labels.map_name }} on {{ $labels.node }} is {{ $value | humanizePercentage }} full"
+
+        - alert: NetworkPolicyDroppingTraffic
+          expr: |
+            sum by (source_namespace, source_workload, destination_namespace, destination_workload) (
+              rate(hubble_drop_total{reason="POLICY_DENIED", source_namespace!=""}[10m])
+            ) > 0.01
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cilium policy is blocking {{ $labels.source_namespace }}/{{ $labels.source_workload }} -> {{ $labels.destination_namespace }}/{{ $labels.destination_workload }}"
+            description: "{{ $value | humanize }} packets/s dropped for 30 minutes. A CiliumNetworkPolicy on one side is probably missing a rule; inspect with Hubble."
+
+        - alert: WorkloadHTTPErrorRate
+          expr: |
+            (
+              sum by (destination_namespace, destination_workload) (rate(hubble_http_requests_total{status=~"5.."}[5m]))
+              / sum by (destination_namespace, destination_workload) (rate(hubble_http_requests_total[5m]))
+            ) > 0.05
+            and sum by (destination_namespace, destination_workload) (rate(hubble_http_requests_total[5m])) > 0.02
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.destination_namespace }}/{{ $labels.destination_workload }} answers {{ $value | humanizePercentage }} of in-cluster HTTP requests with 5xx"

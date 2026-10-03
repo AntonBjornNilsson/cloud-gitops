@@ -1,0 +1,44 @@
+---
+# VictoriaLogs: central log store, queried from Grafana (VictoriaLogs datasource)
+# and by vmalert for log-based alert rules.
+apiVersion: operator.victoriametrics.com/v1
+kind: VLSingle
+metadata:
+  name: logs
+  namespace: victoriametrics
+spec:
+  retentionPeriod: "14d"
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 20Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 1Gi
+---
+# Per-node collector shipping every container's logs (with pod/namespace/
+# container metadata) to VictoriaLogs.
+apiVersion: operator.victoriametrics.com/v1
+kind: VLAgent
+metadata:
+  name: logs
+  namespace: victoriametrics
+spec:
+  k8sCollector:
+    enabled: true
+  remoteWrite:
+    - url: http://vlsingle-logs.victoriametrics.svc.cluster.local:9428/insert/native
+  # Run on every node, including tainted ones (e.g. the GPU node)
+  tolerations:
+    - operator: Exists
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 512Mi

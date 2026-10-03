@@ -49,12 +49,20 @@ spec:
     logs:
       general:
         format: json
-        level: TRACE
+        level: INFO
+      # One JSON line per request (status, duration, router, client) shipped
+      # to VictoriaLogs by the VLAgent collector.
+      access:
+        enabled: true
+        format: json
     metrics:
       prometheus:
         entryPoint: metrics
         addServicesLabels: true
         addEntryPointsLabels: true
+        addRoutersLabels: true
+        # Finer latency histogram than the default 0.1/0.3/1.2/5
+        buckets: "0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2.5,5,10"
         service:
           enabled: true
           spec:
@@ -73,7 +81,7 @@ spec:
         enabled: true
         http:
           enabled: true
-          endpoint: http://jaeger-collector.jaeger.svc.cluster.local:4318/v1/traces
+          endpoint: http://vtsingle-traces.victoriametrics.svc.cluster.local:10428/insert/opentelemetry/v1/traces
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute

@@ -3,6 +3,6 @@ kind: Kustomization
 resources:
   - grafana-operator.yaml
   - grafana-instance.yaml
-  - servicemonitor.yaml
+  - datasources.yaml
   - cilium-policy.yaml
   - ../dashboards

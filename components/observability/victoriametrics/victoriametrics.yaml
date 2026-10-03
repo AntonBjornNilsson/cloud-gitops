@@ -34,8 +34,281 @@ spec:
   values:
     fullnameOverride: "vm-k8s-stack"
 
+    # Grafana is run by the grafana-operator (components/observability/grafana);
+    # datasources live there too, with the UIDs the bundled dashboards expect.
     grafana:
       enabled: false
+
+    # Upstream dashboards (Kubernetes views, node-exporter full, VM/VL internals)
+    # are fetched by the chart's sync job and created as GrafanaDashboard CRs.
+    # On a fresh bootstrap the job may run before the grafana-operator CRDs
+    # exist; it is re-run whenever this HelmRelease's values change.
+    defaultDashboards:
+      enabled: true
+      grafanaOperator:
+        enabled: true
+        spec:
+          instanceSelector:
+            matchLabels:
+              dashboards: "grafana"
+          allowCrossNamespaceImport: true
+          folder: "Kubernetes"
+      sources:
+        victorialogs-single-node:
+          enabled: true
+        victorialogs-vlagent:
+          enabled: true
+        victoriatraces-single-node:
+          enabled: true
+
+    # --- Metrics -----------------------------------------------------------
+    vmsingle:
+      spec:
+        retentionPeriod: "1"
+
+    vmagent:
+      spec:
+        # Several upstream dashboards (Hubble, Kubernetes views) filter on a
+        # "cluster" label.
+        externalLabels:
+          cluster: homelab
+        resources:
+          requests:
+            cpu: 50m
+            memory: 256Mi
+          limits:
+            memory: 1Gi
+
+    vmalert:
+      spec:
+        # LogsQL rules are evaluated by the "logs" VMAlert (logs-alerting.yaml)
+        ruleNamespaceSelector: {}
+        ruleSelector:
+          matchExpressions:
+            - key: alerting.homelab/datasource
+              operator: NotIn
+              values: [victorialogs]
+        extraArgs:
+          # Alert "source" links (ntfy click-through) open the alert's
+          # expression in Grafana Explore.
+          external.url: "https://grafana.${domain}"
+          external.alert.source: 'explore?orgId=1&left={"datasource":"VictoriaMetrics","queries":[{"expr":{{`{{ .Expr|jsonEscape|queryEscape }}`}},"refId":"A"}],"range":{"from":"now-1h","to":"now"}}'
+
+    # Logs (VictoriaLogs + collector) and traces (VictoriaTraces) are
+    # standalone CRs in logs.yaml / traces.yaml; enable the chart's matching
+    # health rules and dashboards for them.
+    defaultRules:
+      sources:
+        vlhealth:
+          enabled: true
+        vlagent:
+          enabled: true
+
+    # --- Alerting -----------------------------------------------------------
+    # Routing lives in alertmanager-config.yaml (VMAlertmanagerConfig). Without
+    # this the operator only routes alerts whose namespace label equals the
+    # config's own namespace, i.e. almost nothing reached ntfy.
+    alertmanager:
+      spec:
+        disableNamespaceMatcher: true
+
+    # --- Scrape targets -----------------------------------------------------
+    # k0s runs etcd, kube-scheduler and kube-controller-manager on controller
+    # hosts that are not cluster nodes, so they cannot be scraped from here.
+    # Leaving these on only produces permanent *Down alerts.
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeEtcd:
+      enabled: false
+
+    kubelet:
+      vmScrape:
+        spec:
+          # Only map a few node labels: the AMD GPU labeller adds dozens, which
+          # pushes kubelet/cadvisor series over VictoriaMetrics' label limit and
+          # silently drops every metric from that node.
+          relabelConfigs:
+            - action: labelmap
+              regex: __meta_kubernetes_node_label_(kubernetes_io_hostname|kubernetes_io_arch|kubernetes_io_os|node_role_kubernetes_io_.+)
+            - sourceLabels: [__metrics_path__]
+              targetLabel: metrics_path
+            - targetLabel: job
+              replacement: kubelet
+
+    prometheus-node-exporter:
+      extraArgs:
+        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
+        - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|erofs|sysfs|tracefs)$
+        # GPU utilisation/VRAM/power (amdgpu exposes these via DRM sysfs)
+        - --collector.drm
+        # Failed host services (feeds NodeSystemdServiceFailed)
+        - --collector.systemd
+        - --collector.systemd.unit-include=(k0s.*|containerd|iscsid|multipathd|ssh|sshd|chronyd|systemd-timesyncd|systemd-networkd|systemd-resolved|NetworkManager|smartd)\.service
+      extraHostVolumeMounts:
+        - name: dbus
+          hostPath: /var/run/dbus/system_bus_socket
+          mountPath: /var/run/dbus/system_bus_socket
+          readOnly: true
+
+    kube-state-metrics:
+      # Flux object state (gotk_resource_info) for reconciliation alerts and
+      # the Flux dashboards.
+      rbac:
+        extraRules:
+          - apiGroups:
+              - source.toolkit.fluxcd.io
+              - kustomize.toolkit.fluxcd.io
+              - helm.toolkit.fluxcd.io
+              - notification.toolkit.fluxcd.io
+            resources:
+              - gitrepositories
+              - buckets
+              - helmrepositories
+              - helmcharts
+              - ocirepositories
+              - kustomizations
+              - helmreleases
+              - receivers
+            verbs: ["list", "watch"]
+      customResourceState:
+        enabled: true
+        config:
+          spec:
+            resources:
+            - groupVersionKind: {group: kustomize.toolkit.fluxcd.io, version: v1, kind: Kustomization}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux Kustomization resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, lastAppliedRevision]
+                  source_name: [spec, sourceRef, name]
+            - groupVersionKind: {group: helm.toolkit.fluxcd.io, version: v2, kind: HelmRelease}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux HelmRelease resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, history, '0', chartVersion]
+                  chart_name: [status, history, '0', chartName]
+                  chart_app_version: [status, history, '0', appVersion]
+                  chart_ref_name: [spec, chartRef, name]
+                  chart_source_name: [spec, chart, spec, sourceRef, name]
+            - groupVersionKind: {group: source.toolkit.fluxcd.io, version: v1, kind: GitRepository}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux GitRepository resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, artifact, revision]
+                  url: [spec, url]
+            - groupVersionKind: {group: source.toolkit.fluxcd.io, version: v1, kind: Bucket}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux Bucket resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, artifact, revision]
+                  endpoint: [spec, endpoint]
+                  bucket_name: [spec, bucketName]
+            - groupVersionKind: {group: source.toolkit.fluxcd.io, version: v1, kind: HelmRepository}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux HelmRepository resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, artifact, revision]
+                  url: [spec, url]
+            - groupVersionKind: {group: source.toolkit.fluxcd.io, version: v1, kind: HelmChart}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux HelmChart resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, artifact, revision]
+                  chart_name: [spec, chart]
+                  chart_version: [spec, version]
+            - groupVersionKind: {group: source.toolkit.fluxcd.io, version: v1, kind: OCIRepository}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux OCIRepository resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  revision: [status, artifact, revision]
+                  url: [spec, url]
+            - groupVersionKind: {group: notification.toolkit.fluxcd.io, version: v1, kind: Receiver}
+              metricNamePrefix: gotk
+              metrics:
+              - name: resource_info
+                help: The current state of a Flux Receiver resource.
+                each:
+                  type: Info
+                  info:
+                    labelsFromPath:
+                      name: [metadata, name]
+                labelsFromPath:
+                  exported_namespace: [metadata, namespace]
+                  ready: [status, conditions, '[type=Ready]', status]
+                  suspended: [spec, suspend]
+                  webhook_path: [status, webhookPath]
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository

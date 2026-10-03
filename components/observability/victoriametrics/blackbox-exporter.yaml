@@ -1,0 +1,234 @@
+---
+# Synthetic probes: is everything reachable, how fast does it answer, and when
+# do its certificates expire. Probe definitions are the VMProbes below.
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: blackbox-exporter
+  namespace: victoriametrics
+spec:
+  interval: 12h
+  chart:
+    spec:
+      chart: prometheus-blackbox-exporter
+      version: "11.x"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+      interval: 12h
+  timeout: 5m
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: blackbox-exporter
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+        # ICMP probes (internet latency / packet loss)
+        add: ["NET_RAW"]
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
+    config:
+      modules:
+        http_2xx:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            follow_redirects: true
+            preferred_ip_protocol: ip4
+        # Public endpoints served by Traefik: must be HTTPS. Redirects to the
+        # Authelia portal are followed, so a 2xx means Traefik + Authelia +
+        # cert are all fine.
+        http_ingress:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            follow_redirects: true
+            fail_if_not_ssl: true
+            preferred_ip_protocol: ip4
+        tcp_connect:
+          prober: tcp
+          timeout: 5s
+          tcp:
+            preferred_ip_protocol: ip4
+        icmp:
+          prober: icmp
+          timeout: 5s
+          icmp:
+            preferred_ip_protocol: ip4
+        dns_external:
+          prober: dns
+          timeout: 5s
+          dns:
+            transport_protocol: udp
+            preferred_ip_protocol: ip4
+            query_name: cloudflare.com
+            query_type: A
+            valid_rcodes: [NOERROR]
+        dns_cluster:
+          prober: dns
+          timeout: 5s
+          dns:
+            transport_protocol: udp
+            preferred_ip_protocol: ip4
+            query_name: kubernetes.default.svc.cluster.local
+            query_type: A
+            valid_rcodes: [NOERROR]
+---
+# Every Ingress in the cluster, discovered automatically.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: ingresses
+  namespace: victoriametrics
+spec:
+  jobName: blackbox-ingress
+  vmProberSpec:
+    url: blackbox-exporter.victoriametrics.svc.cluster.local:9115
+  module: http_ingress
+  interval: 60s
+  scrapeTimeout: 15s
+  targets:
+    ingress:
+      selector: {}
+      namespaceSelector:
+        any: true
+      relabelingConfigs:
+        # Flux webhook receivers only accept signed POSTs
+        - sourceLabels: [__meta_kubernetes_ingress_name]
+          regex: flux-webhook.*
+          action: drop
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - sourceLabels: [__meta_kubernetes_ingress_name]
+          targetLabel: ingress
+        - targetLabel: probe_group
+          replacement: ingress
+---
+# In-cluster health endpoints that matter for the alerting path itself.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: internal-http
+  namespace: victoriametrics
+spec:
+  jobName: blackbox-internal
+  vmProberSpec:
+    url: blackbox-exporter.victoriametrics.svc.cluster.local:9115
+  module: http_2xx
+  interval: 60s
+  scrapeTimeout: 15s
+  targets:
+    staticConfig:
+      labels:
+        probe_group: internal
+      targets:
+        - http://ntfy.ntfy.svc.cluster.local/v1/health
+        - http://authelia.authelia.svc.cluster.local/api/health
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: dns-cluster
+  namespace: victoriametrics
+spec:
+  jobName: blackbox-dns
+  vmProberSpec:
+    url: blackbox-exporter.victoriametrics.svc.cluster.local:9115
+  module: dns_cluster
+  interval: 60s
+  scrapeTimeout: 15s
+  targets:
+    staticConfig:
+      labels:
+        probe_group: dns
+      targets:
+        - kube-dns.kube-system.svc.cluster.local:53
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: dns-external
+  namespace: victoriametrics
+spec:
+  jobName: blackbox-dns
+  vmProberSpec:
+    url: blackbox-exporter.victoriametrics.svc.cluster.local:9115
+  module: dns_external
+  interval: 60s
+  scrapeTimeout: 15s
+  targets:
+    staticConfig:
+      labels:
+        probe_group: dns
+      targets:
+        # LAN resolver
+        - adguard-home-dns.adguard-home.svc.cluster.local:53
+        # Public resolvers (upstream health / WAN DNS latency)
+        - 1.1.1.1:53
+        - 8.8.8.8:53
+---
+# WAN health: latency, packet loss and HTTPS reachability of well-known hosts
+# (and of the registries/forges Flux pulls from).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: internet-icmp
+  namespace: victoriametrics
+spec:
+  jobName: blackbox-internet-icmp
+  vmProberSpec:
+    url: blackbox-exporter.victoriametrics.svc.cluster.local:9115
+  module: icmp
+  interval: 30s
+  scrapeTimeout: 10s
+  targets:
+    staticConfig:
+      labels:
+        probe_group: internet
+      targets:
+        - 1.1.1.1
+        - 8.8.8.8
+        - 9.9.9.9
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMProbe
+metadata:
+  name: internet-http
+  namespace: victoriametrics
+spec:
+  jobName: blackbox-internet-http
+  vmProberSpec:
+    url: blackbox-exporter.victoriametrics.svc.cluster.local:9115
+  module: http_2xx
+  interval: 60s
+  scrapeTimeout: 15s
+  targets:
+    staticConfig:
+      labels:
+        probe_group: internet
+      targets:
+        - https://www.google.com/generate_204
+        - https://cloudflare.com/cdn-cgi/trace
+        - https://github.com

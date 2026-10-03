@@ -1,0 +1,77 @@
+---
+# Workload/cluster alerts not already covered by the chart's kube-prometheus
+# rules (KubePodCrashLooping, KubeNodeNotReady, KubePersistentVolumeFillingUp,
+# KubeJobFailed, NodeFilesystem*, NodeMemoryHighUtilization, ...).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: kubernetes
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: workloads
+      rules:
+        - alert: ContainerOOMKilled
+          expr: |
+            (kube_pod_container_status_restarts_total - kube_pod_container_status_restarts_total offset 15m >= 1)
+            and ignoring(reason)
+            min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[15m]) == 1
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container {{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }} was OOM-killed"
+            description: "The container hit its memory limit and was killed in the last 15 minutes. Raise the limit or find the leak."
+
+        - alert: ContainerRestartingOften
+          expr: increase(kube_pod_container_status_restarts_total[1h]) > 3
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container {{ $labels.namespace }}/{{ $labels.pod }}/{{ $labels.container }} restarts often"
+            description: "{{ $value | humanize }} restarts in the last hour (failing probes or crashes that don't end in CrashLoopBackOff)."
+
+        - alert: PersistentVolumeClaimPending
+          expr: kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is Pending"
+            description: "The claim has not been bound for 15 minutes."
+
+        - alert: CronJobNotSucceededRecently
+          expr: |
+            time() - kube_cronjob_status_last_successful_time > 26 * 3600
+            and on(namespace, cronjob) kube_cronjob_spec_suspend == 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} has not succeeded for over a day"
+            description: "Last success was {{ $value | humanizeDuration }} ago (daily jobs such as backups and backup sync should succeed every day)."
+
+        - alert: PodStuckTerminating
+          expr: time() - kube_pod_deletion_timestamp > 900
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} stuck terminating"
+            description: "The pod was deleted more than 15 minutes ago and is still present (stuck finalizer or volume detach)."
+
+    - name: nodes
+      rules:
+        - alert: NodeRebooted
+          expr: changes(node_boot_time_seconds[30m]) > 0
+          labels:
+            severity: info
+          annotations:
+            summary: "Node {{ $labels.instance }} rebooted"
+            description: "The node's boot time changed within the last 30 minutes."
+
+        - alert: NodeKernelOOMKill
+          expr: increase(node_vmstat_oom_kill[30m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kernel OOM killer ran on {{ $labels.instance }}"
+            description: "{{ $value | humanize }} processes were OOM-killed by the kernel in the last 30 minutes."

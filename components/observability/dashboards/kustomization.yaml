@@ -3,3 +3,5 @@ kind: Kustomization
 resources:
   - generated/cluster-overview.yaml
   - generated/services-health.yaml
+  - generated/homelab-overview.yaml
+  - upstream.yaml

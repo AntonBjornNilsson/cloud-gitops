@@ -2,6 +2,13 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - victoriametrics.yaml
-  - cilium-policy.yaml
-  - alerts.yaml
+  - logs.yaml
+  - logs-alerting.yaml
+  - traces.yaml
+  - blackbox-exporter.yaml
+  - smartctl-exporter.yaml
+  - alertmanager-config.yaml
   - alertmanager-ntfy.yaml
+  - cilium-policy.yaml
+  - rules
+  - scrapes

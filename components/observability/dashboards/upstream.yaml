@@ -1,0 +1,292 @@
+# Community dashboards, downloaded by the grafana-operator at reconcile time.
+# Pinned to a grafana.com revision; DS_* inputs are mapped to our datasources.
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cilium-agent
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 16611
+    revision: 1
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cilium-operator
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 16612
+    revision: 1
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: hubble
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 16613
+    revision: 1
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: hubble-network-overview
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 19424
+    revision: 1
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: hubble-dns-overview
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 19425
+    revision: 1
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: hubble-l7-http
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 19423
+    revision: 1
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cilium-policy-verdicts
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 18015
+    revision: 4
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: traefik
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 17346
+    revision: 9
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: metallb
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 20162
+    revision: 6
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: blackbox-probes
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Networking"
+  grafanaCom:
+    id: 13659
+    revision: 1
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: flux-cluster
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Platform"
+  url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/main/monitoring/configs/dashboards/cluster.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: flux-control-plane
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Platform"
+  url: https://raw.githubusercontent.com/fluxcd/flux2-monitoring-example/main/monitoring/configs/dashboards/control-plane.json
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cert-manager
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Platform"
+  grafanaCom:
+    id: 20842
+    revision: 3
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: kyverno
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Platform"
+  grafanaCom:
+    id: 15987
+    revision: 2
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: longhorn
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Storage"
+  grafanaCom:
+    id: 16888
+    revision: 14
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: smartctl
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Storage"
+  grafanaCom:
+    id: 22604
+    revision: 3
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: VictoriaMetrics
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: victorialogs-explorer
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  folder: "Logs"
+  grafanaCom:
+    id: 22759
+    revision: 9
+  datasources:
+    - inputName: DS_VICTORIALOGS
+      datasourceName: VictoriaLogs

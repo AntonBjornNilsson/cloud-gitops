@@ -1,0 +1,182 @@
+---
+# GitOps, certificates, admission, load balancing, auth, notifications.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: platform
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: flux
+      rules:
+        - alert: FluxResourceNotReady
+          expr: gotk_resource_info{ready="False", suspended!="true"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} is not ready"
+            description: "Reconciliation has been failing for 15 minutes; changes in git are not reaching the cluster. Check `flux get {{ $labels.customresource_kind | toLower }}s -A`."
+
+        - alert: FluxResourceSuspended
+          expr: gotk_resource_info{suspended="true"} == 1
+          for: 24h
+          labels:
+            severity: info
+          annotations:
+            summary: "Flux {{ $labels.customresource_kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} suspended for over a day"
+            description: "Forgotten `flux suspend`? The resource no longer follows git."
+
+        - alert: FluxReconcileErrors
+          expr: sum by (controller) (increase(controller_runtime_reconcile_errors_total{namespace="flux-system"}[30m])) > 5
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.controller }} controller keeps failing to reconcile"
+            description: "{{ $value | humanize }} reconcile errors in the last 30 minutes."
+
+        - alert: FluxControllerUnavailable
+          expr: kube_deployment_status_replicas_available{namespace="flux-system"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Flux {{ $labels.deployment }} is down"
+            description: "No available replicas for 5 minutes; GitOps is stalled."
+
+    - name: cert-manager
+      rules:
+        - alert: CertificateExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 21 * 86400
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+            description: "cert-manager should renew 30 days before expiry; renewal is failing."
+        - alert: CertificateExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 7 * 86400
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: "Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+            description: "Renewal has been failing for weeks; the certificate is about to expire."
+
+        - alert: CertificateNotReady
+          expr: max by (exported_namespace, name) (certmanager_certificate_ready_status{condition=~"False|Unknown"}) == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Certificate {{ $labels.exported_namespace }}/{{ $labels.name }} is not ready"
+            description: "Check `kubectl describe certificate` and the ACME challenge/order."
+
+    - name: kyverno
+      rules:
+        - alert: KyvernoAdmissionControllerDown
+          expr: kube_deployment_status_replicas_available{namespace="kyverno", deployment="kyverno-admission-controller"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Kyverno admission controller is down"
+            description: "Ingress/PVC mutations (TLS, Authelia, backups) are not being applied."
+
+        - alert: KyvernoPolicyNotReady
+          expr: kyverno_policy_rule_info_total{status_ready="false"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kyverno policy {{ $labels.policy_name }} rule {{ $labels.rule_name }} is not ready"
+
+        - alert: KyvernoPolicyErrors
+          expr: sum by (policy_name, rule_name) (increase(kyverno_policy_results_total{rule_result="error"}[30m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kyverno rule {{ $labels.policy_name }}/{{ $labels.rule_name }} is erroring"
+            description: "{{ $value | humanize }} rule evaluation errors in the last 30 minutes."
+
+        - alert: KyvernoAdmissionDenied
+          expr: sum by (resource_kind, resource_namespace) (increase(kyverno_admission_requests_total{request_allowed="false"}[15m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kyverno denied {{ $labels.resource_kind }} admission in {{ $labels.resource_namespace }}"
+            description: "{{ $value | humanize }} requests were rejected in the last 15 minutes."
+
+    - name: metallb
+      rules:
+        - alert: MetalLBConfigNotLoaded
+          expr: metallb_k8s_client_config_loaded_bool == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MetalLB {{ $labels.pod }} has not loaded its configuration"
+        - alert: MetalLBStaleConfig
+          expr: metallb_k8s_client_config_stale_bool == 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MetalLB {{ $labels.pod }} is running on a stale configuration"
+        - alert: MetalLBAddressPoolUsageHigh
+          expr: metallb_allocator_addresses_in_use_total / on(pool) metallb_allocator_addresses_total > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "MetalLB pool {{ $labels.pool }} is {{ $value | humanizePercentage }} used"
+        - alert: MetalLBAddressPoolExhausted
+          expr: metallb_allocator_addresses_in_use_total >= on(pool) metallb_allocator_addresses_total
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "MetalLB pool {{ $labels.pool }} has no free addresses"
+            description: "New LoadBalancer Services in this pool will stay Pending."
+
+    - name: authelia
+      rules:
+        - alert: AutheliaFailedLogins
+          expr: sum(increase(authelia_authn{success="false"}[15m])) > 10
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanize }} failed Authelia logins in 15 minutes"
+            description: "Possible brute-force attempt against the SSO portal."
+        - alert: AutheliaFailedSecondFactor
+          expr: sum(increase(authelia_authn_second_factor{success="false"}[15m])) > 3
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value | humanize }} failed Authelia 2FA attempts in 15 minutes"
+            description: "Someone has a valid password but is failing the second factor."
+        - alert: AutheliaUserBanned
+          expr: (sum(increase(authelia_authn{banned="true"}[15m])) or vector(0)) + (sum(increase(authelia_authn_second_factor{banned="true"}[15m])) or vector(0)) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "Authelia rejected logins from a banned user/IP"
+        - alert: AutheliaServerErrors
+          expr: sum(rate(authelia_request{code=~"5.."}[5m])) > 0.05
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Authelia is returning 5xx responses"
+            description: "{{ $value | humanize }} errors/s; logins and forward-auth for every app may fail."
+
+    - name: ntfy
+      rules:
+        - alert: NtfyPublishFailures
+          expr: increase(ntfy_messages_published_failure[15m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "ntfy failed to publish {{ $value | humanize }} messages"
+            description: "Notifications (including these alerts) may not be delivered."

@@ -1,18 +1,45 @@
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: alertmanager-ntfy
   namespace: victoriametrics
-data:
+type: Opaque
+stringData:
+  # Alertmanager posts to /hook (see alertmanager.config in victoriametrics.yaml).
+  # Subscribe to the "homelab-alerts" topic on the ntfy server to receive alerts.
   config.yml: |
     http:
       addr: :8080
     ntfy:
       baseurl: http://ntfy.ntfy.svc.cluster.local:80
       notification:
-        topic: homelab-alerts-${domain}
+        # ntfy topics only allow [-_A-Za-z0-9]
+        topic: homelab-alerts
+        # critical -> urgent (5), warning -> high (4), info -> low (2),
+        # resolved -> low (2)
         priority: |
-          status == "firing" ? "urgent" : "default"
+          status == "resolved" ? "low" : (labels.severity == "critical" ? "urgent" : (labels.severity == "warning" ? "high" : "low"))
+        tags:
+          - tag: white_check_mark
+            condition: status == "resolved"
+          - tag: rotating_light
+            condition: status == "firing" && labels.severity == "critical"
+          - tag: warning
+            condition: status == "firing" && labels.severity == "warning"
+          - tag: information_source
+            condition: status == "firing" && labels.severity != "critical" && labels.severity != "warning"
+        templates:
+          title: |
+            {{ if eq .Status "resolved" }}Resolved: {{ end }}{{ index .Labels "alertname" }}{{ with index .Labels "namespace" }} [{{ . }}]{{ end }}
+          description: |
+            {{ with index .Annotations "summary" }}{{ . }}
+            {{ end }}{{ with index .Annotations "description" }}{{ . }}{{ end }}{{ with index .Annotations "runbook_url" }}
+            Runbook: {{ . }}{{ end }}
+          headers:
+            # Opens the alert expression in Grafana Explore (vmalert external.alert.source)
+            X-Click: |
+              {{ .GeneratorURL }}
+      async: false
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,15 +57,26 @@ spec:
     metadata:
       labels:
         app: alertmanager-ntfy
+      annotations:
+        # Roll the pod when the config changes
+        config-version: "3"
     spec:
       containers:
         - name: alertmanager-ntfy
-          image: ghcr.io/alexbakker/alertmanager-ntfy:latest
+          image: ghcr.io/alexbakker/alertmanager-ntfy:1.2.1
           args:
             - --configs=/etc/alertmanager-ntfy/config.yml
           ports:
             - containerPort: 8080
               name: http
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            periodSeconds: 30
           volumeMounts:
             - name: config
               mountPath: /etc/alertmanager-ntfy
@@ -51,8 +89,8 @@ spec:
               memory: 64Mi
       volumes:
         - name: config
-          configMap:
-            name: alertmanager-ntfy
+          secret:
+            secretName: alertmanager-ntfy
 ---
 apiVersion: v1
 kind: Service

@@ -1,0 +1,63 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: storage
+  namespace: victoriametrics
+spec:
+  groups:
+    # longhorn_volume_robustness: 0 unknown, 1 healthy, 2 degraded, 3 faulted
+    # longhorn_backup_state: 0 new, 1 pending, 2 in progress, 3 completed, 4 error, 5 unknown
+    - name: longhorn
+      rules:
+        - alert: LonghornVolumeDegraded
+          expr: longhorn_volume_robustness == 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Longhorn volume {{ $labels.pvc_namespace }}/{{ $labels.pvc }} is degraded"
+            description: "Volume {{ $labels.volume }} is missing replicas; data is at risk if another replica fails."
+        - alert: LonghornVolumeFaulted
+          expr: longhorn_volume_robustness == 3
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Longhorn volume {{ $labels.pvc_namespace }}/{{ $labels.pvc }} is faulted"
+            description: "Volume {{ $labels.volume }} has no healthy replica. The workload using it is down; restore from backup may be required."
+        - alert: LonghornNodeNotReady
+          expr: longhorn_node_status{condition="ready"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Longhorn node {{ $labels.node }} is not ready"
+        - alert: LonghornDiskNotReady
+          expr: longhorn_disk_status{condition="ready"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Longhorn disk {{ $labels.disk }} on {{ $labels.node }} is not ready"
+        - alert: LonghornNodeStorageHigh
+          expr: longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes > 0.8
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Longhorn storage on {{ $labels.node }} is {{ $value | humanizePercentage }} used"
+        - alert: LonghornNodeStorageHigh
+          expr: longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes > 0.9
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Longhorn storage on {{ $labels.node }} is {{ $value | humanizePercentage }} used"
+        - alert: LonghornBackupFailed
+          expr: longhorn_backup_state == 4
+          labels:
+            severity: warning
+          annotations:
+            summary: "Longhorn backup {{ $labels.backup }} of {{ $labels.volume }} failed"
+            description: "Check the backup target and the backup in the Longhorn UI; delete it once the cause is fixed."

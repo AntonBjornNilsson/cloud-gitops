@@ -1,0 +1,31 @@
+---
+# Grafana itself and the grafana-operator.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: grafana
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - grafana
+  selector:
+    matchLabels:
+      app: grafana
+  podMetricsEndpoints:
+    - port: grafana-http
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: grafana-operator
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - grafana
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana-operator
+  podMetricsEndpoints:
+    - port: metrics

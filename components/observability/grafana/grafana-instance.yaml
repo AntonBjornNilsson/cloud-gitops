@@ -32,6 +32,8 @@ spec:
             - name: grafana-data
               persistentVolumeClaim:
                 claimName: grafana-pvc
+  preferences:
+    homeDashboardUid: homelab-overview
   config:
     server:
       root_url: "https://grafana.${domain}"
@@ -65,40 +67,3 @@ spec:
                     name: grafana-service
                     port:
                       number: 3000
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDatasource
-metadata:
-  name: victoriametrics
-  namespace: grafana
-spec:
-  allowCrossNamespaceImport: true
-  instanceSelector:
-    matchLabels:
-      dashboards: "grafana"
-  datasource:
-    name: VictoriaMetrics
-    type: prometheus
-    access: proxy
-    url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
-    isDefault: true
-    jsonData:
-      httpMethod: POST
-      timeInterval: 15s
----
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDatasource
-metadata:
-  name: jaeger
-  namespace: grafana
-spec:
-  allowCrossNamespaceImport: true
-  instanceSelector:
-    matchLabels:
-      dashboards: "grafana"
-  datasource:
-    name: Jaeger
-    type: jaeger
-    access: proxy
-    url: http://jaeger-query.jaeger.svc.cluster.local:16686
-    isDefault: false

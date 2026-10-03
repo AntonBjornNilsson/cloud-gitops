@@ -270,8 +270,8 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (service) (rate(traefik_service_requests_total[5m]))",
-                   "legendFormat": "{{service}}"
+                   "expr": "sum by (exported_service) (rate(traefik_service_requests_total[5m]))",
+                   "legendFormat": "{{exported_service}}"
                 }
              ],
              "title": "Traefik Requests by Service (req/s)",
@@ -301,8 +301,8 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (code, service) (rate(traefik_service_requests_total{code=~\"[45]..\"}[5m]))",
-                   "legendFormat": "{{code}} - {{service}}"
+                   "expr": "sum by (code, exported_service) (rate(traefik_service_requests_total{code=~\"[45]..\"}[5m]))",
+                   "legendFormat": "{{code}} - {{exported_service}}"
                 }
              ],
              "title": "Traefik HTTP Error Codes (4xx / 5xx)",

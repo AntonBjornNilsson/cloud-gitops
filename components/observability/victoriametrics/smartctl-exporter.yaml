@@ -1,0 +1,46 @@
+---
+# Disk S.M.A.R.T. health on every node (privileged DaemonSet).
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: smartctl-exporter
+  namespace: victoriametrics
+spec:
+  interval: 12h
+  chart:
+    spec:
+      chart: prometheus-smartctl-exporter
+      version: "0.x"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+      interval: 12h
+  timeout: 5m
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
+  values:
+    fullnameOverride: smartctl-exporter
+    tolerations:
+      - operator: Exists
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        memory: 128Mi
+    # Scrape config and alert rules are standalone CRs
+    # (scrapes/smartctl-exporter.yaml, rules/hardware.yaml).
+    serviceMonitor:
+      enabled: false
+    prometheusRules:
+      enabled: false

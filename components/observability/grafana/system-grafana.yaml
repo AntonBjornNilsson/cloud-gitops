@@ -13,7 +13,6 @@ spec:
   dependsOn:
     - name: system-victoriametrics
     - name: system-traefik
-    - name: system-jaeger
   retryInterval: 1m0s
   timeout: 5m0s
   wait: true

@@ -1,0 +1,17 @@
+---
+# cert-manager controller, cainjector and webhook (certificate expiry/readiness,
+# ACME client requests).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: cert-manager
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - cert-manager
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cert-manager
+  podMetricsEndpoints:
+    - port: http-metrics

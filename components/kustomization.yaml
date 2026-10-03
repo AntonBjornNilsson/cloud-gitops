@@ -14,7 +14,8 @@ resources:
 
   # Observability
   - observability/holmesgpt/system-holmesgpt.yaml
-  - observability/jaeger/system-jaeger.yaml
+  # Replaced by VictoriaTraces (observability/victoriametrics/traces.yaml)
+  # - observability/jaeger/system-jaeger.yaml
   - observability/victoriametrics/system-victoriametrics.yaml
   - observability/grafana/system-grafana.yaml
 

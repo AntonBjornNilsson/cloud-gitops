@@ -1,0 +1,24 @@
+---
+# MetalLB controller and speakers. Metrics are served over HTTPS behind
+# Kubernetes authn/authz; vmagent's ServiceAccount is allowed GET /metrics.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: metallb
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - metallb
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: metallb
+  podMetricsEndpoints:
+    - port: metricshttps
+      scheme: https
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+      relabelConfigs:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node

@@ -1,0 +1,17 @@
+---
+# ntfy (published/failed messages, subscribers). Requires metrics-listen-http
+# in the ntfy server config (port 9090, not exposed through the Ingress).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: ntfy
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - ntfy
+  selector:
+    matchLabels:
+      app: ntfy
+  podMetricsEndpoints:
+    - portNumber: 9090

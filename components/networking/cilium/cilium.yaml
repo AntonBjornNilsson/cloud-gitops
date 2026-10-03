@@ -95,13 +95,16 @@ spec:
               - "Set-Cookie"
       # L7 & flow metrics exported to Prometheus / VictoriaMetrics
       metrics:
+        # labelsContext adds namespace/workload labels so drops, DNS and
+        # flows can be attributed (used by alerts and the Hubble dashboards)
         enabled:
-          - dns:query;ignoreAAAA
-          - drop
+          - dns:query;ignoreAAAA;labelsContext=source_namespace,source_workload
+          - drop:labelsContext=source_namespace,source_workload,destination_namespace,destination_workload,traffic_direction
           - tcp
-          - flow
+          - flow:labelsContext=source_namespace,destination_namespace
           - port-distribution
           - icmp
+          - policy:sourceContext=app|workload-name|pod|reserved-identity;destinationContext=app|workload-name|pod|dns|reserved-identity;labelsContext=source_namespace,destination_namespace
           - httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction
         enableOpenMetrics: true
         serviceMonitor:

@@ -1,0 +1,17 @@
+---
+# Authelia (authentication attempts/failures, authz latency). Requires
+# telemetry.metrics in the Authelia config (port 9959).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: authelia
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - authelia
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: authelia
+  podMetricsEndpoints:
+    - portNumber: 9959

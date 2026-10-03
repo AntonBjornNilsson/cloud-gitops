@@ -1,0 +1,43 @@
+---
+# All alerts -> ntfy (via the alertmanager-ntfy bridge). Severity decides the
+# ntfy priority, see alertmanager-ntfy.yaml.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlertmanagerConfig
+metadata:
+  name: ntfy-notifications
+  namespace: victoriametrics
+spec:
+  route:
+    receiver: ntfy
+    group_by: [alertname, namespace]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 12h
+    routes:
+      # Always-firing helper alerts are not actionable
+      - matchers: ['alertname=~"Watchdog|InfoInhibitor"']
+        receiver: blackhole
+      - matchers: ['severity="critical"']
+        receiver: ntfy
+        repeat_interval: 4h
+  inhibit_rules:
+    # A critical alert silences lower-severity copies of itself
+    - source_matchers: ['severity="critical"']
+      target_matchers: ['severity=~"warning|info"']
+      equal: [namespace, alertname]
+    - source_matchers: ['severity="warning"']
+      target_matchers: ['severity="info"']
+      equal: [namespace, alertname]
+    - source_matchers: ['alertname="InfoInhibitor"']
+      target_matchers: ['severity="info"']
+      equal: [namespace]
+    # A down node explains everything else failing on it
+    - source_matchers: ['alertname=~"KubeNodeNotReady|KubeNodeUnreachable"']
+      target_matchers: ['severity=~"warning|info"']
+      equal: [node]
+  receivers:
+    - name: blackhole
+    - name: ntfy
+      webhook_configs:
+        - url: http://alertmanager-ntfy.victoriametrics.svc.cluster.local:8080/hook
+          send_resolved: true

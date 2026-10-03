@@ -21,6 +21,14 @@ spec:
         - ports:
             - port: "80"
               protocol: TCP
+    # Metrics scraping by vmagent
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9090"
+              protocol: TCP
     # Health checks and probes
     - fromEntities:
         - host

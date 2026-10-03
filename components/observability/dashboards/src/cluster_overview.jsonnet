@@ -83,16 +83,16 @@ dashboard.new('Kubernetes Cluster & Services Overview')
   // Row 3: Service & Ingress Performance
   timeSeries.new('Traefik Requests by Service (req/s)')
   + timeSeries.queryOptions.withTargets([
-    prometheus.new('VictoriaMetrics', 'sum by (service) (rate(traefik_service_requests_total[5m]))')
-    + prometheus.withLegendFormat('{{service}}'),
+    prometheus.new('VictoriaMetrics', 'sum by (exported_service) (rate(traefik_service_requests_total[5m]))')
+    + prometheus.withLegendFormat('{{exported_service}}'),
   ])
   + { gridPos: { x: 0, y: 12, w: 12, h: 8 } }
   + timeSeries.standardOptions.withUnit('reqps'),
 
   timeSeries.new('Traefik HTTP Error Codes (4xx / 5xx)')
   + timeSeries.queryOptions.withTargets([
-    prometheus.new('VictoriaMetrics', 'sum by (code, service) (rate(traefik_service_requests_total{code=~"[45].."}[5m]))')
-    + prometheus.withLegendFormat('{{code}} - {{service}}'),
+    prometheus.new('VictoriaMetrics', 'sum by (code, exported_service) (rate(traefik_service_requests_total{code=~"[45].."}[5m]))')
+    + prometheus.withLegendFormat('{{code}} - {{exported_service}}'),
   ])
   + { gridPos: { x: 12, y: 12, w: 12, h: 8 } }
   + timeSeries.standardOptions.withUnit('reqps'),

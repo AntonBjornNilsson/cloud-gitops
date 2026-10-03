@@ -16,6 +16,16 @@ spec:
               protocol: TCP
           rules:
             http: [{}]
+    # Metrics scraping by vmagent (Grafana 3000, operator 9090)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+            - port: "9090"
+              protocol: TCP
     # Intra-namespace traffic (operator talking to grafana, etc.)
     - fromEndpoints:
         - {}
@@ -47,7 +57,7 @@ spec:
     # Intra-namespace communication
     - toEndpoints:
         - {}
-    # VictoriaMetrics TSDB queries
+    # Datasources: VictoriaMetrics, VictoriaLogs, VictoriaTraces, Alertmanager
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: victoriametrics
@@ -55,15 +65,11 @@ spec:
         - ports:
             - port: "8428"
               protocol: TCP
-          rules:
-            http: [{}]
-    # Jaeger tracing queries
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: jaeger
-      toPorts:
-        - ports:
-            - port: "16686"
+            - port: "9428"
+              protocol: TCP
+            - port: "10428"
+              protocol: TCP
+            - port: "9093"
               protocol: TCP
           rules:
             http: [{}]

@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - authelia.yaml
+  - cert-manager.yaml
+  - flux.yaml
+  - grafana.yaml
+  - metallb.yaml
+  - ntfy.yaml
+  - smartctl-exporter.yaml

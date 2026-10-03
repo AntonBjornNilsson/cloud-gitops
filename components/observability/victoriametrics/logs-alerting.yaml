@@ -1,0 +1,67 @@
+---
+# Evaluates LogsQL alert rules (VMRules labelled
+# alerting.homelab/datasource=victorialogs) against VictoriaLogs. The chart's
+# main vmalert excludes those rules (see vmalert.spec.ruleSelector).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlert
+metadata:
+  name: logs
+  namespace: victoriametrics
+spec:
+  selectAllByDefault: false
+  ruleNamespaceSelector: {}
+  ruleSelector:
+    matchLabels:
+      alerting.homelab/datasource: victorialogs
+  evaluationInterval: 1m
+  datasource:
+    url: http://vlsingle-logs.victoriametrics.svc.cluster.local:9428
+  remoteWrite:
+    url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+  remoteRead:
+    url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+  notifiers:
+    - url: http://vmalertmanager-vm-k8s-stack.victoriametrics.svc.cluster.local:9093
+  extraArgs:
+    rule.defaultRuleType: vlogs
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 256Mi
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: logs
+  namespace: victoriametrics
+  labels:
+    alerting.homelab/datasource: victorialogs
+spec:
+  groups:
+    - name: log-patterns
+      type: vlogs
+      interval: 5m
+      rules:
+        - alert: ContainerPanicked
+          expr: |
+            _time:5m ("panic:" OR "fatal error:" OR "SIGSEGV")
+            | stats by (kubernetes.pod_namespace, kubernetes.pod_name, kubernetes.container_name) count() as matches
+            | rename kubernetes.pod_namespace as namespace, kubernetes.pod_name as pod, kubernetes.container_name as container
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) logged a panic/fatal error"
+            description: "{{ $value }} matching log lines in the last 5 minutes. Look at the VictoriaLogs Explorer dashboard."
+
+        - alert: OutOfMemoryInLogs
+          expr: |
+            _time:5m i("out of memory")
+            | stats by (kubernetes.pod_namespace, kubernetes.pod_name, kubernetes.container_name) count() as matches
+            | rename kubernetes.pod_namespace as namespace, kubernetes.pod_name as pod, kubernetes.container_name as container
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) ran out of memory"
+            description: "{{ $value }} \"out of memory\" log lines in the last 5 minutes (RAM or GPU VRAM)."

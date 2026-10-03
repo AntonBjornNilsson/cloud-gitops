@@ -1,0 +1,1656 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: homelab-overview
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Central overview: alerts, endpoint availability and latency, traffic, network, internet, resources, storage and logs.",
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Status",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "red",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count(ALERTS{alertstate=\"firing\", severity=\"critical\"}) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Critical alerts",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count(ALERTS{alertstate=\"firing\", severity=\"warning\"}) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Warnings",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 0.90000000000000002
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(probe_success{probe_group=\"ingress\"}) / count(probe_success{probe_group=\"ingress\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Endpoints up",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "red",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 12,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count(kube_node_status_condition{condition=\"Ready\", status=\"true\"} == 0) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Nodes not ready",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count(gotk_resource_info{ready=\"False\"}) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Flux not ready",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(probe_success{probe_group=\"internet\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Internet",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 8,
+             "options": {
+                "sortBy": [
+                   {
+                      "desc": false,
+                      "displayName": "severity"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sort_desc(ALERTS{alertstate=\"firing\", alertname!~\"Watchdog|InfoInhibitor\"})",
+                   "format": "table",
+                   "instant": true
+                }
+             ],
+             "title": "Firing alerts",
+             "transformations": [
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Value": true,
+                         "__name__": true,
+                         "alertgroup": true,
+                         "alertstate": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "prometheus": true,
+                         "service": true
+                      },
+                      "indexByName": {
+                         "alertname": 0,
+                         "namespace": 2,
+                         "severity": 1
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 13
+             },
+             "id": 9,
+             "title": "Endpoints (blackbox probes through Traefik)",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ]
+                }
+             },
+             "gridPos": {
+                "h": 12,
+                "w": 12,
+                "x": 0,
+                "y": 14
+             },
+             "id": 10,
+             "options": {
+                "rowHeight": 0.80000000000000004,
+                "showValue": "never"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "probe_success{probe_group=~\"ingress|internal\"}",
+                   "legendFormat": "{{namespace}} {{ingress}} {{instance}}"
+                }
+             ],
+             "title": "Availability",
+             "type": "state-timeline"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 12,
+                "w": 12,
+                "x": 12,
+                "y": 14
+             },
+             "id": 11,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "probe_duration_seconds{probe_group=\"ingress\"}",
+                   "legendFormat": "{{namespace}}/{{ingress}}"
+                }
+             ],
+             "title": "Response time (end to end)",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 26
+             },
+             "id": 12,
+             "title": "Traffic",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 27
+             },
+             "id": 13,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (exported_service) (rate(traefik_service_requests_total[$__rate_interval]))",
+                   "legendFormat": "{{exported_service}}"
+                }
+             ],
+             "title": "Requests/s by service (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 27
+             },
+             "id": 14,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.95, sum by (exported_service, le) (rate(traefik_service_request_duration_seconds_bucket[$__rate_interval])))",
+                   "legendFormat": "{{exported_service}}"
+                }
+             ],
+             "title": "p95 latency by service (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 36
+             },
+             "id": 15,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (exported_service, code) (rate(traefik_service_requests_total{code=~\"5..\"}[$__rate_interval])) > 0",
+                   "legendFormat": "{{exported_service}} {{code}}"
+                }
+             ],
+             "title": "5xx/s by service (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 36
+             },
+             "id": 16,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.95, sum by (destination_namespace, destination_workload, le) (rate(hubble_http_request_duration_seconds_bucket[$__rate_interval])))",
+                   "legendFormat": "{{destination_namespace}}/{{destination_workload}}"
+                }
+             ],
+             "title": "In-cluster HTTP p95 by workload (Hubble)",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 45
+             },
+             "id": 17,
+             "title": "Network",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "pps"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 46
+             },
+             "id": 18,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (source_namespace, source_workload, destination_namespace, destination_workload) (rate(hubble_drop_total{reason=\"POLICY_DENIED\"}[$__rate_interval])) > 0",
+                   "legendFormat": "{{source_namespace}}/{{source_workload}} -> {{destination_namespace}}/{{destination_workload}}"
+                }
+             ],
+             "title": "Policy-denied packets/s (Cilium)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "pps"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 46
+             },
+             "id": 19,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (reason) (rate(hubble_drop_total[$__rate_interval])) > 0",
+                   "legendFormat": "{{reason}}"
+                }
+             ],
+             "title": "Drops/s by reason (Cilium)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 55
+             },
+             "id": 20,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "probe_dns_lookup_time_seconds{probe_group=\"dns\"}",
+                   "legendFormat": "probe {{instance}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.95, sum by (le) (rate(coredns_dns_request_duration_seconds_bucket[$__rate_interval])))",
+                   "legendFormat": "CoreDNS p95"
+                }
+             ],
+             "title": "DNS lookup time",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "Bps"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 55
+             },
+             "id": 21,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (instance) (rate(node_network_receive_bytes_total{device!~\"lo|veth.*|lxc.*|cilium.*|vxlan.*\"}[$__rate_interval]))",
+                   "legendFormat": "rx {{instance}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "-sum by (instance) (rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|lxc.*|cilium.*|vxlan.*\"}[$__rate_interval]))",
+                   "legendFormat": "tx {{instance}}"
+                }
+             ],
+             "title": "Node network throughput",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 64
+             },
+             "id": 22,
+             "title": "Internet",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 65
+             },
+             "id": 23,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "probe_icmp_duration_seconds{phase=\"rtt\"}",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "Ping RTT",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 65
+             },
+             "id": 24,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "1 - avg_over_time(probe_success{job=\"blackbox-internet-icmp\"}[5m])",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "Packet loss (5m)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 65
+             },
+             "id": 25,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "probe_duration_seconds{job=\"blackbox-internet-http\"}",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "HTTPS probe time",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 73
+             },
+             "id": 26,
+             "title": "Resources",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 74
+             },
+             "id": 27,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval]))",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 74
+             },
+             "id": 28,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "celsius"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 74
+             },
+             "id": 29,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (instance) (node_hwmon_temp_celsius)",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "Hottest sensor per node",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 82
+             },
+             "id": 30,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "1 - node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}",
+                   "legendFormat": "{{instance}}"
+                }
+             ],
+             "title": "Root filesystem used",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percent"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 82
+             },
+             "id": 31,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "node_drm_gpu_busy_percent",
+                   "legendFormat": "{{instance}} {{card}}"
+                }
+             ],
+             "title": "GPU busy",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 82
+             },
+             "id": 32,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "node_drm_memory_vram_used_bytes / node_drm_memory_vram_size_bytes",
+                   "legendFormat": "{{instance}} {{card}}"
+                }
+             ],
+             "title": "GPU VRAM used",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 90
+             },
+             "id": 33,
+             "title": "Storage",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 91
+             },
+             "id": 34,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes",
+                   "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}"
+                }
+             ],
+             "title": "PVC usage",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 6,
+                "x": 12,
+                "y": 91
+             },
+             "id": 35,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes",
+                   "legendFormat": "{{node}}"
+                }
+             ],
+             "title": "Longhorn storage per node",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "unit": "celsius"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 6,
+                "x": 18,
+                "y": 91
+             },
+             "id": 36,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "smartctl_device_temperature{temperature_type=\"current\"}",
+                   "legendFormat": "{{node}} {{device}}"
+                }
+             ],
+             "title": "Disk temperature",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "text": "unknown"
+                            },
+                            "2": {
+                               "color": "orange",
+                               "text": "degraded"
+                            },
+                            "3": {
+                               "color": "red",
+                               "text": "faulted"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ]
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 24,
+                "x": 0,
+                "y": 100
+             },
+             "id": 37,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "longhorn_volume_robustness != 1",
+                   "format": "table",
+                   "instant": true
+                }
+             ],
+             "title": "Unhealthy Longhorn volumes",
+             "transformations": [
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "service": true
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 106
+             },
+             "id": 38,
+             "title": "Logs",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 107
+             },
+             "id": 39,
+             "options": {
+                "legend": {
+                   "displayMode": "table",
+                   "placement": "right"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "victoriametrics-logs-datasource",
+                      "uid": "VictoriaLogs"
+                   },
+                   "editorMode": "code",
+                   "expr": "* | stats by (kubernetes.pod_namespace) rate() as lines",
+                   "legendFormat": "{{kubernetes.pod_namespace}}",
+                   "queryType": "statsRange",
+                   "refId": "A"
+                }
+             ],
+             "title": "Log lines/s by namespace",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+             },
+             "gridPos": {
+                "h": 12,
+                "w": 24,
+                "x": 0,
+                "y": 115
+             },
+             "id": 40,
+             "options": {
+                "showTime": true,
+                "wrapLogMessage": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "victoriametrics-logs-datasource",
+                      "uid": "VictoriaLogs"
+                   },
+                   "editorMode": "code",
+                   "expr": "(error OR panic OR fatal) | sort by (_time desc) | limit 200",
+                   "queryType": "range",
+                   "refId": "A"
+                }
+             ],
+             "title": "Recent errors, panics and fatals",
+             "type": "logs"
+          }
+       ],
+       "refresh": "1m",
+       "schemaVersion": 39,
+       "tags": [
+          "homelab",
+          "overview"
+       ],
+       "time": {
+          "from": "now-6h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Homelab Overview",
+       "uid": "homelab-overview"
+    }

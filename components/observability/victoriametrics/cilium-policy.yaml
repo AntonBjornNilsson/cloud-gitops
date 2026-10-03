@@ -6,7 +6,9 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # Web UI (Grafana) and TSDB endpoints from Traefik and cluster
+    # Query endpoints (Grafana) and OTLP trace ingestion (Traefik, apps):
+    # 8428 VictoriaMetrics, 9428 VictoriaLogs, 10428 VictoriaTraces,
+    # 9093 Alertmanager
     - fromEntities:
         - cluster
         - host
@@ -18,6 +20,12 @@ spec:
             - port: "8428"
               protocol: TCP
             - port: "9090"
+              protocol: TCP
+            - port: "9093"
+              protocol: TCP
+            - port: "9428"
+              protocol: TCP
+            - port: "10428"
               protocol: TCP
     # Intra-namespace component traffic (vmagent, vmalert, vmalertmanager, grafana, node-exporter)
     - fromEndpoints:
@@ -61,3 +69,17 @@ spec:
               protocol: TCP
             - port: "80"
               protocol: TCP
+    # Blackbox DNS probes against public resolvers
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Blackbox ICMP probes (internet latency / packet loss)
+    - toEntities:
+        - world
+      icmps:
+        - fields:
+            - type: 8
+              family: IPv4

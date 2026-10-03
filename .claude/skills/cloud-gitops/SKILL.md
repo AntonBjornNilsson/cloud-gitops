@@ -101,9 +101,18 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
 
 ## Observability
 
-- VictoriaMetrics (Prometheus-compatible, alert rules in `victoriametrics/alerts.yaml`, alerts -> ntfy), Grafana operator, Jaeger (Traefik OTel traces).
-- Dashboards: edit Jsonnet in `components/observability/dashboards/src/`, then run `components/observability/dashboards/generate.sh`
+- Everything lives in `components/observability/victoriametrics/`; Grafana (operator) is the single UI, home dashboard `homelab-overview`.
+  - Metrics: VictoriaMetrics k8s-stack HelmRelease (`victoriametrics.yaml`). Logs: `logs.yaml` (VLSingle + VLAgent collecting all container logs).
+    Traces: `traces.yaml` (VTSingle; Traefik sends OTLP/HTTP to `vtsingle-traces...:10428/insert/opentelemetry/v1/traces`).
+  - Prefer standalone CRs over chart values: scrape targets in `scrapes/` (VMPodScrape), alert rules in `rules/` (VMRule, one file per domain),
+    synthetic probes in `blackbox-exporter.yaml` (VMProbe; every Ingress is probed automatically), routing in `alertmanager-config.yaml`.
+  - LogsQL alert rules: VMRule labelled `alerting.homelab/datasource: victorialogs` (`logs-alerting.yaml`); the main vmalert ignores them.
+  - Alerts -> Alertmanager -> `alertmanager-ntfy` bridge (`/hook`) -> ntfy topic `homelab-alerts`. Severity sets priority
+    (critical=urgent, warning=high, info=low). Every rule needs a `severity` label and `summary`/`description` annotations.
+  - New app with metrics: add a VMPodScrape in `scrapes/` and allow ingress from the `victoriametrics` namespace on its metrics port.
+- Dashboards: Jsonnet in `components/observability/dashboards/src/`, then run `components/observability/dashboards/generate.sh`
   (needs `jsonnet` + `jb install` for `vendor/`) and commit the regenerated `generated/*.yaml`. Never edit `generated/` by hand.
+  Never use `${var}` in dashboards (Flux substitutes it); use `$var`. Community dashboards: `dashboards/upstream.yaml` (grafana.com id + revision).
 - HolmesGPT uses in-cluster Ollama (`llama3.1:8b`, chosen for tool-calling support). Scheduled checks in
   `holmesgpt/config/scheduled-health-check.yaml`; trigger with `scripts/trigger.sh [list|all|<check>]`
   (note: this script creates a temporary Job, i.e. a cluster write — only run it when the user asks).

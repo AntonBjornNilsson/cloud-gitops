@@ -1,0 +1,25 @@
+---
+# Flux controllers (reconcile durations/errors, workqueues). Per-object Ready
+# state comes from kube-state-metrics (gotk_resource_info).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: flux-system
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - flux-system
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - helm-controller
+          - kustomize-controller
+          - notification-controller
+          - source-controller
+          - image-automation-controller
+          - image-reflector-controller
+  podMetricsEndpoints:
+    - port: http-prom

@@ -1,0 +1,81 @@
+---
+# UIDs are fixed so dashboards (ours, the VictoriaMetrics chart's and
+# grafana.com ones) can reference them.
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: metrics
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  uid: VictoriaMetrics
+  datasource:
+    name: VictoriaMetrics
+    type: prometheus
+    access: proxy
+    url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+    isDefault: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 30s
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: logs
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  plugins:
+    - name: victoriametrics-logs-datasource
+      version: "0.32.0"
+  uid: VictoriaLogs
+  datasource:
+    name: VictoriaLogs
+    type: victoriametrics-logs-datasource
+    access: proxy
+    url: http://vlsingle-logs.victoriametrics.svc.cluster.local:9428
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: traces
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  uid: VictoriaTraces
+  datasource:
+    name: VictoriaTraces
+    type: jaeger
+    access: proxy
+    url: http://vtsingle-traces.victoriametrics.svc.cluster.local:10428/select/jaeger
+---
+# Read-only view of active alerts/silences in Grafana's Alerting UI
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: alertmanager
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  uid: Alertmanager
+  datasource:
+    name: Alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://vmalertmanager-vm-k8s-stack.victoriametrics.svc.cluster.local:9093
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: false
