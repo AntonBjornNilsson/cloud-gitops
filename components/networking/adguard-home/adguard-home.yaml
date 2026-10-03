@@ -83,9 +83,14 @@ spec:
             - name: data
               mountPath: /opt/adguardhome/work
               subPath: work
+          # Until the setup wizard has been completed AdGuard only serves the
+          # wizard on :3000 and never binds DNS, so liveness accepts either.
           livenessProbe:
-            tcpSocket:
-              port: 53
+            exec:
+              command:
+                - sh
+                - -c
+                - nc -z -w 2 127.0.0.1 53 || nc -z -w 2 127.0.0.1 3000
             initialDelaySeconds: 15
             periodSeconds: 10
           readinessProbe:
@@ -117,10 +122,6 @@ spec:
     - name: dns-tcp
       port: 53
       targetPort: 53
-      protocol: TCP
-    - name: init-setup
-      port: 3000
-      targetPort: 3000
       protocol: TCP
     - name: http
       port: 80
