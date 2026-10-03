@@ -62,7 +62,7 @@ spec:
         app: alertmanager-ntfy
       annotations:
         # Roll the pod when the config changes
-        config-version: "3"
+        config-version: "4"
     spec:
       containers:
         - name: alertmanager-ntfy
