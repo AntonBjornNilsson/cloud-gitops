@@ -124,6 +124,11 @@ spec:
         - sourceLabels: [__meta_kubernetes_ingress_name]
           regex: flux-webhook.*
           action: drop
+        # Authelia is checked in-cluster (internal-http probe); one of its hosts
+        # is intentionally served without TLS at the ingress
+        - sourceLabels: [__meta_kubernetes_namespace]
+          regex: authelia
+          action: drop
         - sourceLabels: [__meta_kubernetes_namespace]
           targetLabel: namespace
         - sourceLabels: [__meta_kubernetes_ingress_name]
