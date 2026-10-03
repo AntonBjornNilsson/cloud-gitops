@@ -457,7 +457,7 @@ metadata:
 spec:
   schedule: "0 7 * * 1"
   mode: alert
-  timeout: 360
+  timeout: 300
   destinations:
     - type: slack
       config:
