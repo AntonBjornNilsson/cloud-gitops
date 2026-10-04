@@ -102,6 +102,15 @@ spec:
         http:
           encodedCharacters: *encoded-characters
           aliasHeadersStrategy: delete
+      # Internal health/metrics entrypoints: same settings, no backends behind them
+      traefik:
+        http:
+          encodedCharacters: *encoded-characters
+          aliasHeadersStrategy: delete
+      metrics:
+        http:
+          encodedCharacters: *encoded-characters
+          aliasHeadersStrategy: delete
     tracing:
       addInternals: true
       otlp:
