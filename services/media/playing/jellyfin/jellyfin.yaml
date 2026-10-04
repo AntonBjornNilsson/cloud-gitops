@@ -32,6 +32,18 @@ spec:
         namespace: jellyfin
       interval: 12h
   timeout: 5m0s
+  # Jellyfin authenticates itself (Authorization: MediaBrowser ...), which Authelia
+  # rejects with a 401 basic-auth prompt; the chart has no ingress labels value.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Ingress
+              name: jellyfin
+            patch: |
+              - op: add
+                path: /metadata/labels/enable-oauth
+                value: "false"
   values:
     replicaCount: 1
     resources:
@@ -44,12 +56,29 @@ spec:
 
     ingress:
       enabled: true
-      ingressClassName: "traefik"
+      className: traefik
+      annotations:
+        traefik.ingress.kubernetes.io/router.middlewares: ""
       hosts:
         - host: stream.${domain}
           paths:
             - path: /
               pathType: Prefix
+
+    # /health stalls past the 1s default under load, restarting the pod
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 10
+      timeoutSeconds: 5
 
     persistence:
       config:
