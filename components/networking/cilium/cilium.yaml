@@ -116,6 +116,9 @@ spec:
           enabled: true
           annotations:
             cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
+            # Set explicitly: Kyverno's webhooks skip kube-system, so the
+            # add-ingress-authelia mutation never reaches this Ingress.
+            traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia-forward-auth@kubernetescrd
           className: "traefik"
           hosts:
             - hubble.${domain}

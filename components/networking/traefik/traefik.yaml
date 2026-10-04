@@ -89,12 +89,15 @@ metadata:
   name: traefik-dashboard
   namespace: traefik
 spec:
+  # HTTPS only: on "web" this route would win over the entrypoint redirect
   entryPoints:
-    - web
     - websecure
   routes:
     - match: (Host(`traefik.${domain}`) || Host(`traefik.${auth_domain}`)) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
       kind: Rule
+      middlewares:
+        - name: authelia-forward-auth
+          namespace: traefik
       services:
         - name: api@internal
           kind: TraefikService
