@@ -47,6 +47,9 @@ spec:
       # the image's system bundle (the issuer uses a public certificate).
       extraArgs:
         - -oidc-ca-file=/etc/ssl/certs/ca-certificates.crt
+      # Plugins arrive from the sidecar after the server starts; in-cluster
+      # mode disables plugin watching unless set explicitly.
+      watchPlugins: true
       oidc:
         clientID: ${headlamp_client_id}
         clientSecret: ${headlamp_client_secret}
