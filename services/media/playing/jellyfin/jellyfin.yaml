@@ -49,9 +49,13 @@ spec:
     replicaCount: 1
     image:
       tag: "12.1"
-    # Never run two pods against the shared SQLite database (config is RWX)
+    # Never run two pods against the shared SQLite database (config is RWX).
+    # Not Recreate: the live rollingUpdate defaults would make the patch invalid.
     deploymentStrategy:
-      type: Recreate
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
     resources:
       limits:
         cpu: 2000m
