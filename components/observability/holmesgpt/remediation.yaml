@@ -606,7 +606,7 @@ spec:
         app: holmes-remediation
       annotations:
         # The script is read once at startup; bump to roll the pod when controller.py changes
-        holmes-remediation/script-revision: "2"
+        holmes-remediation/script-revision: "3"
     spec:
       serviceAccountName: holmes-remediation
       containers:
