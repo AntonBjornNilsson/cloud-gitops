@@ -133,6 +133,10 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
 ## GitHub
 
 - `main` is protected by `.github/rulesets/main.json` (PR + `validate` check). Admins bypass, the agent's GitHub App does not.
+- Version updates come from Renovate (`.github/renovate.json5`, weekly PRs on `renovate/*` branches, Dependency Dashboard issue).
+  Patch/digest bumps of services/observability automerge; core platform and majors are reviewed. Prefer merging its PR over hand-bumping.
+  After a bump, trivy-operator rescans the new images: check `kubectl --context=oidc-user get vulnerabilityreports -n <ns> -o wide`.
+  Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
   After editing the JSON, re-apply it with `gh api` (PUT on the existing ruleset id).
 
 ## Workflow for any change
