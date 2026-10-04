@@ -133,6 +133,19 @@ spec:
               protocol: TCP
             - port: "9091"
               protocol: TCP
+    # OIDC discovery/token exchange via the public auth hostname. It
+    # resolves to the Traefik LoadBalancer IP, which Cilium translates to the
+    # Traefik pod, so the policy sees the container ports, not 80/443.
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+            app.kubernetes.io/name: traefik
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+            - port: "8443"
+              protocol: TCP
     # External OIDC providers
     - toEntities:
         - world
