@@ -29,3 +29,4 @@ Use operator for managing cloudflare
 finish the flux webhook
 Headlamp plugin: Kubescape (needs Kubescape operator) - compliance + vulnerability views
 Headlamp plugin: Inspektor Gadget (needs IG deployed) - eBPF tracing/debugging from the UI
+Headlamp plugin: Beacon (version monitoring) - removed 2026-10-04, v2.1.0 release tarball fails its Artifact Hub checksum; retry when upstream publishes a matching release (also needs updater image built from source)
