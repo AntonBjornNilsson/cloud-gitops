@@ -73,6 +73,10 @@ spec:
       annotations:
         metallb.io/address-pool: external-pool
         metallb.io/loadBalancerIPs: "${traefik_lb_ip}"
+    # Keep the legacy router/service names that alert rules and dashboards match
+    # on. Set as an argument: the chart only renders safeNaming when it is true.
+    additionalArguments:
+      - --providers.kubernetescrd.safeNaming=false
     ports:
       web:
         http:
@@ -81,6 +85,23 @@ spec:
               to: websecure
               scheme: https
               permanent: true
+          # Reject encoded characters that let a path be read differently by
+          # Traefik's router/auth rules and by the backend (none seen in traffic)
+          encodedCharacters: &encoded-characters
+            allowEncodedSlash: false
+            allowEncodedBackSlash: false
+            allowEncodedNullCharacter: false
+            allowEncodedSemicolon: false
+            allowEncodedPercent: false
+            allowEncodedQuestionMark: false
+            allowEncodedHash: false
+          # Drop headers like Remote_User that some backends read as the
+          # Remote-User header Authelia sets
+          aliasHeadersStrategy: delete
+      websecure:
+        http:
+          encodedCharacters: *encoded-characters
+          aliasHeadersStrategy: delete
     tracing:
       addInternals: true
       otlp:

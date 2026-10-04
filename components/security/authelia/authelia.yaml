@@ -272,6 +272,8 @@ spec:
   forwardAuth:
     address: "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth"
     trustForwardHeader: true
+    # Authelia answers with a few KB; cap it so a misbehaving backend can't exhaust memory
+    maxResponseBodySize: 1048576
     authResponseHeaders:
       - Remote-User
       - Remote-Groups
@@ -287,6 +289,8 @@ spec:
   forwardAuth:
     address: "http://authelia.authelia.svc.cluster.local/api/authz/forward-auth"
     trustForwardHeader: true
+    # Authelia answers with a few KB; cap it so a misbehaving backend can't exhaust memory
+    maxResponseBodySize: 1048576
     authResponseHeaders:
       - Remote-User
       - Remote-Groups
