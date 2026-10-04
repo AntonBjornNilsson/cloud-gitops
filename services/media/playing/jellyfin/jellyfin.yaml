@@ -158,6 +158,14 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+    # Live TV from Dispatcharr (HDHomeRun tuner, XMLTV guide and streams)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: dispatcharr
+      toPorts:
+        - ports:
+            - port: "9191"
+              protocol: TCP
     # Metadata, plugin repositories, cover art
     - toEntities:
         - world

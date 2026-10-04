@@ -305,6 +305,14 @@ spec:
         - ports:
             - port: "9191"
               protocol: TCP
+    # Jellyfin Live TV: HDHomeRun tuner, XMLTV guide and streams
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyfin
+      toPorts:
+        - ports:
+            - port: "9191"
+              protocol: TCP
     # Intra-namespace traffic
     - fromEndpoints:
         - {}
