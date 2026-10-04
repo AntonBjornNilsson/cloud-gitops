@@ -79,23 +79,3 @@ spec:
     jsonData:
       implementation: prometheus
       handleGrafanaManagedAlerts: false
----
-# TEMPORARY: adopts the datasource left behind by the old "victoriametrics"
-# CR (random UID) and renames it so it no longer collides with "metrics".
-# Removed in the next commit so the operator's finalizer deletes it.
-apiVersion: grafana.integreatly.org/v1beta1
-kind: GrafanaDatasource
-metadata:
-  name: victoriametrics
-  namespace: grafana
-spec:
-  instanceSelector:
-    matchLabels:
-      dashboards: "grafana"
-  uid: be8c550f-884a-42d0-984e-fd235478d153
-  datasource:
-    name: VictoriaMetrics (orphaned)
-    type: prometheus
-    access: proxy
-    url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
-    isDefault: false
