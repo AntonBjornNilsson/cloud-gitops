@@ -50,8 +50,10 @@ spec:
       # upgrade and causes Flux health checks to time out. Models are persisted
       # on the PVC and survive pod restarts. Pull new models imperatively via:
       #   kubectl exec -n ollama deploy/ollama -- ollama pull <model>
+    # In-cluster only: the API has no auth, and its clients (open-webui,
+    # holmesgpt) use the Service DNS name
     service:
-      type: LoadBalancer
+      type: ClusterIP
     image:
       tag: "rocm" # force amd
     persistentVolume:
@@ -78,20 +80,6 @@ spec:
     # extraEnv:
     #   - name: OLLAMA_DEBUG
     #     value: "2"
-  postRenderers:
-    - kustomize:
-        patches:
-          - target:
-              kind: Service
-            patch: |
-              apiVersion: apps/v1
-              kind: Service
-              metadata:
-                name: ollama
-                annotations:
-                  meta.helm.sh/release-name: ollama
-                  meta.helm.sh/release-namespace: ollama
-                  metallb.io/loadBalancerIPs: "192.168.21.42"
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -101,21 +89,12 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # API requests from open-webui, holmesgpt, cluster clients, and local network via LoadBalancer
+    # API requests from open-webui and holmesgpt only
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: open-webui
         - matchLabels:
             io.kubernetes.pod.namespace: holmesgpt
-      toPorts:
-        - ports:
-            - port: "11434"
-              protocol: TCP
-    - fromEntities:
-        - cluster
-        - host
-        - remote-node
-        - world
       toPorts:
         - ports:
             - port: "11434"
