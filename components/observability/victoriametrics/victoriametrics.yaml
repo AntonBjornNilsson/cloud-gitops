@@ -24,7 +24,7 @@ spec:
   chart:
     spec:
       chart: victoria-metrics-k8s-stack
-      version: "*"
+      version: "0.95.0"
       sourceRef:
         kind: HelmRepository
         name: victoriametrics
@@ -337,7 +337,7 @@ spec:
   chart:
     spec:
       chart: prometheus-operator-crds
-      version: "32.x"
+      version: "32.0.1"
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
