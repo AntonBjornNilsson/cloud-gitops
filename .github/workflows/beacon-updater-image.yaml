@@ -1,0 +1,44 @@
+# Builds the Headlamp Beacon updater image from upstream source (upstream
+# publishes no image) and pushes it to GHCR for
+# services/management/headlamp/beacon.yaml. Bump REF and VERSION together.
+name: beacon-updater-image
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/beacon-updater-image.yaml
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+env:
+  UPSTREAM: https://github.com/KerberOps/headlamp-beacon.git
+  REF: 031db0e211403a8d4127f9085b5c778cd709e8a1
+  VERSION: 2.0.8
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve image name
+        id: v
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/beacon-updater" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: ${{ env.UPSTREAM }}#${{ env.REF }}:updater
+          platforms: linux/amd64
+          pull: true
+          push: true
+          tags: |
+            ${{ steps.v.outputs.image }}:${{ env.VERSION }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Headlamp Beacon updater built from ${{ env.UPSTREAM }}@${{ env.REF }}

@@ -1,0 +1,131 @@
+# Backend for the Headlamp Beacon plugin (free tier).
+# The plugin hardcodes the ops-headlamp namespace. It writes the beacon-*-apps
+# ConfigMaps itself from its Settings page, so they are not declared here;
+# the updater fills the matching beacon-*-versions ConfigMaps once a day.
+# The updater image is built by .github/workflows/beacon-updater-image.yaml.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ops-headlamp
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: beacon-updater
+  namespace: ops-headlamp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: beacon-updater
+  namespace: ops-headlamp
+rules:
+  # create cannot be restricted by resourceName
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames:
+      - beacon-apps-apps
+      - beacon-apps-versions
+      - beacon-core-apps
+      - beacon-core-versions
+      - beacon-plugins-apps
+      - beacon-plugins-versions
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: beacon-updater
+  namespace: ops-headlamp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: beacon-updater
+subjects:
+  - kind: ServiceAccount
+    name: beacon-updater
+    namespace: ops-headlamp
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: beacon-updater
+  namespace: ops-headlamp
+spec:
+  schedule: "0 6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: beacon-updater
+        spec:
+          serviceAccountName: beacon-updater
+          restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: updater
+              image: ghcr.io/${ghcr_repo}/beacon-updater:2.0.8
+              env:
+                - name: NAMESPACE
+                  value: ops-headlamp
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  memory: 128Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: beacon-updater
+  namespace: ops-headlamp
+spec:
+  endpointSelector: {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Kubernetes API server (version cache ConfigMaps)
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Latest versions from the GitHub API and GHCR
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
