@@ -99,7 +99,7 @@ spec:
     - name: oldAnnotations
       expression: "oldObject.metadata.?annotations.orValue({})"
   validations:
-    - expression: "request.subResource == ''"
+    - expression: "request.?subResource.orValue('') == ''"
       message: "oidc:view may not write Flux subresources"
     - expression: "object.spec == oldObject.spec"
       message: "oidc:view may only request reconciliation; spec changes are not allowed"
