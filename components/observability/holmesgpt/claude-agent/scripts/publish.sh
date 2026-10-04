@@ -29,6 +29,13 @@ FORBIDDEN=$(git diff --cached --name-only \
 TOKEN=$(cat "$GITHUB_TOKEN_FILE")
 if git diff --cached | grep -F "$TOKEN" > /dev/null; then reject "diff contains a credential"; fi
 kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null || reject "kustomize validation failed"
+AGENT_TASK=$(printenv AGENT_TASK || echo health)
+if [ "$AGENT_TASK" = "updates" ]; then
+  # Update PRs may only change version fields (and comments)
+  OTHER=$(git diff --cached -U0 | grep -E '^[-+]' | grep -vE '^(\+\+\+|---) ' \
+    | grep -vE '^[-+][[:space:]]*(- )?(version|tag|image):[[:space:]]' | grep -vE '^[-+][[:space:]]*(#.*)?$' || true)
+  [ -z "$OTHER" ] || reject "update diff changes more than version fields: $(head -5 <<<"$OTHER")"
+fi
 
 # ── branch, push, PR ────────────────────────────────────────────────────────
 # Token is read from the file on every use, so a refresh mid-run is picked up
@@ -36,12 +43,12 @@ git config --global credential.helper '!f() { echo username=x-access-token; echo
 git config --global user.name "claude-agent"
 git config --global user.email "claude-agent@users.noreply.github.com"
 
-BRANCH="claude/$(date -u +%Y%m%d-%H%M)"
+BRANCH="claude/$AGENT_TASK-$(date -u +%Y%m%d-%H%M)"
 git switch --quiet -c "$BRANCH"
 git commit --quiet -F - <<EOF
 $TITLE
 
-Opened by the claude-agent CronJob.
+Opened by the claude-agent CronJob ($AGENT_TASK run).
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF

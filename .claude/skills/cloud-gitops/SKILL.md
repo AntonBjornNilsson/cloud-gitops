@@ -133,9 +133,11 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
 ## GitHub
 
 - `main` is protected by `.github/rulesets/main.json` (PR + `validate` check). Admins bypass, the agent's GitHub App does not.
-- Version updates come from Renovate (`.github/renovate.json5`, weekly PRs on `renovate/*` branches, Dependency Dashboard issue).
-  Patch/digest bumps of services/observability automerge; core platform and majors are reviewed. Prefer merging its PR over hand-bumping.
-  After a bump, trivy-operator rescans the new images: check `kubectl --context=oidc-user get vulnerabilityreports -n <ns> -o wide`.
+- Version updates come from the `claude-agent-updates` CronJob (daily): `scripts/check-updates.sh` lists newer chart/image
+  versions, Claude picks one batch (Trivy CRITICAL fixes first, one core component per PR, no majors), `publish.sh` only
+  accepts version-field diffs and opens a `claude/updates-*` PR; it reaches main only via the ntfy Merge button. One update
+  PR at a time. Dependabot only covers `.github/` actions and the claude-agent image (paths the agent may not touch).
+  After a bump, trivy-operator rescans the new images: `kubectl --context=oidc-user get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
   After editing the JSON, re-apply it with `gh api` (PUT on the existing ruleset id).
 
