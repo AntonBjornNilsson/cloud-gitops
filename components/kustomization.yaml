@@ -25,7 +25,7 @@ resources:
   # - security/aws/system-aws.yaml
   - security/cert-manager/system-cert-manager.yaml
   - security/kyverno/system-kyverno.yaml
-  # - security/trivy-operator/system-trivy-operator.yaml
+  - security/trivy-operator/system-trivy-operator.yaml
 
   # Storage
   - storage/longhorn/system-longhorn.yaml

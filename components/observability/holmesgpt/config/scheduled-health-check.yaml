@@ -356,7 +356,8 @@ spec:
     - Images from deprecated or archived base images
     - Images that have not been updated in over 90 days (potential unpatched CVEs)
     - Images pulled from Docker Hub public registry without rate-limit consideration
-    - Trivy or other in-cluster scan results showing CRITICAL or HIGH CVEs if available
+    - trivy-operator VulnerabilityReports (aquasecurity.github.io, one per workload container;
+      only fixable MEDIUM+ CVEs are recorded) with CRITICAL or HIGH findings
     For each finding, list the workload, namespace, image reference, and recommend
     a pinned digest or updated image tag with the corrected manifest in ```yaml:path/to/file.yaml.
 ---

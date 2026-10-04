@@ -17,6 +17,11 @@ spec:
       # Always-firing helper alerts are not actionable
       - matchers: ['alertname=~"Watchdog|InfoInhibitor"']
         receiver: blackhole
+      # Image CVE / exposed-secret findings stay open until an image bump;
+      # a weekly reminder is enough
+      - matchers: ['alertname=~"ImageCriticalVulnerabilities|ImageExposedSecrets"']
+        receiver: ntfy
+        repeat_interval: 168h
       - matchers: ['severity="critical"']
         receiver: ntfy
         repeat_interval: 4h

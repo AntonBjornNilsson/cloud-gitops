@@ -8,3 +8,4 @@ resources:
   - metallb.yaml
   - ntfy.yaml
   - smartctl-exporter.yaml
+  - trivy-operator.yaml

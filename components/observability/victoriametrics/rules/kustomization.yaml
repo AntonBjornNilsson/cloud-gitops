@@ -6,4 +6,5 @@ resources:
   - networking.yaml
   - observability.yaml
   - platform.yaml
+  - security.yaml
   - storage.yaml

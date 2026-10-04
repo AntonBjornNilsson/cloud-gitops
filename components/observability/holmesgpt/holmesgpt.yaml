@@ -71,6 +71,12 @@ spec:
       - name: OVERRIDE_MAX_OUTPUT_TOKEN
         value: "8192"
 
+    # trivy-operator reports, for the image-vulnerability-scan check
+    customClusterRoleRules:
+      - apiGroups: ["aquasecurity.github.io"]
+        resources: ["*"]
+        verbs: ["get", "list", "watch"]
+
     # Enable Holmes Operator for continuous investigations
     operator:
       enabled: true

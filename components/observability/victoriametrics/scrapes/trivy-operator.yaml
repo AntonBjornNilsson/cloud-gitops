@@ -1,0 +1,20 @@
+---
+# Trivy operator: vulnerability / exposed-secret / config-audit / RBAC finding
+# counts per workload and image.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: trivy-operator
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - trivy-system
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trivy-operator
+  podMetricsEndpoints:
+    - port: metrics
+      # Findings carry the scanned workload's `namespace`; keep it instead of
+      # overwriting it with trivy-system.
+      honorLabels: true

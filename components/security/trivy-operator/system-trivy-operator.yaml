@@ -6,13 +6,16 @@ metadata:
 spec:
   interval: 2m0s
   retryInterval: 1m0s
-  timeout: 5m0s
+  timeout: 10m0s
   path: ./components/security/trivy-operator
   prune: true
   sourceRef:
     kind: GitRepository
     name: flux-system
   wait: true
+  dependsOn:
+    # Trivy server cache PVC
+    - name: system-longhorn-config
   postBuild:
     substituteFrom:
       - kind: Secret

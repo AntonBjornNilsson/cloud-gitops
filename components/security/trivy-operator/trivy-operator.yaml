@@ -17,6 +17,12 @@ spec:
   interval: 24h
   url: https://aquasecurity.github.io/helm-charts/
 ---
+# Continuous image vulnerability, exposed-secret, config-audit and RBAC
+# scanning. Results are stored as CRs (VulnerabilityReport, ConfigAuditReport,
+# ...), exported as metrics to VictoriaMetrics (scrapes/trivy-operator.yaml,
+# rules/security.yaml) and shown in Grafana and the Headlamp Trivy plugin.
+# The chart aggregates read access to the reports into the built-in "view"
+# role, so the claude-agent can read them without extra RBAC.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -27,33 +33,88 @@ spec:
   chart:
     spec:
       chart: trivy-operator
-      version: "*"
+      version: "0.x"
       sourceRef:
         kind: HelmRepository
         name: aqua
         namespace: trivy-system
       interval: 12h
+  # The built-in Trivy server downloads the vulnerability DB before it
+  # becomes ready on first install.
+  timeout: 10m
   install:
     crds: CreateReplace
     strategy:
       name: RetryOnFailure
-      retryInterval: 1m
+      retryInterval: 2m
+    remediation:
+      retries: 3
   upgrade:
     crds: CreateReplace
     strategy:
       name: RetryOnFailure
-      retryInterval: 1m
-  timeout: 5m
+      retryInterval: 2m
+    remediation:
+      retries: 3
   values:
     operator:
+      # ClientServer mode: one Trivy server keeps the vulnerability DB and the
+      # analysed-layer cache on a PVC. Scan jobs only send layer digests and
+      # skip layers the server has already seen, so the daily rescans don't
+      # re-download the DB (~80 MB per job in Standalone mode) or re-pull
+      # unchanged layers (several GB for the ROCm images).
+      builtInTrivyServer: true
+      # Small cluster: few scans at a time, generous timeout for the first
+      # scan of multi-GB images.
+      scanJobsConcurrentLimit: 2
+      scanJobTimeout: 30m
+      # Rescan daily so new CVEs show up for images that didn't change.
+      scannerReportTTL: "24h"
+      # SBOM reports are large CRs (can approach the 1.5 MB etcd object
+      # limit) and nothing here consumes them.
+      sbomGenerationEnabled: false
+      # Node-collector checks kubeadm paths (/etc/kubernetes, /var/lib/etcd);
+      # on k0s they all report false failures, and the CIS compliance
+      # reports are built on top of them.
+      infraAssessmentScannerEnabled: false
+      clusterComplianceEnabled: false
+      # Per-CVE metrics would explode cardinality; per-severity counts are
+      # enough for alerting and the dashboard.
+      metricsFindingsEnabled: true
+      metricsVulnIdEnabled: false
+    trivy:
+      mode: ClientServer
+      # Only report what an image update can fix, from MEDIUM up. Keeps the
+      # reports actionable and well below the etcd object size limit.
+      ignoreUnfixed: true
+      severity: MEDIUM,HIGH,CRITICAL
+      timeout: "25m0s"
+      # Scan job (Trivy client) resources
       resources:
         requests:
           cpu: 100m
           memory: 128Mi
         limits:
-          cpu: 500m
-          memory: 512Mi
-    trivy:
-      ignoreUnfixed: false
-    serviceMonitor:
-      enabled: false
+          cpu: "1"
+          memory: 1Gi
+      # Vulnerability DB + Java DB + layer cache. Cache only: not backed up,
+      # losing it just means a re-download.
+      storageClassName: longhorn
+      storageSize: 5Gi
+      server:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: "1"
+            memory: 1Gi
+    # Don't install the (inactive) CIS/NSA/PSS ClusterComplianceReports.
+    compliance:
+      specs: []
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi

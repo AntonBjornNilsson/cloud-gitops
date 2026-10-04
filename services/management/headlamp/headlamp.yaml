@@ -78,10 +78,10 @@ spec:
           - name: metallb
             source: https://artifacthub.io/packages/headlamp/headlamp-metallb-plugin/headlamp-metallb-plugin
             version: 0.5.1
-          # Enable together with components/security/trivy-operator
-          # - name: trivy
-          #   source: https://artifacthub.io/packages/headlamp/headlamp-trivy/headlamp_trivy
-          #   version: 0.3.2
+          # Reads the trivy-operator report CRs
+          - name: trivy
+            source: https://artifacthub.io/packages/headlamp/headlamp-trivy/headlamp_trivy
+            version: 0.3.2
         installOptions:
           parallel: true
           maxConcurrent: 2

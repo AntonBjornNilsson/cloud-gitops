@@ -1,3 +1,5 @@
+# Covers the operator, the built-in Trivy server and the scan jobs (all run in
+# trivy-system).
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -6,14 +8,22 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    - fromEntities:
-        - host
-        - remote-node
-        - health
+    # Scan jobs and operator -> Trivy server (4954)
+    - fromEndpoints:
+        - {}
+    # Operator metrics (vmagent)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
       toPorts:
         - ports:
             - port: "8080"
               protocol: TCP
+    # Health checks and probes (operator 9090, server 4954)
+    - fromEntities:
+        - host
+        - remote-node
+        - health
   egress:
     # DNS Resolution
     - toEndpoints:
@@ -31,7 +41,12 @@ spec:
         - ports:
             - port: "6443"
               protocol: TCP
-    # Outbound HTTPS for downloading vulnerability DBs (GitHub GHCR) and container image layers
+    # Intra-namespace (scan jobs -> trivy-service)
+    - toEndpoints:
+        - {}
+    # Vulnerability/Java DBs and checks bundle (mirror.gcr.io) and image
+    # manifests/layers from the workloads' registries (Docker Hub, GHCR,
+    # lscr.io, quay.io, registry.k8s.io)
     - toEntities:
         - world
       toPorts:

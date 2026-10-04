@@ -65,3 +65,21 @@ spec:
           annotations:
             summary: "{{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) ran out of memory"
             description: "{{ $value }} \"out of memory\" log lines in the last 5 minutes (RAM or GPU VRAM)."
+
+    - name: trivy
+      type: vlogs
+      interval: 15m
+      rules:
+        # The operator deletes failed scan jobs right away, so kube-state-metrics
+        # rarely sees them; the operator logs each failure instead.
+        - alert: TrivyScanJobsFailing
+          expr: |
+            _time:1h kubernetes.pod_namespace:trivy-system kubernetes.container_name:trivy-operator "Scan job container"
+            | stats by (kubernetes.pod_namespace) count() as matches
+            | filter matches:>=3
+            | rename kubernetes.pod_namespace as namespace
+          labels:
+            severity: warning
+          annotations:
+            summary: "Trivy scan jobs are failing"
+            description: "{{ $value }} failed scan jobs in the last hour. Usual causes: the trivy-server is unreachable, a registry is blocked by the Cilium policy (only 443 is open), or the job hit its memory limit / timeout on a large image. The operator log lines contain status.reason and status.message."

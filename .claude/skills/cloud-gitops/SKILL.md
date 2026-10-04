@@ -48,7 +48,7 @@ TODO                             user's backlog (">" = done)
 ```
 
 Enable/disable = uncomment/comment the line in `components/kustomization.yaml` or `services/kustomization.yaml`.
-Currently disabled examples: cloudflare, aws, trivy-operator, the *arr stack, homeassistant, vaultwarden, tailscale, github-runners, skyrim.
+Currently disabled examples: cloudflare, aws, the *arr stack, homeassistant, vaultwarden, tailscale, github-runners, skyrim.
 `components/networking/ingress-nginx` is legacy (Traefik replaced it) and is not referenced.
 
 ## Components (infrastructure)

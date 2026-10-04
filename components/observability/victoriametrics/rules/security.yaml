@@ -1,0 +1,60 @@
+---
+# Image vulnerabilities and exposed secrets (trivy-operator). The operator only
+# reports fixable MEDIUM+ CVEs (see components/security/trivy-operator), so
+# every finding here is resolved by bumping the image. Finding alerts are
+# "info" and repeat weekly (alertmanager-config.yaml); details via
+# `kubectl get vulnerabilityreports -n <ns>`, the Headlamp Trivy plugin or
+# the "Trivy Operator" Grafana dashboard.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: security
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: trivy-findings
+      interval: 5m
+      rules:
+        - alert: ImageCriticalVulnerabilities
+          expr: |
+            sum by (namespace, resource_kind, resource_name, image_registry, image_repository, image_tag) (
+              trivy_image_vulnerabilities{severity="Critical"}
+            ) > 0
+          for: 6h
+          labels:
+            severity: info
+          annotations:
+            summary: "{{ $labels.image_repository }}:{{ $labels.image_tag }} in {{ $labels.namespace }}/{{ $labels.resource_name }} has {{ $value }} fixable critical CVEs"
+            description: "A newer image fixes them. `kubectl get vulnerabilityreports -n {{ $labels.namespace }} -o wide` lists the report; bump the tag in the manifest."
+
+        - alert: ImageExposedSecrets
+          expr: |
+            sum by (namespace, resource_kind, resource_name, image_registry, image_repository, image_tag) (
+              trivy_image_exposedsecrets{severity=~"Critical|High"}
+            ) > 0
+          for: 1h
+          labels:
+            severity: info
+          annotations:
+            summary: "{{ $labels.image_repository }}:{{ $labels.image_tag }} in {{ $labels.namespace }}/{{ $labels.resource_name }} contains {{ $value }} secrets"
+            description: "Trivy found credentials or private keys baked into the image (often test fixtures in upstream images). Check `kubectl get exposedsecretreports -n {{ $labels.namespace }} -o yaml`; if it is one of our images, rotate the secret."
+
+    - name: trivy-operator
+      rules:
+        - alert: TrivyOperatorDown
+          expr: kube_deployment_status_replicas_available{namespace="trivy-system", deployment="trivy-operator"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Trivy operator is down"
+            description: "No new vulnerability or config-audit reports are produced; existing ones go stale."
+
+        - alert: TrivyServerDown
+          expr: kube_statefulset_status_replicas_ready{namespace="trivy-system", statefulset="trivy-server"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Trivy server is down"
+            description: "All image scan jobs fail without it (ClientServer mode). Check the trivy-server pod and its PVC; it needs mirror.gcr.io on 443 for the DB."
