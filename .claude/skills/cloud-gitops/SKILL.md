@@ -139,7 +139,8 @@ flux --context=oidc-user reconcile kustomization <system-name|flux-services> --w
 flux --context=oidc-user reconcile helmrelease <name> -n <ns>
 ```
 
-Commit and push without asking: pushing is how changes reach the cluster. `kustomize` is not installed standalone; use `kubectl kustomize`.
+Commit and push without asking: pushing is how changes reach the cluster.
+Only stage and push files you changed in this session (`git add <paths>`, never `git add -A`/`.`); other sessions may have uncommitted work in the tree — leave it alone (use `git pull --rebase --autostash` if it blocks the rebase). `kustomize` is not installed standalone; use `kubectl kustomize`.
 
 ## Debugging cheatsheet
 
