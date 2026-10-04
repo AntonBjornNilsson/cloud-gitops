@@ -87,7 +87,7 @@ spec:
           - image.toolkit.fluxcd.io
         apiVersions: ["*"]
         operations: ["UPDATE"]
-        resources: ["*", "*/*"]
+        resources: ["*/*"]
   matchConditions:
     - name: oidc-reader
       expression: >-
