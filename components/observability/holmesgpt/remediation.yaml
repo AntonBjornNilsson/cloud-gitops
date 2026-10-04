@@ -11,10 +11,12 @@ data:
     import time
     import uuid
     import secrets
+    import hashlib
     import re
     import base64
     import ssl
     import threading
+    from datetime import datetime, timezone
     from http.server import HTTPServer, BaseHTTPRequestHandler
     import urllib.request
     import urllib.error
@@ -31,10 +33,108 @@ data:
     K8S_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
     K8S_CA_PATH    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     K8S_API        = "https://kubernetes.default.svc"
+    NAMESPACE      = "holmesgpt"
+    # Created and owned by this controller (not by Flux), so restarts keep button tokens and seen checks
+    STATE_CONFIGMAP = "holmes-remediation-state"
+    STATE_MAX_AGE   = 30 * 86400
 
-    # In-memory store: token -> remediation item
-    remediations   = {}
+    # sha256(button token) -> remediation item. Raw tokens only ever leave the
+    # process inside the ntfy notification, never in /remediations or the state ConfigMap.
+    remediations     = {}
+    # HealthCheck names already notified
     processed_checks = set()
+    state_lock       = threading.RLock()
+    # Set once saved state is loaded; merge/reject answer 503 until then
+    state_ready      = threading.Event()
+    START_TIME       = time.time()
+
+    def token_key(token):
+        return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    def new_item(title, description, fixes=None, pr_number=None, pr_url=None):
+        """Stores a new remediation item. Returns (token, item)."""
+        token = secrets.token_urlsafe(24)
+        item = {
+            "id":          str(uuid.uuid4())[:8],
+            "title":       title,
+            "description": description,
+            "fixes":       fixes or [],
+            "pr_number":   pr_number,
+            "pr_url":      pr_url,
+            "created_at":  time.time(),
+            "status":      "pending"
+        }
+        with state_lock:
+            remediations[token_key(token)] = item
+        return token, item
+
+    # ─── Kubernetes API / persisted state ────────────────────────────────────
+
+    _k8s_ssl = None
+
+    def _k8s(method, path, payload=None):
+        global _k8s_ssl
+        if _k8s_ssl is None:
+            _k8s_ssl = ssl.create_default_context(cafile=K8S_CA_PATH)
+        # Re-read every call: the projected serviceaccount token is rotated
+        with open(K8S_TOKEN_PATH) as f:
+            k8s_token = f.read().strip()
+        req = urllib.request.Request(
+            f"{K8S_API}{path}",
+            data=json.dumps(payload).encode("utf-8") if payload is not None else None,
+            headers={"Authorization": f"Bearer {k8s_token}", "Accept": "application/json",
+                     "Content-Type": "application/json"},
+            method=method
+        )
+        with urllib.request.urlopen(req, context=_k8s_ssl, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    def load_state():
+        """Restores state from the ConfigMap. Returns False if none was saved yet."""
+        try:
+            cm = _k8s("GET", f"/api/v1/namespaces/{NAMESPACE}/configmaps/{STATE_CONFIGMAP}")
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return False
+            raise
+        data = cm.get("data") or {}
+        with state_lock:
+            remediations.update(json.loads(data.get("remediations.json") or "{}"))
+            processed_checks.update(json.loads(data.get("processed_checks.json") or "[]"))
+        return True
+
+    def save_state():
+        """Writes state to the ConfigMap. Only items with a PR (i.e. buttons) are kept."""
+        if not state_ready.is_set():
+            return  # never overwrite saved state before it was loaded
+        with state_lock:
+            now = time.time()
+            for key in [k for k, i in remediations.items() if now - i.get("created_at", now) > STATE_MAX_AGE]:
+                del remediations[key]
+            keep = {
+                k: dict(i, fixes=[], description=(i.get("description") or "")[:2000])
+                for k, i in remediations.items() if i.get("pr_number")
+            }
+            body = {
+                "apiVersion": "v1",
+                "kind":       "ConfigMap",
+                "metadata":   {"name": STATE_CONFIGMAP, "namespace": NAMESPACE,
+                               "labels": {"app": "holmes-remediation"}},
+                "data": {
+                    "remediations.json":     json.dumps(keep),
+                    "processed_checks.json": json.dumps(sorted(processed_checks))
+                }
+            }
+            base = f"/api/v1/namespaces/{NAMESPACE}/configmaps"
+            try:
+                try:
+                    _k8s("PUT", f"{base}/{STATE_CONFIGMAP}", body)
+                except urllib.error.HTTPError as e:
+                    if e.code != 404:
+                        raise
+                    _k8s("POST", base, body)
+            except Exception as e:
+                print(f"[state] Save failed: {e}", file=sys.stderr)
 
     # ─── ntfy ────────────────────────────────────────────────────────────────
 
@@ -214,14 +314,16 @@ data:
         )
         return create_pr(branch, f"fix(holmesgpt): {item['title'][:72]}", body)
 
-    def _handle_result(item):
+    def _handle_result(item, token):
         """Shared logic: open PR if fixes exist, else plain failure ntfy."""
         if item["fixes"]:
             try:
                 pr_num, pr_url = open_remediation_pr(item)
-                item["pr_number"] = pr_num
-                item["pr_url"]    = pr_url
-                send_ntfy_pr_notification(item["title"], item["description"], item["token"], pr_num, pr_url)
+                with state_lock:
+                    item["pr_number"] = pr_num
+                    item["pr_url"]    = pr_url
+                save_state()
+                send_ntfy_pr_notification(item["title"], item["description"], token, pr_num, pr_url)
             except Exception as e:
                 print(f"[pr] Failed: {e}", file=sys.stderr)
                 send_ntfy_failure(item["title"], f"{item['description'][:2000]}\n\n⚠️ PR creation failed: {e}")
@@ -232,7 +334,9 @@ data:
 
     class RequestHandler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
-            print(f"[http] {self.address_string()} {fmt % args}")
+            # The request line carries the button token; never log it
+            msg = re.sub(r"(/(?:merge|reject)/)[^\s?]+", r"\1<redacted>", fmt % args)
+            print(f"[http] {self.address_string()} {msg}")
 
         def _json(self, code, obj):
             body = json.dumps(obj).encode("utf-8")
@@ -251,7 +355,8 @@ data:
             if self.path in ("/healthz", "/readyz"):
                 self._json(200, {"status": "ok"})
             elif self.path == "/remediations":
-                self._json(200, remediations)
+                with state_lock:
+                    self._json(200, remediations)
             else:
                 self.send_response(404); self.end_headers()
 
@@ -261,8 +366,11 @@ data:
 
             # /merge/<token>
             if self.path.startswith("/merge/"):
+                if not state_ready.is_set():
+                    self._text(503, "Starting up, try again shortly.\n"); return
                 token = self.path[7:].split("?")[0]
-                item  = remediations.get(token)
+                with state_lock:
+                    item = remediations.get(token_key(token))
                 if not item:
                     self._text(404, "Not found.\n"); return
                 if not item.get("pr_number"):
@@ -272,6 +380,7 @@ data:
                 try:
                     merge_pr(item["pr_number"])
                     item["status"] = "merged"
+                    save_state()
                     send_ntfy_followup("✅ PR Merged",
                         f"PR #{item['pr_number']} for '{item['title']}' merged into {GITHUB_BRANCH}.\n{item.get('pr_url','')}",
                         tags=["white_check_mark"])
@@ -286,8 +395,11 @@ data:
 
             # /reject/<token>
             if self.path.startswith("/reject/"):
+                if not state_ready.is_set():
+                    self._text(503, "Starting up, try again shortly.\n"); return
                 token = self.path[8:].split("?")[0]
-                item  = remediations.get(token)
+                with state_lock:
+                    item = remediations.get(token_key(token))
                 if not item:
                     self._text(404, "Not found.\n"); return
                 if not item.get("pr_number"):
@@ -297,6 +409,7 @@ data:
                 try:
                     close_pr(item["pr_number"])
                     item["status"] = "rejected"
+                    save_state()
                     send_ntfy_followup("❌ PR Rejected",
                         f"PR #{item['pr_number']} for '{item['title']}' closed without merging.",
                         tags=["x"])
@@ -317,18 +430,8 @@ data:
                 if not pr_number:
                     send_ntfy_failure(title, description or "No details available.")
                     self._json(200, {"status": "notified_no_pr"}); return
-                token_id = secrets.token_urlsafe(24)
-                remediations[token_id] = {
-                    "id":          str(uuid.uuid4())[:8],
-                    "token":       token_id,
-                    "title":       title,
-                    "description": description,
-                    "fixes":       [],
-                    "pr_number":   int(pr_number),
-                    "pr_url":      data.get("pr_url"),
-                    "created_at":  time.time(),
-                    "status":      "pending"
-                }
+                token_id, _ = new_item(title, description, pr_number=int(pr_number), pr_url=data.get("pr_url"))
+                save_state()
                 send_ntfy_pr_notification(title, description, token_id, pr_number, data.get("pr_url", ""))
                 self._json(200, {"status": "registered", "pr_number": pr_number}); return
 
@@ -351,21 +454,9 @@ data:
                     text  = data["message"]
                     title = data.get("name", title)
 
-                token_id = secrets.token_urlsafe(24)
-                fixes    = extract_remediation_fixes(text)
-                item = {
-                    "id":          str(uuid.uuid4())[:8],
-                    "token":       token_id,
-                    "title":       title,
-                    "description": text,
-                    "fixes":       fixes,
-                    "pr_number":   None,
-                    "pr_url":      None,
-                    "created_at":  time.time(),
-                    "status":      "pending"
-                }
-                remediations[token_id] = item
-                _handle_result(item)
+                fixes = extract_remediation_fixes(text)
+                token_id, item = new_item(title, text, fixes)
+                _handle_result(item, token_id)
 
                 self._json(200, {
                     "status":     "pr_created" if item.get("pr_number") else "notified_no_fixes",
@@ -380,42 +471,60 @@ data:
 
     # ─── K8s HealthCheck watcher ──────────────────────────────────────────────
 
+    def _created_at(meta):
+        try:
+            ts = datetime.strptime(meta.get("creationTimestamp", ""), "%Y-%m-%dT%H:%M:%SZ")
+            return ts.replace(tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            return 0
+
     def k8s_healthcheck_watcher():
         if not os.path.exists(K8S_TOKEN_PATH):
-            print("[watcher] No serviceaccount token — inactive.")
+            print("[watcher] No serviceaccount token — inactive, state kept in memory only.")
+            state_ready.set()
             return
-        with open(K8S_TOKEN_PATH) as f:
-            k8s_token = f.read().strip()
-        ssl_ctx = ssl.create_default_context(cafile=K8S_CA_PATH)
 
         while True:
             try:
-                req = urllib.request.Request(
-                    f"{K8S_API}/apis/holmesgpt.dev/v1alpha1/namespaces/holmesgpt/healthchecks",
-                    headers={"Authorization": f"Bearer {k8s_token}", "Accept": "application/json"}
-                )
-                with urllib.request.urlopen(req, context=ssl_ctx, timeout=10) as resp:
-                    for hc in json.loads(resp.read().decode("utf-8")).get("items", []):
-                        name   = hc.get("metadata", {}).get("name", "unknown")
-                        status = hc.get("status", {})
-                        if status.get("result") == "fail" and name not in processed_checks:
-                            processed_checks.add(name)
-                            message  = status.get("message") or status.get("rationale") or "Health check failure."
-                            token_id = secrets.token_urlsafe(24)
-                            item = {
-                                "id":          str(uuid.uuid4())[:8],
-                                "token":       token_id,
-                                "title":       f"HealthCheck Failed: {name}",
-                                "description": message,
-                                "fixes":       extract_remediation_fixes(message),
-                                "pr_number":   None,
-                                "pr_url":      None,
-                                "created_at":  time.time(),
-                                "status":      "pending"
-                            }
-                            remediations[token_id] = item
-                            print(f"[watcher] '{name}' failed — fixes: {len(item['fixes'])}")
-                            _handle_result(item)
+                restored = load_state()
+                break
+            except Exception as e:
+                print(f"[state] Load failed, retrying: {e}", file=sys.stderr)
+                time.sleep(5)
+        with state_lock:
+            print(f"[state] restored={restored} remediations={len(remediations)} processed_checks={len(processed_checks)}")
+        state_ready.set()
+        save_state()
+
+        while True:
+            try:
+                items = _k8s("GET", f"/apis/holmesgpt.dev/v1alpha1/namespaces/{NAMESPACE}/healthchecks").get("items", [])
+                changed = False
+                for hc in items:
+                    meta   = hc.get("metadata", {})
+                    name   = meta.get("name", "unknown")
+                    status = hc.get("status", {})
+                    if status.get("result") != "fail" or name in processed_checks:
+                        continue
+                    with state_lock:
+                        processed_checks.add(name)
+                    changed = True
+                    # Without saved state, we can't tell which old failures were already notified
+                    if not restored and _created_at(meta) < START_TIME:
+                        print(f"[watcher] '{name}' failed before startup — skipping")
+                        continue
+                    message = status.get("message") or status.get("rationale") or "Health check failure."
+                    token_id, item = new_item(f"HealthCheck Failed: {name}", message, extract_remediation_fixes(message))
+                    print(f"[watcher] '{name}' failed — fixes: {len(item['fixes'])}")
+                    _handle_result(item, token_id)
+                # Forget checks that no longer exist so the set stays bounded
+                present = {hc.get("metadata", {}).get("name") for hc in items}
+                with state_lock:
+                    if not processed_checks <= present:
+                        processed_checks.intersection_update(present)
+                        changed = True
+                if changed:
+                    save_state()
             except Exception as e:
                 print(f"[watcher] Error: {e}", file=sys.stderr)
             time.sleep(15)
@@ -455,6 +564,15 @@ rules:
   - apiGroups: ["holmesgpt.dev"]
     resources: ["healthchecks", "scheduledhealthchecks"]
     verbs: ["get", "list", "watch"]
+  # Persisted button tokens (hashed) and notified checks
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["holmes-remediation-state"]
+    verbs: ["get", "update"]
+  # create can't be limited by resourceNames; only used for the state ConfigMap above
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -486,6 +604,9 @@ spec:
     metadata:
       labels:
         app: holmes-remediation
+      annotations:
+        # The script is read once at startup; bump to roll the pod when controller.py changes
+        holmes-remediation/script-revision: "2"
     spec:
       serviceAccountName: holmes-remediation
       containers:
