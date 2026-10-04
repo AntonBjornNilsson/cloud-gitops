@@ -49,7 +49,7 @@ spec:
             limits:
               memory: 32Mi
           volumeMounts:
-            - name: config
+            - name: tunnel-config
               mountPath: /config
             - name: creds
               mountPath: /creds
@@ -84,14 +84,16 @@ spec:
             limits:
               memory: 256Mi
           volumeMounts:
-            - name: config
+            - name: tunnel-config
               mountPath: /etc/cloudflared/config
               readOnly: true
             - name: creds
               mountPath: /etc/cloudflared/creds
               readOnly: true
       volumes:
-        - name: config
+        # Not "config": that name still carries the configMap source from the
+        # pre-Flux kubectl apply, and server-side apply would merge the two.
+        - name: tunnel-config
           emptyDir: {}
         - name: creds
           secret:
