@@ -47,6 +47,11 @@ data:
     # Set once saved state is loaded; merge/reject answer 503 until then
     state_ready      = threading.Event()
     START_TIME       = time.time()
+    # HealthCheck results that trigger an alert
+    ALERT_RESULTS    = ("fail", "error")
+    # Results with no saved notification history (first start, or newly added to
+    # ALERT_RESULTS); checks with these results created before startup are skipped
+    backfill_results = set(ALERT_RESULTS)
 
     def token_key(token):
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -101,6 +106,9 @@ data:
         with state_lock:
             remediations.update(json.loads(data.get("remediations.json") or "{}"))
             processed_checks.update(json.loads(data.get("processed_checks.json") or "[]"))
+            # State saved before alert_results.json existed only alerted on "fail"
+            saved = json.loads(data.get("alert_results.json") or '["fail"]')
+            backfill_results.intersection_update(set(ALERT_RESULTS) - set(saved))
         return True
 
     def save_state():
@@ -122,7 +130,8 @@ data:
                                "labels": {"app": "holmes-remediation"}},
                 "data": {
                     "remediations.json":     json.dumps(keep),
-                    "processed_checks.json": json.dumps(sorted(processed_checks))
+                    "processed_checks.json": json.dumps(sorted(processed_checks)),
+                    "alert_results.json":    json.dumps(list(ALERT_RESULTS))
                 }
             }
             base = f"/api/v1/namespaces/{NAMESPACE}/configmaps"
@@ -173,6 +182,16 @@ data:
             "message":  message[:4000],
             "tags":     ["rotating_light", "robot"],
             "priority": "high"
+        })
+
+    def send_ntfy_check_error(title, message):
+        """The check itself could not run (e.g. LLM unreachable) — nothing to remediate."""
+        _post_ntfy({
+            "topic":    NTFY_TOPIC,
+            "title":    f"⚠️ HolmesGPT Check Error: {title[:80]}",
+            "message":  message[:2000],
+            "tags":     ["warning", "robot"],
+            "priority": "default"
         })
 
     def send_ntfy_followup(title, message, tags=None):
@@ -499,19 +518,35 @@ data:
         while True:
             try:
                 items = _k8s("GET", f"/apis/holmesgpt.dev/v1alpha1/namespaces/{NAMESPACE}/healthchecks").get("items", [])
+                items.sort(key=lambda hc: _created_at(hc.get("metadata", {})))
+                # Previous completed result per schedule, to alert only when a schedule starts erroring
+                prev_result = {}
                 changed = False
                 for hc in items:
-                    meta   = hc.get("metadata", {})
-                    name   = meta.get("name", "unknown")
-                    status = hc.get("status", {})
-                    if status.get("result") != "fail" or name in processed_checks:
+                    meta     = hc.get("metadata", {})
+                    name     = meta.get("name", "unknown")
+                    schedule = (meta.get("labels") or {}).get("holmesgpt.dev/scheduled-by") or name
+                    status   = hc.get("status", {})
+                    result   = status.get("result")
+                    previous = prev_result.get(schedule)
+                    if result in ("pass", "fail", "error"):
+                        prev_result[schedule] = result
+                    if result not in ALERT_RESULTS or name in processed_checks:
                         continue
                     with state_lock:
                         processed_checks.add(name)
                     changed = True
-                    # Without saved state, we can't tell which old failures were already notified
-                    if not restored and _created_at(meta) < START_TIME:
-                        print(f"[watcher] '{name}' failed before startup — skipping")
+                    if result in backfill_results and _created_at(meta) < START_TIME:
+                        print(f"[watcher] '{name}' {result} before startup — skipping")
+                        continue
+                    if result == "error":
+                        if previous == "error":
+                            print(f"[watcher] '{name}' errored, schedule '{schedule}' already erroring — skipping")
+                            continue
+                        print(f"[watcher] '{name}' errored")
+                        send_ntfy_check_error(f"{schedule}",
+                            f"{status.get('message') or status.get('error') or 'Check errored.'}\n\n"
+                            f"No further error alerts for this check until it runs successfully again.")
                         continue
                     message = status.get("message") or status.get("rationale") or "Health check failure."
                     token_id, item = new_item(f"HealthCheck Failed: {name}", message, extract_remediation_fixes(message))
@@ -606,7 +641,7 @@ spec:
         app: holmes-remediation
       annotations:
         # The script is read once at startup; bump to roll the pod when controller.py changes
-        holmes-remediation/script-revision: "3"
+        holmes-remediation/script-revision: "4"
     spec:
       serviceAccountName: holmes-remediation
       containers:
