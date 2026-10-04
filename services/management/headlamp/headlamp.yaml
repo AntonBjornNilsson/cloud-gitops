@@ -42,6 +42,11 @@ spec:
       retryInterval: 3m
   values:
     config:
+      # In-cluster mode always hands the OIDC client a CA string; when it is
+      # empty every login logs "failed to append ca cert to pool". Point it at
+      # the image's system bundle (the issuer uses a public certificate).
+      extraArgs:
+        - -oidc-ca-file=/etc/ssl/certs/ca-certificates.crt
       oidc:
         clientID: ${headlamp_client_id}
         clientSecret: ${headlamp_client_secret}
