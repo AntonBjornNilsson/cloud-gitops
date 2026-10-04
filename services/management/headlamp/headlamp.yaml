@@ -53,6 +53,31 @@ spec:
         issuerURL: ${headlamp_issuer_url}
         scopes: ${headlamp_scopes}
         callbackURL: "https://headlamp.${domain}/oidc-callback"
+    # Sidecar that installs Artifact Hub plugins into the shared plugins dir
+    # (emptyDir, so they are re-downloaded on every pod start).
+    pluginsManager:
+      enabled: true
+      version: "0.1.1"
+      env:
+        - name: HOME
+          value: /tmp
+      configContent: |
+        plugins:
+          - name: flux
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_flux
+            version: 0.7.0
+          - name: cert-manager
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_cert-manager
+            version: 0.1.1
+          - name: kyverno
+            source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_kyverno
+            version: 0.1.0
+          - name: metallb
+            source: https://artifacthub.io/packages/headlamp/headlamp-metallb-plugin/headlamp-metallb-plugin
+            version: 0.5.1
+        installOptions:
+          parallel: true
+          maxConcurrent: 2
 
 ---
 apiVersion: networking.k8s.io/v1
