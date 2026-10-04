@@ -31,7 +31,8 @@ spec:
         name: jellyfin
         namespace: jellyfin
       interval: 12h
-  timeout: 5m0s
+  # First boot after a major upgrade runs database migrations
+  timeout: 30m0s
   # Jellyfin authenticates itself (Authorization: MediaBrowser ...), which Authelia
   # rejects with a 401 basic-auth prompt; the chart has no ingress labels value.
   postRenderers:
@@ -46,6 +47,11 @@ spec:
                 value: "false"
   values:
     replicaCount: 1
+    image:
+      tag: "12.1"
+    # Never run two pods against the shared SQLite database (config is RWX)
+    deploymentStrategy:
+      type: Recreate
     resources:
       limits:
         cpu: 2000m
@@ -65,6 +71,12 @@ spec:
             - path: /
               pathType: Prefix
 
+    # Allow up to 30m for startup database migrations
+    startupProbe:
+      tcpSocket:
+        port: http
+      periodSeconds: 10
+      failureThreshold: 180
     # /health stalls past the 1s default under load, restarting the pod
     livenessProbe:
       httpGet:
