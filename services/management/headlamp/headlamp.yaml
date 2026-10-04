@@ -64,7 +64,7 @@ spec:
       env:
         - name: HOME
           value: /tmp
-      configContent: |
+      configContent: &plugin-config |
         plugins:
           - name: flux
             source: https://artifacthub.io/packages/headlamp/headlamp-plugins/headlamp_flux
@@ -89,6 +89,10 @@ spec:
         installOptions:
           parallel: true
           maxConcurrent: 2
+    # pluginctl's --watch misses ConfigMap updates (atomic symlink swap), so
+    # copy the plugin list into a pod annotation to roll the pod on changes.
+    podAnnotations:
+      headlamp/plugin-config: *plugin-config
 
 ---
 apiVersion: networking.k8s.io/v1
