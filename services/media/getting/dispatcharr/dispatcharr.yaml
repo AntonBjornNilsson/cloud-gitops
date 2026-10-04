@@ -53,14 +53,14 @@ metadata:
   name: dispatcharr-db
   namespace: dispatcharr
 spec:
-  # Step 1 of 2: take server-side-apply ownership of the defaulted rollingUpdate
-  # fields (same values as today, no rollout) so the next commit can drop them
-  # when switching to Recreate.
+  # Step 1 of 2: take server-side-apply ownership of the rollingUpdate fields
+  # (Flux skips unchanged objects, so the values must differ; strategy-only
+  # changes cause no rollout) so the next commit can drop them for Recreate.
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 25%
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: dispatcharr-db
