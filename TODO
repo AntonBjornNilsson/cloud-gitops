@@ -30,3 +30,15 @@ finish the flux webhook
 Headlamp plugin: Kubescape (needs Kubescape operator) - compliance + vulnerability views
 Headlamp plugin: Inspektor Gadget (needs IG deployed) - eBPF tracing/debugging from the UI
 Headlamp plugin: Beacon (version monitoring) - removed 2026-10-04, v2.1.0 release tarball fails its Artifact Hub checksum; retry when upstream publishes a matching release (also needs updater image built from source)
+Stalkarr (MAG/Stalker portal for Dispatcharr, own repo stalkarr; manifests in services/media/playing/stalkarr, disabled)
+ - add flux-substitutions keys: ghcr_owner, ghcr_pull_auth (base64 user:PAT read:packages), stalkarr_secret, stalkarr_devices (JSON list of box MACs)
+ - check Dispatcharr Settings -> Network access lets pod IPs read M3U/EPG/HDHR
+ - enable media/playing/stalkarr in services/kustomization.yaml, check flux-services goes Ready and /api/status lists channels
+ - set portal background/logo in config.yaml (URL, or file in /data/assets on the PVC)
+ - point the MAG box at https://tv.<domain>/c/ and test on hardware: video visible behind the UI, remote keys, CH+/-, volume, 576p/1080p scaling, HTTPS cert accepted by the box
+ - test a Stalker app (TiviMate / STB Emulator / Kodi pvr.stalker) against the same portal
+ - cut a v0.1.0 release in stalkarr and pin the image tag instead of :latest
+ - decide on Longhorn backup for stalkarr-data (only favourites + last channel)
+ - add Prometheus metrics to stalkarr (active streams, refresh errors), VMPodScrape, alert on refresh failures
+ - add stalkarr to homepage
+ - features: VOD/series from Dispatcharr, catch-up/timeshift, radio, parental lock, UI translations
