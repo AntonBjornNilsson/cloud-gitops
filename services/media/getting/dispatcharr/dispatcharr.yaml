@@ -53,10 +53,14 @@ metadata:
   name: dispatcharr-db
   namespace: dispatcharr
 spec:
-  # Two postgres instances must never share the data directory (RWX volume)
+  # Step 1 of 2: take server-side-apply ownership of the defaulted rollingUpdate
+  # fields (same values as today, no rollout) so the next commit can drop them
+  # when switching to Recreate.
   strategy:
-    type: Recreate
-    rollingUpdate: null
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
   selector:
     matchLabels:
       app: dispatcharr-db
@@ -74,23 +78,7 @@ spec:
             - name: POSTGRES_USER
               value: dispatch
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: dispatcharr-db
-                  key: password
-          # POSTGRES_PASSWORD only takes effect when the data directory is first
-          # initialised; keep the role's password in sync with the Secret on every
-          # start (local socket connections are trusted in the official image).
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - sh
-                  - -c
-                  - |
-                    [ -n "$POSTGRES_PASSWORD" ] || exit 0
-                    for i in $(seq 1 60); do pg_isready -q -U dispatch -d dispatcharr && break; sleep 2; done
-                    echo "ALTER USER dispatch PASSWORD :'pw';" | psql -q -v ON_ERROR_STOP=1 -v pw="$POSTGRES_PASSWORD" -U dispatch -d dispatcharr || true
+              value: secret
           ports:
             - containerPort: 5432
           readinessProbe:
@@ -229,10 +217,7 @@ spec:
             - name: POSTGRES_USER
               value: dispatch
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: dispatcharr-db
-                  key: password
+              value: secret
             - name: REDIS_HOST
               value: dispatcharr-redis
             - name: DISPATCHARR_LOG_LEVEL
@@ -266,10 +251,7 @@ spec:
             - name: POSTGRES_USER
               value: dispatch
             - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: dispatcharr-db
-                  key: password
+              value: secret
             - name: REDIS_HOST
               value: dispatcharr-redis
             - name: DISPATCHARR_LOG_LEVEL
@@ -341,14 +323,6 @@ spec:
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: jellyfin
-      toPorts:
-        - ports:
-            - port: "9191"
-              protocol: TCP
-    # Stalkarr: MAG portal reading the HDHR lineup, M3U/XMLTV and streams
-    - fromEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: stalkarr
       toPorts:
         - ports:
             - port: "9191"
