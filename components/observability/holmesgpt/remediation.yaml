@@ -148,11 +148,16 @@ data:
     # ─── ntfy ────────────────────────────────────────────────────────────────
 
     def _post_ntfy(payload):
+        # JSON publishing only works on the server root (topic inside the body);
+        # posted to /<topic>, ntfy shows the raw JSON as the message and drops the actions.
+        headers = {"Content-Type": "application/json"}
+        if NTFY_TOKEN:
+            headers["Authorization"] = f"Bearer {NTFY_TOKEN}"
         try:
             req = urllib.request.Request(
-                f"{NTFY_SERVER}/{NTFY_TOPIC}",
+                f"{NTFY_SERVER}/",
                 data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {NTFY_TOKEN}"},
+                headers=headers,
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -164,9 +169,10 @@ data:
         """Notification with Merge PR / Reject PR action buttons."""
         _post_ntfy({
             "topic":   NTFY_TOPIC,
-            "title":   f"🔧 HolmesGPT Fix Ready: {title[:80]}",
-            "message": f"{message[:3000]}\n\n🔗 PR #{pr_number}: {pr_url}",
-            "tags":    ["warning", "robot"],
+            "title":    f"🔧 PR #{pr_number} ready: {title[:80]}",
+            "message":  f"{message[:3000]}\n\n🔗 PR #{pr_number}: {pr_url}",
+            "markdown": True,
+            "tags":     ["warning", "robot"],
             "actions": [
                 {"action": "http",  "label": "✅ Merge PR",  "url": f"{BASE_URL}/merge/{token}",  "method": "POST"},
                 {"action": "http",  "label": "❌ Reject PR", "url": f"{BASE_URL}/reject/{token}", "method": "POST"},
@@ -641,7 +647,7 @@ spec:
         app: holmes-remediation
       annotations:
         # The script is read once at startup; bump to roll the pod when controller.py changes
-        holmes-remediation/script-revision: "4"
+        holmes-remediation/script-revision: "5"
     spec:
       serviceAccountName: holmes-remediation
       containers:
