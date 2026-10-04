@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-app-token-refresh
+  namespace: holmesgpt
+rules:
+  # "create" can't be limited by resourceNames; only needed for the very first run
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["github-app-token"]
+    verbs: ["get", "patch", "update"]

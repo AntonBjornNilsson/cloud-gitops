@@ -1,0 +1,104 @@
+# Daily cluster review. Two containers sharing /work:
+#   investigate (init): Claude with read-only kubectl, edits a clone of the repo. No GitHub credentials.
+#   publish:            guards and validates the diff, pushes a claude/* branch and opens the PR as
+#                       the GitHub App, then registers it with holmes-remediation for the ntfy buttons.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: claude-agent
+  namespace: holmesgpt
+spec:
+  schedule: "30 6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 1800
+      ttlSecondsAfterFinished: 604800
+      template:
+        spec:
+          serviceAccountName: claude-agent
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+          initContainers:
+            - name: investigate
+              image: ghcr.io/${ghcr_repo}/claude-agent:latest
+              imagePullPolicy: Always
+              command: ["bash", "/etc/claude-agent/investigate.sh"]
+              env:
+                - name: CLAUDE_MODEL
+                  value: claude-sonnet-5-5
+                - name: CLAUDE_MAX_TURNS
+                  value: "60"
+                - name: GITHUB_REPO
+                  value: "${github_repo}"
+                - name: GITHUB_BRANCH
+                  value: main
+                - name: CLAUDE_CODE_OAUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: claude-agent
+                      key: oauth-token
+              volumeMounts:
+                - name: scripts
+                  mountPath: /etc/claude-agent
+                - name: home
+                  mountPath: /home/node
+                - name: work
+                  mountPath: /work
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 512Mi
+                limits:
+                  cpu: "1"
+                  memory: 2Gi
+          containers:
+            - name: publish
+              image: ghcr.io/${ghcr_repo}/claude-agent:latest
+              imagePullPolicy: Always
+              command: ["bash", "/etc/claude-agent/publish.sh"]
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: GITHUB_REPO
+                  value: "${github_repo}"
+                - name: GITHUB_BRANCH
+                  value: main
+                - name: GITHUB_TOKEN_FILE
+                  value: /var/run/github/token
+              volumeMounts:
+                - name: scripts
+                  mountPath: /etc/claude-agent
+                - name: work
+                  mountPath: /work
+                - name: tmp
+                  mountPath: /tmp
+                - name: github-token
+                  mountPath: /var/run/github
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+          volumes:
+            - name: scripts
+              configMap:
+                name: claude-agent-scripts
+            - name: home
+              emptyDir: {}
+            - name: work
+              emptyDir: {}
+            - name: tmp
+              emptyDir: {}
+            - name: github-token
+              secret:
+                secretName: github-app-token

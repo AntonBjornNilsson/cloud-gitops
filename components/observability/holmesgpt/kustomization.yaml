@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - holmesgpt.yaml
   - remediation.yaml
+  - claude-agent
   - cilium-policy.yaml
   - system-holmesgpt-config.yaml

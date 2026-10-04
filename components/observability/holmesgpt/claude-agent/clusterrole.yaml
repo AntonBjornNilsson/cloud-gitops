@@ -1,0 +1,19 @@
+# Added on top of the built-in "view" role (which excludes Secrets):
+# cluster-scoped resources and CRDs that "view" does not aggregate.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: claude-agent-read
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "persistentvolumes", "namespaces"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io", "networking.k8s.io", "apiextensions.k8s.io", "metrics.k8s.io"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["longhorn.io", "cilium.io", "traefik.io", "holmesgpt.dev", "grafana.integreatly.org",
+                "source.toolkit.fluxcd.io", "kustomize.toolkit.fluxcd.io", "helm.toolkit.fluxcd.io",
+                "notification.toolkit.fluxcd.io", "kyverno.io", "wgpolicyk8s.io", "cert-manager.io",
+                "operator.victoriametrics.com"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]

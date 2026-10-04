@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: claude-agent-view
+subjects:
+  - kind: ServiceAccount
+    name: claude-agent
+    namespace: holmesgpt
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: claude-agent-read
+subjects:
+  - kind: ServiceAccount
+    name: claude-agent
+    namespace: holmesgpt
+roleRef:
+  kind: ClusterRole
+  name: claude-agent-read
+  apiGroup: rbac.authorization.k8s.io

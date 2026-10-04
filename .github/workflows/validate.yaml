@@ -1,0 +1,17 @@
+# Required status check for main (see .github/rulesets/main.json)
+name: validate
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build components and services
+        run: |
+          kubectl kustomize components > /dev/null
+          kubectl kustomize services > /dev/null

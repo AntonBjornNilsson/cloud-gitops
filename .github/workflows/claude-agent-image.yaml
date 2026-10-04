@@ -1,0 +1,90 @@
+# Builds the claude-agent tooling image and pushes it to GHCR.
+# Daily schedule picks up new Claude Code / kubectl / flux releases and base image updates;
+# a build is skipped when an image for the exact same set of versions already exists.
+name: claude-agent-image
+on:
+  push:
+    branches: [main]
+    paths:
+      - components/observability/holmesgpt/claude-agent/image/**
+      - .github/workflows/claude-agent-image.yaml
+  pull_request:
+    paths:
+      - components/observability/holmesgpt/claude-agent/image/**
+      - .github/workflows/claude-agent-image.yaml
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: claude-agent-image-${{ github.ref }}
+env:
+  CONTEXT: components/observability/holmesgpt/claude-agent/image
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve versions
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base=$(grep -m1 '^FROM ' "$CONTEXT/Dockerfile" | awk '{print $2}')
+          claude_code=$(npm view @anthropic-ai/claude-code version)
+          kubectl=$(curl -fsSL https://dl.k8s.io/release/stable.txt)
+          flux=$(gh release view --repo fluxcd/flux2 --json tagName -q .tagName | sed 's/^v//')
+          base_digest=$(docker buildx imagetools inspect "$base" --format '{{json .Manifest.Digest}}' | tr -d '"')
+          # Content key: changes whenever a tool, the base image or the Dockerfile changes
+          key=$(printf '%s\n' "$claude_code" "$kubectl" "$flux" "$base_digest" "$(sha256sum "$CONTEXT/Dockerfile")" | sha256sum | cut -c1-12)
+          {
+            echo "image=ghcr.io/${GITHUB_REPOSITORY,,}/claude-agent"
+            echo "claude_code=$claude_code"
+            echo "kubectl=$kubectl"
+            echo "flux=$flux"
+            echo "key=$key"
+          } >> "$GITHUB_OUTPUT"
+          echo "claude-code $claude_code, kubectl $kubectl, flux $flux, base $base_digest -> key $key"
+
+      - uses: docker/login-action@v4
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Skip if this version set is already published
+        id: exists
+        if: github.event_name != 'pull_request'
+        run: |
+          if docker buildx imagetools inspect "${{ steps.v.outputs.image }}:key-${{ steps.v.outputs.key }}" > /dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Image for key ${{ steps.v.outputs.key }} already exists, skipping build"
+          fi
+
+      - uses: docker/setup-buildx-action@v4
+        if: steps.exists.outputs.skip != 'true'
+
+      - uses: docker/build-push-action@v7
+        if: steps.exists.outputs.skip != 'true'
+        with:
+          context: ${{ env.CONTEXT }}
+          platforms: linux/amd64
+          pull: true
+          push: ${{ github.event_name != 'pull_request' }}
+          build-args: |
+            CLAUDE_CODE_VERSION=${{ steps.v.outputs.claude_code }}
+            KUBECTL_VERSION=${{ steps.v.outputs.kubectl }}
+            FLUX_VERSION=${{ steps.v.outputs.flux }}
+          tags: |
+            ${{ steps.v.outputs.image }}:latest
+            ${{ steps.v.outputs.image }}:${{ steps.v.outputs.claude_code }}
+            ${{ steps.v.outputs.image }}:key-${{ steps.v.outputs.key }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Tooling image for the claude-agent CronJobs
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

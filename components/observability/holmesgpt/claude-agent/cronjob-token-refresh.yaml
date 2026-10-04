@@ -1,0 +1,52 @@
+# Installation tokens live 1h; refreshing every 20 min leaves >30 min for any consumer.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: github-app-token-refresh
+  namespace: holmesgpt
+spec:
+  schedule: "*/20 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      ttlSecondsAfterFinished: 3600
+      template:
+        spec:
+          serviceAccountName: github-app-token-refresh
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+          containers:
+            - name: refresh
+              image: ghcr.io/${ghcr_repo}/claude-agent:latest
+              imagePullPolicy: Always
+              command: ["bash", "/etc/claude-agent/refresh-token.sh"]
+              env:
+                - name: GITHUB_REPO
+                  value: "${github_repo}"
+              volumeMounts:
+                - name: scripts
+                  mountPath: /etc/claude-agent
+                - name: github-app
+                  mountPath: /etc/github-app
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+          volumes:
+            - name: scripts
+              configMap:
+                name: claude-agent-scripts
+            - name: github-app
+              secret:
+                secretName: claude-agent-github-app
