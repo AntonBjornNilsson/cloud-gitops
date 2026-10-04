@@ -151,11 +151,8 @@ spec:
       labels:
         app: dispatcharr-web
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: nilsson-server
-      tolerations:
-        - key: "node-role.kubernetes.io/control-plane"
-          effect: "NoSchedule"
+      # Not pinned: nothing here needs the control-plane node (only /dev/net/tun, present on every node),
+      # and keeping it off leaves that node's disk and CPU to etcd.
       containers:
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
