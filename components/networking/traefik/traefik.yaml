@@ -25,17 +25,20 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: "29.0.1"
+      version: "41.6.1"
       sourceRef:
         kind: HelmRepository
         name: traefik
         namespace: traefik
       interval: 12h
   install:
+    crds: CreateReplace
     strategy:
       name: RetryOnFailure
       retryInterval: 1m
   upgrade:
+    # Newer Traefik versions need the matching CRD schemas
+    crds: CreateReplace
     strategy:
       name: RetryOnFailure
       retryInterval: 1m
@@ -46,15 +49,14 @@ spec:
     ingressRoute:
       dashboard:
         enabled: false
-    logs:
-      general:
-        format: json
-        level: INFO
-      # One JSON line per request (status, duration, router, client) shipped
-      # to VictoriaLogs by the VLAgent collector.
-      access:
-        enabled: true
-        format: json
+    log:
+      format: json
+      level: INFO
+    # One JSON line per request (status, duration, router, client) shipped
+    # to VictoriaLogs by the VLAgent collector.
+    accessLog:
+      enabled: true
+      format: json
     metrics:
       prometheus:
         entryPoint: metrics
@@ -65,16 +67,20 @@ spec:
         buckets: "0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2.5,5,10"
         service:
           enabled: true
-          spec:
-            loadBalancerIP: 192.168.21.25
-          annotations:
-            metallb.io/address-pool: external-pool
         serviceMonitor:
           enabled: true
+    service:
+      annotations:
+        metallb.io/address-pool: external-pool
+        metallb.io/loadBalancerIPs: "${traefik_lb_ip}"
     ports:
       web:
-        redirectTo:
-          port: websecure
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+              permanent: true
     tracing:
       addInternals: true
       otlp:
