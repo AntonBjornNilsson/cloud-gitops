@@ -21,3 +21,5 @@ kubectl/flux context `oidc-user` points at a read-only service account without a
     "summary": "markdown: what is wrong (evidence), root cause, what you changed and why, risk, other findings"}
    Use "fixed" only if you edited files, "findings" for problems you did not fix, "healthy" if nothing is wrong.
    The summary goes to GitHub and ntfy: keep it under 3000 characters and free of hostnames, IPs and secrets.
+   Check the file with `jq . /work/out/report.json` (python is not installed).
+   Base findings on the current state: events and old conditions can outlive an issue that is already fixed.

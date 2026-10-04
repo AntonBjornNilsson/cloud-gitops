@@ -48,7 +48,7 @@ claude -p "$PROMPT" \
     "Bash(kubectl --context=oidc-user get:*)" "Bash(kubectl --context=oidc-user describe:*)" \
     "Bash(kubectl --context=oidc-user logs:*)" "Bash(kubectl --context=oidc-user top:*)" "Bash(kubectl --context=oidc-user events:*)" \
     "Bash(kubectl kustomize:*)" "Bash(flux get:*)" "Bash(flux --context=oidc-user get:*)" \
-    "Bash(git status:*)" "Bash(git diff:*)" "Bash(git log:*)" \
+    "Bash(git status:*)" "Bash(git diff:*)" "Bash(git log:*)" "Bash(jq:*)" \
   --disallowedTools WebFetch WebSearch \
   | tee "$OUT/claude.log"
 
