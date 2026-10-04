@@ -32,9 +32,8 @@ spec:
   instanceSelector:
     matchLabels:
       dashboards: "grafana"
-  plugins:
-    - name: victoriametrics-logs-datasource
-      version: "0.32.0"
+  # Plugin is installed via plugins.preinstall_sync in grafana-instance.yaml
+  # (the CR's "plugins" field sets the deprecated GF_INSTALL_PLUGINS).
   uid: VictoriaLogs
   datasource:
     name: VictoriaLogs

@@ -37,6 +37,11 @@ spec:
   config:
     server:
       root_url: "https://grafana.${domain}"
+    plugins:
+      preinstall_sync: "victoriametrics-logs-datasource@0.32.0"
+      # Don't auto-update bundled plugins (zipkin, elasticsearch, ...); their
+      # directory is read-only in the image, so every update attempt fails.
+      preinstall_auto_update: "false"
     auth:
       signout_redirect_url: "${victoriametrics_auth_redirect_url}"
     "auth.generic_oauth":
