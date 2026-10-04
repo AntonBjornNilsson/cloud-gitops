@@ -27,3 +27,5 @@ Use operator for managing cloudflare
 > Setup L7 for hubble
 > Set up oidc for headlamp
 finish the flux webhook
+Headlamp plugin: Kubescape (needs Kubescape operator) - compliance + vulnerability views
+Headlamp plugin: Inspektor Gadget (needs IG deployed) - eBPF tracing/debugging from the UI

@@ -65,6 +65,14 @@ spec:
     vmsingle:
       spec:
         retentionPeriod: "1"
+        # Label the default service so Headlamp's Prometheus plugin
+        # auto-detects it and queries it through the API server proxy.
+        serviceSpec:
+          useAsDefault: true
+          metadata:
+            labels:
+              headlamp-prometheus: "true"
+          spec: {}
 
     vmagent:
       spec:
