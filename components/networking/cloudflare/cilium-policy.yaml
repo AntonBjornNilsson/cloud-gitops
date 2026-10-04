@@ -1,24 +1,23 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: cloudflare-operator
-  namespace: cloudflare-operator-system
+  name: cloudflared
+  namespace: cloudflare
 spec:
-  endpointSelector: {}
+  endpointSelector:
+    matchLabels:
+      app: cloudflared
   ingress:
-    # Health checks and metrics scraping
+    # Probes on the metrics/ready port
     - fromEntities:
         - host
         - remote-node
         - health
       toPorts:
         - ports:
-            - port: "8080"
-              protocol: TCP
             - port: "2000"
               protocol: TCP
   egress:
-    # 1. Kubernetes DNS resolution
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: kube-system
@@ -27,14 +26,7 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # 2. Kubernetes API server communication
-    - toEntities:
-        - kube-apiserver
-      toPorts:
-        - ports:
-            - port: "6443"
-              protocol: TCP
-    # 3. Cloudflare API and edge communication (HTTPS & QUIC for tunnels)
+    # Cloudflare edge (QUIC/HTTP2 on 7844) and API
     - toEntities:
         - world
       toPorts:
@@ -42,14 +34,15 @@ spec:
             - port: "443"
               protocol: TCP
             - port: "7844"
-              protocol: UDP
-    # 4. Proxying ingress traffic to Traefik
+              protocol: ANY
+    # Origin: the Traefik LoadBalancer IP, translated to the Traefik pods by Cilium
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
+            app.kubernetes.io/name: traefik
       toPorts:
         - ports:
-            - port: "443"
+            - port: "8000"
               protocol: TCP
-            - port: "80"
+            - port: "8443"
               protocol: TCP

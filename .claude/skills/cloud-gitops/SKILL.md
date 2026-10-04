@@ -49,7 +49,6 @@ TODO                             user's backlog (">" = done)
 
 Enable/disable = uncomment/comment the line in `components/kustomization.yaml` or `services/kustomization.yaml`.
 Currently disabled examples: cloudflare, aws, the *arr stack, homeassistant, vaultwarden, tailscale, github-runners, skyrim.
-`components/networking/ingress-nginx` is legacy (Traefik replaced it) and is not referenced.
 
 ## Components (infrastructure)
 
@@ -66,7 +65,7 @@ The Flux Kustomization template: `apiVersion: kustomize.toolkit.fluxcd.io/v1`, n
 and `postBuild.substituteFrom: [{kind: Secret, name: flux-substitutions}]`. Copy an existing one, e.g.
 `components/security/kyverno/system-kyverno.yaml`.
 
-HelmRelease house style (see `components/observability/jaeger/jaeger.yaml`): `helm.toolkit.fluxcd.io/v2`,
+HelmRelease house style (see `components/security/cert-manager/cert-manager.yaml`): `helm.toolkit.fluxcd.io/v2`,
 HelmRepository in the same namespace, semver range `version: "3.x"`, `install/upgrade.strategy: RetryOnFailure`,
 `remediation.retries: 3`, explicit `timeout`.
 
@@ -168,7 +167,7 @@ Only stage and push files you changed in this session (`git add <paths>`, never 
 ## Debugging cheatsheet
 
 - Kustomization stuck "dependency not ready" -> walk the `dependsOn` chain; one failed HelmRelease blocks `flux-services`.
-- HelmRelease failing upgrades -> check `flux get hr`, then `kubectl --context=oidc-user describe hr`; Jaeger uses `upgrade.remediation.strategy: uninstall` for stuck upgrades.
+- HelmRelease failing upgrades -> check `flux get hr`, then `kubectl --context=oidc-user describe hr`; for stuck upgrades consider `upgrade.remediation.strategy: uninstall`.
 - `${var}` appearing literally in the cluster -> the Kustomization is missing `postBuild.substituteFrom` or the key is missing from the secrets repo.
 - Pod can't reach something -> CiliumNetworkPolicy on either side; DNS egress rule missing is the usual culprit.
 - PVC Pending/Multi-attach -> RWO volume with >1 replica or a rollout with surge; use `strategy: Recreate` or replicas 1.

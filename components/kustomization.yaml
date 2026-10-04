@@ -7,7 +7,7 @@ resources:
   # Networking
   # Temporarily disabled; namespace and PVC are kept (prune disabled)
   # - networking/adguard-home/system-adguard-home.yaml
-  # - networking/cloudflare/system-cloudflare.yaml
+  - networking/cloudflare/system-cloudflare.yaml
   - networking/cilium/system-cilium.yaml
   - networking/metallb/system-metallb.yaml
   - networking/traefik/system-traefik.yaml
@@ -15,8 +15,6 @@ resources:
 
   # Observability
   - observability/holmesgpt/system-holmesgpt.yaml
-  # Replaced by VictoriaTraces (observability/victoriametrics/traces.yaml)
-  # - observability/jaeger/system-jaeger.yaml
   - observability/victoriametrics/system-victoriametrics.yaml
   - observability/grafana/system-grafana.yaml
 

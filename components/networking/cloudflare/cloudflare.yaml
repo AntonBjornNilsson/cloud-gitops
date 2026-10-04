@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflare
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflare
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: cloudflared
+                topologyKey: kubernetes.io/hostname
+      # The tunnel is remotely managed: hostname -> origin rules live in the Cloudflare
+      # dashboard. cloudflared still needs the tunnel ID, which is read from the
+      # credentials file (secrets repo) so no extra substitution key is needed.
+      initContainers:
+        - name: config
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              id=$(grep -o '"TunnelID": *"[^"]*"' /creds/credentials.json | cut -d'"' -f4)
+              [ -n "$id" ] || { echo "TunnelID not found in credentials.json" >&2; exit 1; }
+              printf 'tunnel: %s\ncredentials-file: /etc/cloudflared/creds/credentials.json\nmetrics: 0.0.0.0:2000\n' "$id" > /config/config.yaml
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: creds
+              mountPath: /creds
+              readOnly: true
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2026.9.3
+          args:
+            - tunnel
+            - --config
+            - /etc/cloudflared/config/config.yaml
+            - run
+          ports:
+            - name: metrics
+              containerPort: 2000
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/config
+              readOnly: true
+            - name: creds
+              mountPath: /etc/cloudflared/creds
+              readOnly: true
+      volumes:
+        - name: config
+          emptyDir: {}
+        - name: creds
+          secret:
+            secretName: cloudflare-tunnel-secret

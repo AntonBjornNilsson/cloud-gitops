@@ -12,7 +12,10 @@ spec:
     name: flux-system
   retryInterval: 1m0s
   timeout: 5m0s
-  wait: false
+  wait: true
+  dependsOn:
+    - name: system-traefik
+    - name: secrets-kustomization
   postBuild:
     substituteFrom:
       - kind: Secret
