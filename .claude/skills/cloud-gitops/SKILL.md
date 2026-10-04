@@ -139,7 +139,7 @@ flux --context=oidc-user reconcile kustomization <system-name|flux-services> --w
 flux --context=oidc-user reconcile helmrelease <name> -n <ns>
 ```
 
-Always ask the user before committing/pushing. `kustomize` is not installed standalone; use `kubectl kustomize`.
+Commit and push without asking: pushing is how changes reach the cluster. `kustomize` is not installed standalone; use `kubectl kustomize`.
 
 ## Debugging cheatsheet
 
