@@ -42,6 +42,10 @@ spec:
       retryInterval: 3m
   values:
     config:
+      # Chart 0.40.1 always passes -session-ttl, which the v0.40.1 image does
+      # not know (the pod exits on flag parsing). null drops the key and the
+      # flag; remove once the image supports it.
+      sessionTTL: null
       # In-cluster mode always hands the OIDC client a CA string; when it is
       # empty every login logs "failed to append ca cert to pool". Point it at
       # the image's system bundle (the issuer uses a public certificate).
