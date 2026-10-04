@@ -100,6 +100,22 @@ spec:
       timeoutSeconds: 10
       failureThreshold: 6
 
+    # SQLite on the NFS-backed RWX config volume hits "database is locked" with the
+    # default NoLock behavior; Optimistic retries conflicting writes instead of failing.
+    extraInitContainers:
+      - name: db-locking-behavior
+        image: busybox:1.37
+        command:
+          - sh
+          - -c
+          - |
+            f=/config/config/database.xml
+            [ -f "$f" ] && sed -i 's#<LockingBehavior>[^<]*</LockingBehavior>#<LockingBehavior>Optimistic</LockingBehavior>#' "$f"
+            exit 0
+        volumeMounts:
+          - mountPath: /config
+            name: config
+
     persistence:
       config:
         enabled: true
