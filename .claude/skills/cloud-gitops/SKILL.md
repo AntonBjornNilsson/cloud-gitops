@@ -16,9 +16,17 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
 0. **Never write setup-specific information into the repo** (node names, IPs, hostnames, account/repo names, paths, secret values). Anything environment-specific goes through `${var}` substitution from the secrets repo. This also applies to docs, comments, skills and commit messages.
 1. **No imperative cluster mutations.** Never `kubectl apply/delete/edit/patch/scale/create`, never `helm install/upgrade`.
    Change manifests -> commit -> push -> let Flux reconcile.
-2. **Always use `--context=oidc-user`** for kubectl/flux (it is read-only plus Flux reconcile rights).
+2. **Default to `--context=oidc-user`** for kubectl/flux (it is read-only plus Flux reconcile rights).
    The default current context may be an admin one — do not rely on it.
    Allowed: `get`, `describe`, `logs`, `top`, `flux get ...`, `flux reconcile ...`.
+   **Escalating to the admin context** (cluster-admin rights; its name is in local memory, never in the repo)
+   is only allowed after explicit approval from the user, asked with `AskUserQuestion` each time. The question must state:
+   - why `oidc-user` is not enough (the denied command / missing permission),
+   - exactly what the admin context will be used for (the commands and the resources/namespaces they touch),
+   - whether any of it mutates the cluster.
+   Without a clear yes, stay on `oidc-user`. The approval covers only the stated commands — anything beyond needs a new question.
+   Pass the admin context per command (`--context=<admin>`); never run `kubectl config use-context`, and go back to `oidc-user` right after.
+   Rule 1 still applies under admin rights unless the approved question explicitly listed the mutation.
 3. **No plaintext secrets or private domains.** Use `${var}` placeholders; values come from the
    `flux-substitutions` Secret (in `cloud-gitops-secrets`) via `postBuild.substituteFrom`.
    Common vars: `${domain}`, `${auth_domain}`, `${admin_email}`, `${github_repo}`, `${oidc_issuer_host}`.
