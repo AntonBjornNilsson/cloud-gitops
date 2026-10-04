@@ -1,0 +1,15 @@
+# Stalkarr portal settings. Box MACs and the signing secret come from the
+# stalkarr Secret (STALKARR_DEVICES / STALKARR_SECRET).
+dispatcharr:
+  url: http://dispatcharr-web.dispatcharr.svc.cluster.local:9191
+  refresh_interval: 900
+portal:
+  name: Home TV
+  # An http(s) URL, or a file name under /data/assets (on the PVC).
+  # background: background.jpg
+  # logo: logo.png
+  accent_color: "#e5a00d"
+  timezone: Europe/Stockholm
+stream_mode: proxy
+data_dir: /data
+assets_dir: /data/assets

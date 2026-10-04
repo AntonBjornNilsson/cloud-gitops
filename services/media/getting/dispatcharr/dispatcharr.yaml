@@ -345,6 +345,14 @@ spec:
         - ports:
             - port: "9191"
               protocol: TCP
+    # Stalkarr: MAG portal reading the HDHR lineup, M3U/XMLTV and streams
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: stalkarr
+      toPorts:
+        - ports:
+            - port: "9191"
+              protocol: TCP
     # Intra-namespace traffic
     - fromEndpoints:
         - {}
