@@ -569,7 +569,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: holmes-remediation
+  # Renamed so it is recreated without the Authelia annotation Kyverno added to the old one
+  name: holmes-remediation-actions
   namespace: holmesgpt
   labels:
     # ntfy action buttons can't pass Authelia; the unguessable per-PR token is the auth.
