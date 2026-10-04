@@ -27,9 +27,12 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: longhorn-repo
-      version: v1.10.1
+      # Upgrade one minor version at a time (Longhorn only supports
+      # upgrading from the previous minor).
+      version: v1.11.3
   interval: 10m0s
-  timeout: 30s
+  # Pre-upgrade checker job + manager/driver rollout
+  timeout: 15m
   values:
     persistence:
       # defaultClassReplicaCount: 1
@@ -49,6 +52,10 @@ spec:
       storageOverProvisioningPercentage: 200
       storageMinimalAvailablePercentage: 10
       taintToleration: "GPU=true:NoSchedule;node-role.kubernetes.io/control-plane:NoSchedule"
+      # Live-upgrade volume engines after a Longhorn upgrade, one volume per
+      # node at a time. With 0 the volumes keep running the old engine and
+      # instance-manager images (and their CVEs) until upgraded by hand.
+      concurrentAutomaticEngineUpgradePerNodeLimit: 1
 
     defaultBackupStore:
       backupTarget: ${s3_bucket_longhorn}
