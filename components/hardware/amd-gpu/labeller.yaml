@@ -46,7 +46,7 @@ spec:
     spec:
       serviceAccountName: node-labeller-sa
       nodeSelector:
-        kubernetes.io/hostname: nilsson-linux
+        kubernetes.io/hostname: ${gpu_node}
         kubernetes.io/arch: amd64
       priorityClassName: system-node-critical
       tolerations:

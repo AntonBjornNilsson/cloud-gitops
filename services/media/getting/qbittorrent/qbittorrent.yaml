@@ -32,7 +32,7 @@ spec:
         app: qbittorrent
     spec:
       nodeSelector:
-        kubernetes.io/hostname: nilsson-server
+        kubernetes.io/hostname: ${media_node}
       tolerations:
         - key: "node-role.kubernetes.io/control-plane"
           effect: "NoSchedule"

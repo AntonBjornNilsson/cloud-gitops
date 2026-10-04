@@ -1,12 +1,12 @@
 apiVersion: longhorn.io/v1beta2
 kind: Node
 metadata:
-  name: node1
+  name: ${longhorn_node_1}
   namespace: longhorn-system
 spec:
   allowScheduling: true
   disks:
-    node1-nvme:
+    ${longhorn_node_1}-nvme:
       allowScheduling: true
       diskType: filesystem
       evictionRequested: false
@@ -15,18 +15,18 @@ spec:
       tags: []
   evictionRequested: false
   instanceManagerCPURequest: 0
-  name: node1
+  name: ${longhorn_node_1}
   tags: []
 ---
 apiVersion: longhorn.io/v1beta2
 kind: Node
 metadata:
-  name: node2
+  name: ${longhorn_node_2}
   namespace: longhorn-system
 spec:
   allowScheduling: true
   disks:
-    node2-nvme:
+    ${longhorn_node_2}-nvme:
       allowScheduling: true
       diskType: filesystem
       evictionRequested: false
@@ -35,18 +35,18 @@ spec:
       tags: []
   evictionRequested: false
   instanceManagerCPURequest: 0
-  name: node2
+  name: ${longhorn_node_2}
   tags: []
 ---
 apiVersion: longhorn.io/v1beta2
 kind: Node
 metadata:
-  name: nilsson-linux
+  name: ${longhorn_node_3}
   namespace: longhorn-system
 spec:
   allowScheduling: true
   disks:
-    nilsson-linux-nvme:
+    ${longhorn_node_3}-nvme:
       allowScheduling: true
       diskType: filesystem
       evictionRequested: false
@@ -55,5 +55,5 @@ spec:
       tags: []
   evictionRequested: false
   instanceManagerCPURequest: 0
-  name: nilsson-linux
+  name: ${longhorn_node_3}
   tags: []

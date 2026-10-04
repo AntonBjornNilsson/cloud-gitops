@@ -78,6 +78,7 @@ added as a directory entry in `services/kustomization.yaml`. **No per-service Fl
 
 Conventions:
 - Copy node placement (nodeSelector/tolerations), TZ, PUID/PGID and media hostPath from a sibling service; do not invent or document new values.
+- Pin to a node only via substitution (`kubernetes.io/hostname: ${media_node}`, `${gpu_node}`, `${longhorn_node_N}`), never a literal hostname.
 - Single-replica for RWO PVCs (multi-attach is impossible).
 
 ## Ingress, TLS and auth (mostly automatic via Kyverno)
