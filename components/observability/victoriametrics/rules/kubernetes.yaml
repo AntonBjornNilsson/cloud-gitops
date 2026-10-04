@@ -84,3 +84,35 @@ spec:
           annotations:
             summary: "Kernel OOM killer ran on {{ $labels.instance }}"
             description: "{{ $value | humanize }} processes were OOM-killed by the kernel in the last 30 minutes."
+
+    # The chart's KubeAPIDown / KubeAPIInstanceUnreachable wait 15m, longer than a
+    # typical outage here. Alert delivery (vmalert -> Alertmanager -> ntfy) does
+    # not need the API server, so these still fire while it is down.
+    - name: control-plane
+      rules:
+        - alert: KubernetesAPIDown
+          expr: max(up{job="apiserver"}) == 0 or absent(up{job="apiserver"})
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Kubernetes API server is unreachable"
+            description: "The API server has failed every scrape for 2 minutes. Flux, controllers and kubectl are down; running pods keep serving. Check k0scontroller and etcd on the controller host."
+
+        - alert: KubernetesAPIUnstable
+          expr: avg_over_time(up{job="apiserver"}[1h]) < 0.98
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kubernetes API server had short outages"
+            description: "Only {{ $value | humanizePercentage }} of API server scrapes succeeded in the last hour. Repeated short outages make controllers (e.g. Flux) crash-loop."
+
+        - alert: EtcdRequestsSlow
+          expr: |
+            histogram_quantile(0.99, sum by (le) (rate(etcd_request_duration_seconds_bucket{job="apiserver"}[5m]))) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "etcd requests are slow ({{ $value | humanizeDuration }} p99)"
+            description: "API server requests to etcd are slow (normally under 100ms). Usually disk contention on the controller host; it tends to precede API outages."
