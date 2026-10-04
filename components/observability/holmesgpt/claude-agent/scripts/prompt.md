@@ -6,7 +6,15 @@ kubectl/flux context `oidc-user` points at a read-only service account without a
    - Flux Kustomizations, HelmReleases and sources that are not Ready
    - pods crashlooping, pending, OOMKilled or with many restarts; failed Jobs
    - recent Warning events, degraded Longhorn volumes, Pending PVCs, expiring/failed certificates
+   Then check image security from the trivy-operator reports (rescanned daily, only fixable MEDIUM+ CVEs):
+   `kubectl get vulnerabilityreports -A -o wide` (CRITICAL/HIGH counts per workload container) and
+   `kubectl get exposedsecretreports -A -o wide`. Ignore reports whose workload no longer exists.
+   For each image with CRITICAL findings, check the "Open Renovate update PRs" list below: if a PR bumps
+   that chart/image, name it in the summary ("merging #N should fix ..."). Renovate updates versions;
+   you cannot look up new releases, so do not invent version bumps. Note Trivy's report can be newer
+   than a merged bump until the pod has been rescanned.
 2. Pick the single most important issue that can be fixed by changing manifests in this repo.
+   Cluster health problems come before image CVEs.
    Skip issues that already have an open PR (listed below). Make the smallest correct edit.
    - Never touch cluster/flux-system/, .github/, .claude/, components/storage/longhorn/config/restore/
      or components/observability/holmesgpt/claude-agent/. These changes are rejected automatically.

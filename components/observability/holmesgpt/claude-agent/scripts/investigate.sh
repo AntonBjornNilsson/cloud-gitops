@@ -31,13 +31,20 @@ EOF
 # Public repo: clone and list PRs without credentials
 git clone --quiet --depth 20 --branch "$GITHUB_BRANCH" "https://github.com/$GITHUB_REPO.git" "$WORK"
 cd "$WORK"
-OPEN_PRS=$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO/pulls?state=open&per_page=50" \
-  | jq -r '[.[] | select(.head.ref | startswith("claude/")) | "- #\(.number) \(.title)"] | if length == 0 then "(none)" else join("\n") end')
+PULLS=$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO/pulls?state=open&per_page=100")
+list_prs() {
+  jq -r --arg p "$1" '[.[] | select(.head.ref | startswith($p)) | "- #\(.number) \(.title)"] | if length == 0 then "(none)" else join("\n") end' <<<"$PULLS"
+}
+OPEN_PRS=$(list_prs claude/)
+RENOVATE_PRS=$(list_prs renovate/)
 
 PROMPT="$(cat /etc/claude-agent/prompt.md)
 
 Open PRs from earlier runs:
-$OPEN_PRS"
+$OPEN_PRS
+
+Open Renovate update PRs:
+$RENOVATE_PRS"
 
 claude -p "$PROMPT" \
   --model "$CLAUDE_MODEL" \
