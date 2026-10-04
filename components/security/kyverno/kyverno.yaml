@@ -33,7 +33,9 @@ spec:
         name: kyverno-repo
         namespace: kyverno
       interval: 12h
-  timeout: 5m
+  # Room for queued image pulls (kubelet pulls serially) when other upgrades
+  # roll out at the same time; 5m caused a rollback once.
+  timeout: 10m
   install:
     crds: CreateReplace
     remediation:
