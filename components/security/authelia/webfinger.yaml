@@ -13,13 +13,18 @@ data:
       server_tokens off;
 
       location = /.well-known/webfinger {
-        # Only answer for accounts on the email domain
-        if ($arg_resource !~* "^acct(:|%3A)[a-z0-9._+-]+(@|%40)${auth_domain}$") {
+        # Only answer for accounts on the email domain; the resource arrives
+        # URL-encoded, so rebuild the subject from the local part
+        set $wf_user "";
+        if ($arg_resource ~* "^acct(?::|%3A)([a-z0-9._+-]+)(?:@|%40)${auth_domain}$") {
+          set $wf_user $1;
+        }
+        if ($wf_user = "") {
           return 404;
         }
         default_type application/jrd+json;
         add_header Access-Control-Allow-Origin "*";
-        return 200 '{"subject":"$arg_resource","links":[{"rel":"http://openid.net/specs/connect/1.0/issuer","href":"https://auth.${auth_domain}"}]}';
+        return 200 '{"subject":"acct:$wf_user@${auth_domain}","links":[{"rel":"http://openid.net/specs/connect/1.0/issuer","href":"https://auth.${auth_domain}"}]}';
       }
 
       location = /healthz {
@@ -48,7 +53,7 @@ spec:
         app: webfinger
       annotations:
         # Roll the pod when the nginx config changes
-        checksum/config: webfinger-v1
+        checksum/config: webfinger-v2
     spec:
       automountServiceAccountToken: false
       securityContext:
