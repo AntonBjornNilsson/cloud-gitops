@@ -240,6 +240,29 @@ spec:
                 - code
               userinfo_signed_response_alg: none
 
+            # Tailscale custom OIDC sign-in (WebFinger in webfinger.yaml)
+            - client_id: tailscale
+              client_name: Tailscale
+              client_secret:
+                value: "${authelia_tailscale_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              require_pkce: false
+              redirect_uris:
+                - "https://login.tailscale.com/a/oauth_response"
+              scopes:
+                - openid
+                - profile
+                - email
+              grant_types:
+                - authorization_code
+              response_types:
+                - code
+              access_token_signed_response_alg: none
+              userinfo_signed_response_alg: none
+              token_endpoint_auth_method: client_secret_basic
+
             - client_id: k8s-cluster
               client_name: Kubernetes Cluster
               public: true

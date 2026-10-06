@@ -5,3 +5,4 @@ resources:
   - authelia.yaml
   - cilium-policy.yaml
   - rbac.yaml
+  - webfinger.yaml

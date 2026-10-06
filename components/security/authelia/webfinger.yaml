@@ -1,0 +1,157 @@
+# WebFinger for Tailscale's custom OIDC sign-in: Tailscale looks up
+# https://<email domain>/.well-known/webfinger to find the issuer (Authelia)
+# for users whose email is on ${auth_domain}.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: webfinger
+  namespace: authelia
+data:
+  default.conf: |
+    server {
+      listen 8080;
+      server_tokens off;
+
+      location = /.well-known/webfinger {
+        # Only answer for accounts on the email domain
+        if ($arg_resource !~* "^acct(:|%3A)[a-z0-9._+-]+(@|%40)${auth_domain}$") {
+          return 404;
+        }
+        default_type application/jrd+json;
+        add_header Access-Control-Allow-Origin "*";
+        return 200 '{"subject":"$arg_resource","links":[{"rel":"http://openid.net/specs/connect/1.0/issuer","href":"https://auth.${auth_domain}"}]}';
+      }
+
+      location = /healthz {
+        access_log off;
+        return 200 "ok";
+      }
+
+      location / {
+        return 404;
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webfinger
+  namespace: authelia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webfinger
+  template:
+    metadata:
+      labels:
+        app: webfinger
+      annotations:
+        # Roll the pod when the nginx config changes
+        checksum/config: webfinger-v1
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nginx
+          image: nginxinc/nginx-unprivileged:1.31.6-alpine-slim
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: webfinger
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webfinger
+  namespace: authelia
+spec:
+  selector:
+    app: webfinger
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webfinger
+  namespace: authelia
+  labels:
+    enable-oauth: "false"
+  annotations:
+    # Tailscale fetches it from the internet
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
+spec:
+  rules:
+    - host: ${auth_domain}
+      http:
+        paths:
+          - path: /.well-known/webfinger
+            pathType: Exact
+            backend:
+              service:
+                name: webfinger
+                port:
+                  number: 80
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: webfinger
+  namespace: authelia
+spec:
+  endpointSelector:
+    matchLabels:
+      app: webfinger
+  ingress:
+    # Requests routed by Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  # Static responses only, no outbound traffic
+  egress: []
