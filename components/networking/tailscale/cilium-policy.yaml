@@ -1,0 +1,38 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: tailscale
+  namespace: tailscale
+spec:
+  # Operator and the proxy pods it creates (the subnet router Connector)
+  endpointSelector: {}
+  ingress:
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Kubernetes API Server
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Tailscale control plane, DERP relays and the advertised LAN subnets
+    - toEntities:
+        - world
+    # LAN traffic that lands on the cluster: node IPs and LoadBalancer IPs
+    # (e.g. Traefik), which Cilium translates to in-cluster backends
+    - toEntities:
+        - cluster

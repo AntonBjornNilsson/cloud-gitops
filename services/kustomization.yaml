@@ -34,7 +34,6 @@ resources:
   - management/ntfy
 
   # Security
-  # - security/tailscale
   # - security/vaultwarden
 
   # Game Servers

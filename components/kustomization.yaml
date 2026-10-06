@@ -12,6 +12,7 @@ resources:
   - networking/metallb/system-metallb.yaml
   - networking/traefik/system-traefik.yaml
   - networking/flux-receiver/system-flux-receiver.yaml
+  - networking/tailscale/system-tailscale.yaml
 
   # Observability
   - observability/holmesgpt/system-holmesgpt.yaml

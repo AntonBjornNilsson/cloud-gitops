@@ -1,0 +1,12 @@
+# Subnet router: makes the home LAN reachable from every device on the tailnet.
+# Hostnames under ${domain} resolve to the Traefik LoadBalancer IP through the
+# LAN DNS server; point a Tailscale split-DNS entry for the domain at it.
+apiVersion: tailscale.com/v1alpha1
+kind: Connector
+metadata:
+  name: home-lan
+spec:
+  hostname: home-lan
+  subnetRouter:
+    # Flow list from the secrets repo, e.g. ["<cidr-1>", "<cidr-2>"]
+    advertiseRoutes: ${tailscale_advertise_routes}
