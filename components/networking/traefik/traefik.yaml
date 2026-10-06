@@ -73,6 +73,10 @@ spec:
       annotations:
         metallb.io/address-pool: external-pool
         metallb.io/loadBalancerIPs: "${traefik_lb_ip}"
+      # ClusterIP Service "traefik-public" for the tunnel origin
+      additionalServices:
+        public:
+          type: ClusterIP
     # Keep the legacy router/service names that alert rules and dashboards match
     # on. Set as an argument: the chart only renders safeNaming when it is true.
     additionalArguments:
@@ -99,7 +103,24 @@ spec:
           # Remote-User header Authelia sets
           aliasHeadersStrategy: delete
       websecure:
+        # Routes without an explicit entrypoint annotation only land here (LAN,
+        # Tailscale). Internet-facing ones also opt in to "public" below.
+        asDefault: true
         http:
+          encodedCharacters: *encoded-characters
+          aliasHeadersStrategy: delete
+      # Internet-facing entrypoint: only the cloudflared tunnel reaches it (see
+      # cilium-policy.yaml). Ingresses opt in with the annotation
+      # traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
+      public:
+        port: 8444
+        exposedPort: 443
+        expose:
+          default: false
+          public: true
+        http:
+          tls:
+            enabled: true
           encodedCharacters: *encoded-characters
           aliasHeadersStrategy: delete
       # Internal health/metrics entrypoints: same settings, no backends behind them

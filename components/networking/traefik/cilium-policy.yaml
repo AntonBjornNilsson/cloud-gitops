@@ -24,6 +24,15 @@ spec:
               protocol: TCP
             - port: "8443"
               protocol: TCP
+    # Internet-facing entrypoint: only the cloudflared tunnel
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: cloudflare
+            app: cloudflared
+      toPorts:
+        - ports:
+            - port: "8444"
+              protocol: TCP
     # Health checks, metrics, and internal dashboard
     - fromEntities:
         - cluster

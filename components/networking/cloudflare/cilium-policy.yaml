@@ -35,13 +35,16 @@ spec:
               protocol: TCP
             - port: "7844"
               protocol: ANY
-    # Origin: the Traefik LoadBalancer IP, translated to the Traefik pods by Cilium
+    # Origin: Traefik's "public" entrypoint (Service traefik-public).
+    # 8000/8443 (LAN entrypoints) stay until the tunnel origin is switched.
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
             app.kubernetes.io/name: traefik
       toPorts:
         - ports:
+            - port: "8444"
+              protocol: TCP
             - port: "8000"
               protocol: TCP
             - port: "8443"

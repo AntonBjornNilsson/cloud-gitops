@@ -48,3 +48,12 @@ Traefik serves as the primary ingress controller with defense-in-depth authentic
      labels:
        enable-oauth: "false"
    ```
+4. **LAN-only by default**:
+   `websecure` (the LoadBalancer, reached from the LAN and over the Tailscale subnet router) is the default entrypoint, so every route is private unless it opts in.
+   Internet traffic only arrives through the cloudflared tunnel, whose origin is the ClusterIP Service `traefik-public` (entrypoint `public`, reachable only from the `cloudflare` namespace).
+   To make an ingress internet-facing, add:
+   ```yaml
+   metadata:
+     annotations:
+       traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
+   ```

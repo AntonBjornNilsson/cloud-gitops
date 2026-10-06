@@ -69,6 +69,8 @@ spec:
       className: traefik
       annotations:
         traefik.ingress.kubernetes.io/router.middlewares: ""
+        # Internet-facing: also served on the tunnel entrypoint
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
       hosts:
         - host: stream.${domain}
           paths:

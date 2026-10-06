@@ -9,6 +9,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
+    # GitHub push webhooks arrive through the tunnel
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
 spec:
   rules:
     - host: flux-webhook.${domain}
@@ -36,6 +38,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
+    # GitHub push webhooks arrive through the tunnel
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
 spec:
   rules:
     - host: flux-webhook.${auth_domain}

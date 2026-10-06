@@ -87,6 +87,8 @@ Write a minimal Ingress with `host: <app>.${domain}`. Kyverno then mutates it to
 - cert-manager `cloudflare-wildcard-issuer` annotation and `spec.tls` with secret `<ingress-name>-tls` (if unset),
 - Authelia forward-auth middleware `authelia-authelia-forward-auth@kubernetescrd`.
 
+Ingresses are LAN/Tailscale-only by default (Traefik default entrypoint `websecure`). Internet-facing ones (auth, jellyfin, flux-webhook)
+add annotation `traefik.ingress.kubernetes.io/router.entrypoints: websecure,public`; the tunnel reaches only the `public` entrypoint.
 Opt out of Authelia with label `enable-oauth: "false"` (e.g. apps doing their own OIDC). Apps using Authelia OIDC
 (grafana, headlamp, homepage, open-webui) need a client entry + hashed secret in authelia config and secrets repo.
 Auth chain details: `components/networking/traefik/README.md`.

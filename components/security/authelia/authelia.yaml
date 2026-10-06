@@ -78,6 +78,8 @@ spec:
       annotations:
         cert-manager.io/cluster-issuer: cloudflare-wildcard-issuer
         traefik.ingress.kubernetes.io/router.middlewares: ""
+        # Internet-facing: also served on the tunnel entrypoint
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
     configMap:
       theme: dark
       # Prometheus metrics on :9959 (scraped by vmagent, see
