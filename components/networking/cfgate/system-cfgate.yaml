@@ -12,7 +12,7 @@ spec:
     name: flux-system
   retryInterval: 1m0s
   timeout: 5m0s
-  wait: true
+  wait: false
   dependsOn:
     - name: secrets-kustomization
   postBuild:
