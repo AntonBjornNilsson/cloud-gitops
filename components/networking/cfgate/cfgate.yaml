@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cfgate-system
+  annotations:
+    # The namespace UID is cfgate's installation identity (tunnel and DNS
+    # ownership claims): never let it be deleted and recreated
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: cfgate
+  namespace: cfgate-system
+spec:
+  interval: 24h
+  url: oci://ghcr.io/cfgate/charts/cfgate
+  layerSelector:
+    mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
+    operation: copy
+  ref:
+    # cfgate is alpha (0.2.0-alpha.x) and ships migrations between releases:
+    # pin exactly and read the chart's upgrade notes before bumping
+    tag: 1.10.0
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cfgate
+  namespace: cfgate-system
+spec:
+  interval: 12h
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  timeout: 5m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+  chartRef:
+    kind: OCIRepository
+    name: cfgate
+  values:
+    # Leader election; one controller is enough here
+    replicaCount: 1
+    installCRDs: true
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 256Mi

@@ -1,0 +1,18 @@
+# Proxied CNAMEs to the tunnel for every hostname in routes.yaml. Only records
+# cfgate created (TXT/comment owner markers) are updated or deleted.
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareDNS
+metadata:
+  name: public-hostnames
+  namespace: cfgate-system
+spec:
+  tunnelRef:
+    name: homelab
+  zones:
+    - name: ${domain}
+  source:
+    gatewayRoutes:
+      enabled: true
+  defaults:
+    proxied: true
+  policy: sync

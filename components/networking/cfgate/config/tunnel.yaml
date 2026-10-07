@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-api-token
+  namespace: cfgate-system
+type: Opaque
+stringData:
+  # Account: Cloudflare Tunnel Edit, Account Settings Read; Zone: DNS Edit
+  CLOUDFLARE_API_TOKEN: "${cloudflare_api_token}"
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareTunnel
+metadata:
+  name: homelab
+  namespace: cfgate-system
+spec:
+  tunnel:
+    # Created by cfgate; the old dashboard-managed tunnel is left alone
+    name: homelab
+  cloudflare:
+    accountId: "${cloudflare_account_id}"
+    secretRef:
+      name: cloudflare-api-token
+  cloudflared:
+    replicas: 2
+    # Upstream image instead of cfgate's default fork (only needed for h2c origins)
+    image: cloudflare/cloudflared:2026.9.3
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+  # Hostnames without an HTTPRoute get a 404 from the connector
+  fallbackTarget: http_status:404

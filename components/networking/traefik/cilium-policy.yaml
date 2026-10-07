@@ -24,11 +24,15 @@ spec:
               protocol: TCP
             - port: "8443"
               protocol: TCP
-    # Internet-facing entrypoint: only the cloudflared tunnel
+    # Internet-facing entrypoint: only the cloudflared tunnel connectors
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: cloudflare
             app: cloudflared
+        - matchLabels:
+            io.kubernetes.pod.namespace: cfgate-system
+            app.kubernetes.io/name: cloudflared
+            app.kubernetes.io/managed-by: cfgate
       toPorts:
         - ports:
             - port: "8444"

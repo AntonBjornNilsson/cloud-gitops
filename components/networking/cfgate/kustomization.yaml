@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # Gateway API CRDs: cfgate is a Gateway API controller and refuses to start without them
+  - https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.6.2/standard-install.yaml
+  - cfgate.yaml
+  - cilium-policy.yaml
+  - system-cfgate-config.yaml

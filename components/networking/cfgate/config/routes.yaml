@@ -1,0 +1,71 @@
+# The internet-facing hostnames: the tunnel serves these and nothing else.
+# Each one also needs the "public" entrypoint annotation on its Ingress
+# (traefik.ingress.kubernetes.io/router.entrypoints: websecure,public).
+# Traefik terminates TLS with the wildcard certificate, so the connector sends
+# the public hostname as SNI and verifies the certificate.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  # Authelia login portal and OIDC provider
+  name: auth
+  namespace: cfgate-system
+  annotations:
+    cfgate.io/origin-protocol: "https"
+    cfgate.io/origin-ssl-verify: "true"
+    cfgate.io/origin-server-name: "auth.${domain}"
+spec:
+  parentRefs:
+    - name: cloudflare-tunnel
+  hostnames:
+    - auth.${domain}
+  rules:
+    - backendRefs:
+        - name: traefik-public
+          namespace: traefik
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  # Jellyfin
+  name: stream
+  namespace: cfgate-system
+  annotations:
+    cfgate.io/origin-protocol: "https"
+    cfgate.io/origin-ssl-verify: "true"
+    cfgate.io/origin-server-name: "stream.${domain}"
+spec:
+  parentRefs:
+    - name: cloudflare-tunnel
+  hostnames:
+    - stream.${domain}
+  rules:
+    - backendRefs:
+        - name: traefik-public
+          namespace: traefik
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  # GitHub push webhooks for the Flux receiver
+  name: flux-webhook
+  namespace: cfgate-system
+  annotations:
+    cfgate.io/origin-protocol: "https"
+    cfgate.io/origin-ssl-verify: "true"
+    cfgate.io/origin-server-name: "flux-webhook.${domain}"
+spec:
+  parentRefs:
+    - name: cloudflare-tunnel
+  hostnames:
+    - flux-webhook.${domain}
+  rules:
+    - backendRefs:
+        - name: traefik-public
+          namespace: traefik
+          port: 443
+      matches:
+        - path:
+            type: PathPrefix
+            value: /hook
