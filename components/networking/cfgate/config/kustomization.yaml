@@ -5,3 +5,4 @@ resources:
   - gateway.yaml
   - dns.yaml
   - routes.yaml
+  - access.yaml

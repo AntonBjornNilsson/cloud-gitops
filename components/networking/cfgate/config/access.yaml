@@ -1,0 +1,77 @@
+# Cloudflare Access in front of the public hostnames (routes.yaml). Policies need
+# explicit credentials; the applications inherit them from the tunnel.
+# Token permission: Account > Access: Apps and Policies: Edit.
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessPolicy
+metadata:
+  name: allow-admin
+  namespace: cfgate-system
+spec:
+  cloudflareRef:
+    name: cloudflare-api-token
+    accountId: "${cloudflare_account_id}"
+  name: allow-admin
+  decision: allow
+  include:
+    - email:
+        addresses: ["${admin_email}"]
+---
+# GitHub cannot log in: the receiver authenticates deliveries with its HMAC secret
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessPolicy
+metadata:
+  name: bypass-everyone
+  namespace: cfgate-system
+spec:
+  cloudflareRef:
+    name: cloudflare-api-token
+    accountId: "${cloudflare_account_id}"
+  name: bypass-everyone
+  decision: bypass
+  include:
+    - everyone: true
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessApplication
+metadata:
+  name: auth
+  namespace: cfgate-system
+spec:
+  targetRef:
+    kind: HTTPRoute
+    name: auth
+  application:
+    name: auth
+  policyRefs:
+    - name: allow-admin
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessApplication
+metadata:
+  name: stream
+  namespace: cfgate-system
+spec:
+  targetRef:
+    kind: HTTPRoute
+    name: stream
+  application:
+    name: stream
+  policyRefs:
+    - name: allow-admin
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessApplication
+metadata:
+  name: flux-webhook
+  namespace: cfgate-system
+spec:
+  # Path comes from the route rule name below (/hook only)
+  targetRef:
+    kind: HTTPRoute
+    name: flux-webhook
+    sectionName: hook
+  application:
+    name: flux-webhook
+    appLauncherVisible: false
+  policyRefs:
+    - name: bypass-everyone

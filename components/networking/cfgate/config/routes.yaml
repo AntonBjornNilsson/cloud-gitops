@@ -61,7 +61,8 @@ spec:
   hostnames:
     - flux-webhook.${domain}
   rules:
-    - backendRefs:
+    - name: hook
+      backendRefs:
         - name: traefik-public
           namespace: traefik
           port: 443
