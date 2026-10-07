@@ -7,7 +7,6 @@ resources:
   # Networking
   # Temporarily disabled; namespace and PVC are kept (prune disabled)
   # - networking/adguard-home/system-adguard-home.yaml
-  - networking/cloudflare/system-cloudflare.yaml
   - networking/cfgate/system-cfgate.yaml
   - networking/cilium/system-cilium.yaml
   - networking/metallb/system-metallb.yaml

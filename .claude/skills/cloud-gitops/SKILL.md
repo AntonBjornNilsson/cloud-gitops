@@ -48,7 +48,7 @@ TODO                             user's backlog (">" = done)
 ```
 
 Enable/disable = uncomment/comment the line in `components/kustomization.yaml` or `services/kustomization.yaml`.
-Currently disabled examples: cloudflare, aws, the *arr stack, homeassistant, vaultwarden, github-runners, skyrim.
+Currently disabled examples: aws, the *arr stack, homeassistant, vaultwarden, github-runners, skyrim.
 
 ## Components (infrastructure)
 
@@ -89,6 +89,8 @@ Write a minimal Ingress with `host: <app>.${domain}`. Kyverno then mutates it to
 
 Ingresses are LAN/Tailscale-only by default (Traefik default entrypoint `websecure`). Internet-facing ones (auth, jellyfin, flux-webhook)
 add annotation `traefik.ingress.kubernetes.io/router.entrypoints: websecure,public`; the tunnel reaches only the `public` entrypoint.
+The Cloudflare tunnel, its DNS records and the public hostname list are managed by cfgate (`components/networking/cfgate/config/routes.yaml`, one HTTPRoute per hostname).
+cfgate is alpha and pinned exactly: read the chart upgrade notes before bumping it.
 Opt out of Authelia with label `enable-oauth: "false"` (e.g. apps doing their own OIDC). Apps using Authelia OIDC
 (grafana, headlamp, homepage, open-webui) need a client entry + hashed secret in authelia config and secrets repo.
 Auth chain details: `components/networking/traefik/README.md`.

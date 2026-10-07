@@ -50,7 +50,7 @@ Traefik serves as the primary ingress controller with defense-in-depth authentic
    ```
 4. **LAN-only by default**:
    `websecure` (the LoadBalancer, reached from the LAN and over the Tailscale subnet router) is the default entrypoint, so every route is private unless it opts in.
-   Internet traffic only arrives through the cloudflared tunnel, whose origin is the ClusterIP Service `traefik-public` (entrypoint `public`, reachable only from the `cloudflare` namespace).
+   Internet traffic only arrives through the cfgate-managed tunnel (`components/networking/cfgate`), whose routes target the ClusterIP Service `traefik-public` (entrypoint `public`, reachable only from the cfgate cloudflared pods). A hostname must be listed in `cfgate/config/routes.yaml` *and* carry the annotation below.
    To make an ingress internet-facing, add:
    ```yaml
    metadata:
