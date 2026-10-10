@@ -10,7 +10,7 @@ This guide describes the architectural layout, component vs. service distinction
 ---
 
 > [!CRITICAL]
-> ## Core Rule for LLMs: Pure Declarative GitOps (No Imperative Mutations)
+> ## Core Rule for LLMs: GitOps Is the End State
 >
 > Git is the source of truth. An LLM or automated agent may use imperative `kubectl`/`flux` commands only as temporary debugging or unblocking steps; every lasting change must end up as a manifest change in Git, pushed and reconciled by Flux, so the cluster matches the repository when the task is done.
 >
@@ -24,6 +24,7 @@ This guide describes the architectural layout, component vs. service distinction
 > - Use the cluster-admin context, passed per command (`--context=<admin>`); its name is kept in local agent memory, never in this repository. Never switch the current context.
 > - Admin rights do not relax the GitOps end-state rule above.
 > - Flux reconciliation (`flux reconcile source git|kustomization|helmrelease ...`) is the normal way to apply pushed changes.
+>
 > ### 3. The Standard LLM Change Workflow
 > When asked to fix, deploy, modify, or delete any resource in the cluster, follow this exact sequence:
 > 1. **Diagnose**: Inspect cluster state (`kubectl get`, `kubectl logs`, etc.).
@@ -31,7 +32,7 @@ This guide describes the architectural layout, component vs. service distinction
 > 3. **Validate**: Run client-side validation (`kubectl kustomize <path>`).
 > 4. **Commit & Push**: Commit the change with a descriptive message and push to the Git remote.
 > 5. **Reconcile**: Trigger Flux reconciliation (`flux reconcile kustomization ...`).
-> 6. **Verify**: Use read-only commands to confirm pods/resources reach `Ready` state.
+> 6. **Verify**: Confirm the cluster matches Git and pods/resources reach `Ready` state.
 >
 > ### 4. Zero Plaintext Secrets or Domains (Kustomization Substitution Only)
 > - **DO NOT write out any secrets, credentials, or private domain names in plaintext**:
