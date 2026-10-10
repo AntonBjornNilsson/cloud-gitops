@@ -6,3 +6,9 @@ resources:
   - backup-credentials.yaml
   - backup-sync.yaml
   - restore/
+
+configMapGenerator:
+  - name: longhorn-backup-sync-script
+    namespace: longhorn-system
+    files:
+      - sync.py=sync-longhorn-backups.py

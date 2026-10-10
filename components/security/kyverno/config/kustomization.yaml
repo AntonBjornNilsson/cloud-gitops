@@ -3,6 +3,5 @@ kind: Kustomization
 resources:
   - ingress-tls.yaml
   - ingress-authelia.yaml
-  - flux-substitution.yaml
   - pvc.yaml
   - protect-namespaces.yaml

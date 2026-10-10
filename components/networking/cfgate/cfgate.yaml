@@ -19,8 +19,7 @@ spec:
     mediaType: "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
     operation: copy
   ref:
-    # cfgate is alpha (0.2.0-alpha.x) and ships migrations between releases:
-    # pin exactly and read the chart's upgrade notes before bumping
+    # cfgate chart pinned; read upgrade notes before bumping
     tag: 1.10.0
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
