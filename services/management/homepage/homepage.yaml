@@ -88,6 +88,25 @@ spec:
             - YouTube:
                 - icon: youtube.png
                   href: https://youtube.com
+            - Messenger:
+                - icon: facebook-messenger.png
+                  href: https://messenger.com
+            - Klart:
+                - icon: mdi-weather-partly-cloudy
+                  href: https://klart.se
+        - Streaming:
+            - Netflix:
+                - icon: netflix.png
+                  href: https://netflix.com
+            - Prime Video:
+                - icon: prime-video.png
+                  href: https://primevideo.com
+            - Disney+:
+                - icon: disney-plus.png
+                  href: https://disneyplus.com
+            - HBO Max:
+                - icon: max.png
+                  href: https://max.com
       services:
         - Infrastructure & Management:
             - Headlamp:
