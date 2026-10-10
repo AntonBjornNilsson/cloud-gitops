@@ -30,12 +30,6 @@ TOKEN=$(cat "$GITHUB_TOKEN_FILE")
 if git diff --cached | grep -F "$TOKEN" > /dev/null; then reject "diff contains a credential"; fi
 kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null || reject "kustomize validation failed"
 AGENT_TASK=$(printenv AGENT_TASK || echo health)
-if [ "$AGENT_TASK" = "updates" ]; then
-  # Update PRs may only change version fields (and comments)
-  OTHER=$(git diff --cached -U0 | grep -E '^[-+]' | grep -vE '^(\+\+\+|---) ' \
-    | grep -vE '^[-+][[:space:]]*(- )?(version|tag|image):[[:space:]]' | grep -vE '^[-+][[:space:]]*(#.*)?$' || true)
-  [ -z "$OTHER" ] || reject "update diff changes more than version fields: $(head -5 <<<"$OTHER")"
-fi
 
 # ── branch, push, PR ────────────────────────────────────────────────────────
 # Token is read from the file on every use, so a refresh mid-run is picked up

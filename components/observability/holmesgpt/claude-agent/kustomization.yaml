@@ -8,15 +8,12 @@ resources:
   - role.yaml
   - rolebinding.yaml
   - cronjob-agent.yaml
-  - cronjob-updates.yaml
   - cronjob-token-refresh.yaml
 # Scripts as real files; the hash suffix rolls the CronJobs when they change
 configMapGenerator:
   - name: claude-agent-scripts
     files:
       - scripts/prompt.md
-      - scripts/prompt-updates.md
-      - scripts/check-updates.sh
       - scripts/common.sh
       - scripts/investigate.sh
       - scripts/publish.sh

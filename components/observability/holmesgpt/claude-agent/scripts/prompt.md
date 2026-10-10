@@ -14,7 +14,9 @@ GitOps is still the end state, and your fix only reaches the cluster once the us
    - pods crashlooping, pending, OOMKilled or with many restarts; failed Jobs
    - recent Warning events, degraded Longhorn volumes, Pending PVCs, expiring/failed certificates
 2. Pick the single most important issue that can be fixed by changing manifests in this repo.
-   Chart/image version bumps (including CVE fixes) are done by the separate update run; don't make them.
+   Renovate updates chart and image versions (including CVE fixes); don't make version bumps.
+   For images with CRITICAL findings, check the "Open Renovate update PRs" list: if an open PR bumps
+   it, name it in the summary ("merging #N should fix...").
    Skip issues that already have an open PR (listed below). Make the smallest correct edit.
    - Never touch cluster/flux-system/, .github/, .claude/, components/storage/longhorn/config/restore/
      or components/observability/holmesgpt/claude-agent/. These changes are rejected automatically.
