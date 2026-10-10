@@ -25,6 +25,9 @@ kind: CloudflareDNS
 metadata:
   name: email-domain
   namespace: cfgate-system
+  annotations:
+    # One-time: take over the apex CNAME left by the deleted dashboard tunnel. Remove once synced.
+    cfgate.io/adopt-existing: "true"
 spec:
   tunnelRef:
     name: homelab
