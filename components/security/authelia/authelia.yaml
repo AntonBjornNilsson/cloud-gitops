@@ -82,6 +82,13 @@ spec:
         traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
     configMap:
       theme: dark
+      # Requests through Cloudflare Access carry its JWT twice (CF_Authorization
+      # cookie and Cf-Access-Jwt-Assertion header), which overflows the default
+      # 4 KiB header buffer: Authelia answered 431 on /api/oidc/authorization
+      server:
+        buffers:
+          read: 16384
+          write: 16384
       # Prometheus metrics on :9959 (scraped by vmagent, see
       # observability/victoriametrics/scrapes/authelia.yaml)
       telemetry:
