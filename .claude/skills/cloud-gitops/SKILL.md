@@ -1,6 +1,6 @@
 ---
 name: cloud-gitops
-description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, HolmesGPT/Ollama, or debugging the cluster. Covers layout, conventions, the mandatory read-only/GitOps workflow, and validation commands.
+description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, HolmesGPT/Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
 ---
 
 # cloud-gitops working guide
@@ -14,19 +14,18 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
 ## Hard rules
 
 0. **Never write setup-specific information into the repo** (node names, IPs, hostnames, account/repo names, paths, secret values). Anything environment-specific goes through `${var}` substitution from the secrets repo. This also applies to docs, comments, skills and commit messages.
-1. **No imperative cluster mutations.** Never `kubectl apply/delete/edit/patch/scale/create`, never `helm install/upgrade`.
-   Change manifests -> commit -> push -> let Flux reconcile.
-2. **Default to `--context=oidc-user`** for kubectl/flux (it is read-only plus Flux reconcile rights).
-   The default current context may be an admin one — do not rely on it.
-   Allowed: `get`, `describe`, `logs`, `top`, `flux get ...`, `flux reconcile ...`.
-   **Escalating to the admin context** (cluster-admin rights; its name is in local memory, never in the repo)
-   is only allowed after explicit approval from the user, asked with `AskUserQuestion` each time. The question must state:
-   - why `oidc-user` is not enough (the denied command / missing permission),
-   - exactly what the admin context will be used for (the commands and the resources/namespaces they touch),
-   - whether any of it mutates the cluster.
-   Without a clear yes, stay on `oidc-user`. The approval covers only the stated commands — anything beyond needs a new question.
-   Pass the admin context per command (`--context=<admin>`); never run `kubectl config use-context`, and go back to `oidc-user` right after.
-   Rule 1 still applies under admin rights unless the approved question explicitly listed the mutation.
+1. **GitOps is the end state.** Git is the source of truth; every lasting change goes manifests -> commit -> push -> Flux reconcile.
+   Imperative commands (`kubectl apply/delete/edit/patch/scale/create/rollout restart`, `flux suspend/resume`) are allowed only
+   as temporary steps while debugging or unblocking (e.g. deleting a stuck pod/job, testing a patch, clearing a failed Helm release).
+   Before you finish a task:
+   - every fix you applied by hand is also committed and pushed, or reverted — the cluster must match the repo;
+   - anything you suspended is resumed, and `flux get kustomizations -A` / `flux get helmreleases -A` show everything Ready;
+   - tell the user which imperative commands you ran and where the matching commit is.
+   Never `helm install/upgrade/uninstall` (HelmReleases are Flux-managed). Ask first before anything that loses data or is
+   hard to undo: deleting PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs, or Flux objects with `prune` on.
+2. **Use the admin kube context** (cluster-admin; its name is in local memory, never in the repo) for kubectl/flux:
+   pass it per command (`--context=<admin>`), never rely on the current context, never run `kubectl config use-context`.
+   Admin rights do not relax rule 1.
 3. **No plaintext secrets or private domains.** Use `${var}` placeholders; values come from the
    `flux-substitutions` Secret (in `cloud-gitops-secrets`) via `postBuild.substituteFrom`.
    Common vars: `${domain}`, `${auth_domain}`, `${admin_email}`, `${github_repo}`, `${oidc_issuer_host}`.
@@ -120,7 +119,7 @@ A service is public only if **all three** are in place:
 
 Then commit, push and verify:
 ```bash
-kubectl --context=oidc-user -n cfgate-system get cloudflaretunnel,cloudflaredns,httproute,cloudflareaccessapplication
+kubectl --context=<admin> -n cfgate-system get cloudflaretunnel,cloudflaredns,httproute,cloudflareaccessapplication
 dig +short <host> @<zone nameserver>      # resolves publicly only once published
 ```
 From outside (mobile data) the host should redirect to Cloudflare Access; Traefik access logs show
@@ -176,7 +175,7 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   versions, Claude picks one batch (Trivy CRITICAL fixes first, one core component per PR, no majors), `publish.sh` only
   accepts version-field diffs and opens a `claude/updates-*` PR; it reaches main only via the ntfy Merge button. One update
   PR at a time. Dependabot only covers `.github/` actions and the claude-agent image (paths the agent may not touch).
-  After a bump, trivy-operator rescans the new images: `kubectl --context=oidc-user get vulnerabilityreports -n <ns> -o wide`.
+  After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
   After editing the JSON, re-apply it with `gh api` (PUT on the existing ruleset id).
 
@@ -184,10 +183,10 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
 
 ```bash
 # 1. Diagnose (read-only)
-flux --context=oidc-user get kustomizations -A
-flux --context=oidc-user get helmreleases -A
-kubectl --context=oidc-user -n <ns> get pods,events
-kubectl --context=oidc-user -n <ns> logs deploy/<name>
+flux --context=<admin> get kustomizations -A
+flux --context=<admin> get helmreleases -A
+kubectl --context=<admin> -n <ns> get pods,events
+kubectl --context=<admin> -n <ns> logs deploy/<name>
 
 # 2. Edit manifests, then validate locally (substitution vars stay literal - that's expected)
 kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null
@@ -196,9 +195,9 @@ kubectl kustomize components/<cat>/<name>
 # 3. Commit (conventional style: feat(scope): / fix(scope): / chore(scope):), pull --rebase, push
 
 # 4. Reconcile and verify
-flux --context=oidc-user reconcile source git flux-system
-flux --context=oidc-user reconcile kustomization <system-name|flux-services> --with-source
-flux --context=oidc-user reconcile helmrelease <name> -n <ns>
+flux --context=<admin> reconcile source git flux-system
+flux --context=<admin> reconcile kustomization <system-name|flux-services> --with-source
+flux --context=<admin> reconcile helmrelease <name> -n <ns>
 ```
 
 Commit and push without asking: pushing is how changes reach the cluster.
@@ -207,7 +206,7 @@ Only stage and push files you changed in this session (`git add <paths>`, never 
 ## Debugging cheatsheet
 
 - Kustomization stuck "dependency not ready" -> walk the `dependsOn` chain; one failed HelmRelease blocks `flux-services`.
-- HelmRelease failing upgrades -> check `flux get hr`, then `kubectl --context=oidc-user describe hr`; for stuck upgrades consider `upgrade.remediation.strategy: uninstall`.
+- HelmRelease failing upgrades -> check `flux get hr`, then `kubectl --context=<admin> describe hr`; for stuck upgrades consider `upgrade.remediation.strategy: uninstall`.
 - `${var}` appearing literally in the cluster -> the Kustomization is missing `postBuild.substituteFrom` or the key is missing from the secrets repo.
 - Pod can't reach something -> CiliumNetworkPolicy on either side; DNS egress rule missing is the usual culprit.
 - PVC Pending/Multi-attach -> RWO volume with >1 replica or a rollout with surge; use `strategy: Recreate` or replicas 1.

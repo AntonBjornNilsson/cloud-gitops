@@ -12,34 +12,21 @@ This guide describes the architectural layout, component vs. service distinction
 > [!CRITICAL]
 > ## Core Rule for LLMs: Pure Declarative GitOps (No Imperative Mutations)
 >
-> An LLM or automated agent working on this cluster **MUST NOT** use `kubectl` with modify/write access. All changes to cluster state must be made by editing manifests in the Git repository, pushing the commit to Git, and allowing Flux to reconcile the changes.
+> Git is the source of truth. An LLM or automated agent may use imperative `kubectl`/`flux` commands only as temporary debugging or unblocking steps; every lasting change must end up as a manifest change in Git, pushed and reconciled by Flux, so the cluster matches the repository when the task is done.
 >
-> ### 1. Strict Prohibitions
-> - **DO NOT** run imperative mutation commands against the cluster:
->   - `kubectl apply -f ...` (Bypasses GitOps source of truth)
->   - `kubectl delete ...` (Causes immediate disruption and fights Flux reconciliation)
->   - `kubectl edit ...` or `kubectl patch ...` (Introduces silent configuration drift)
->   - `kubectl create ...` (Except when testing harmless local client-side dry-runs)
->   - `kubectl scale ...` (State will be overwritten on the next Flux sync)
->   - `helm install / upgrade / uninstall` (Helm releases must be managed solely via Flux `HelmRelease` manifests)
+> ### 1. Rules for Imperative Commands
+> - Allowed temporarily (debugging/unblocking): `kubectl apply/delete/edit/patch/scale/create/rollout restart`, `flux suspend/resume`.
+> - Before finishing: commit and push every hand-applied fix (or revert it), resume anything suspended, and confirm all Flux Kustomizations and HelmReleases are Ready.
+> - Never `helm install / upgrade / uninstall` (Helm releases are managed solely via Flux `HelmRelease` manifests).
+> - Ask the user first before data-losing or hard-to-undo actions (PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs, pruned Flux objects).
 >
-> ### 2. Permitted Actions & Mandatory OIDC Context
-> - **LLM Authentication & Context**:
->   - LLMs and automated tools **MUST ALWAYS** use the `oidc-user` context (e.g. `kubectl --context=oidc-user ...` or ensure the active context is `oidc-user`).
->   - The `oidc-user` role is strictly bound to `oidc-read-only` (`get`, `list`, `watch`), ensuring the LLM cannot accidentally mutate or destroy persistent cluster resources.
->   - Never use `admin` or `oidc-admin` contexts for automated LLM queries.
-> - **Read-Only Diagnostics**:
->   - `kubectl --context=oidc-user get ...`, `kubectl --context=oidc-user describe ...`, `kubectl --context=oidc-user logs ...`, `kubectl --context=oidc-user top ...`
->   - `kubectl kustomize <path>` (Client-side validation of manifests prior to commit)
-> - **Flux Synchronization (Permitted for oidc-user)**:
->   - The `oidc-user` role possesses RBAC patch/update permissions on all Flux API groups (`source.toolkit.fluxcd.io`, `kustomize.toolkit.fluxcd.io`, `helm.toolkit.fluxcd.io`, `notification.toolkit.fluxcd.io`, `image.toolkit.fluxcd.io`).
->   - LLMs can and should run:
->     - `flux reconcile source git <source>`
->     - `flux reconcile kustomization <kustomization>`
->     - `flux reconcile helmrelease <release>`
+> ### 2. Kube Context
+> - Use the cluster-admin context, passed per command (`--context=<admin>`); its name is kept in local agent memory, never in this repository. Never switch the current context.
+> - Admin rights do not relax the GitOps end-state rule above.
+> - Flux reconciliation (`flux reconcile source git|kustomization|helmrelease ...`) is the normal way to apply pushed changes.
 > ### 3. The Standard LLM Change Workflow
 > When asked to fix, deploy, modify, or delete any resource in the cluster, follow this exact sequence:
-> 1. **Diagnose**: Inspect read-only cluster state (`kubectl get`, `kubectl logs`, etc.).
+> 1. **Diagnose**: Inspect cluster state (`kubectl get`, `kubectl logs`, etc.).
 > 2. **Modify Code**: Edit the appropriate manifest(s) in `cloud-gitops` or `cloud-gitops-secrets`.
 > 3. **Validate**: Run client-side validation (`kubectl kustomize <path>`).
 > 4. **Commit & Push**: Commit the change with a descriptive message and push to the Git remote.
