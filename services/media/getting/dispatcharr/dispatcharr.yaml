@@ -181,9 +181,12 @@ spec:
     spec:
       # Not pinned: nothing here needs the control-plane node (only /dev/net/tun, present on every node),
       # and keeping it off leaves that node's disk and CPU to etcd.
-      containers:
+      # gluetun is a native sidecar: web/celery only start once the VPN is up. Its kill switch
+      # blocks egress until then, so jobs Dispatcharr runs at startup (EPG/M3U refresh) would fail.
+      initContainers:
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
+          restartPolicy: Always
           securityContext:
             capabilities:
               add:
@@ -213,9 +216,17 @@ spec:
           ports:
             - name: http
               containerPort: 9191
+          # Healthy only while the tunnel is up (same check as the image's Docker HEALTHCHECK).
+          # No liveness probe: gluetun reconnects by itself and a restart would drop all streams.
+          startupProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 5
+            failureThreshold: 120
           volumeMounts:
             - name: tun
               mountPath: /dev/net/tun
+      containers:
         - name: web
           image: ghcr.io/dispatcharr/dispatcharr:latest
           env:
@@ -247,6 +258,11 @@ spec:
             - name: data
               mountPath: /data
               subPath: data
+            # Downloaded EPG/M3U files; upstream keeps them in the image layer, so they were
+            # lost on restart and not shared between web and celery.
+            - name: data
+              mountPath: /app/media
+              subPath: media
         - name: celery
           image: ghcr.io/dispatcharr/dispatcharr:latest
           command:
@@ -293,6 +309,11 @@ spec:
             - name: data
               mountPath: /data
               subPath: data
+            # Downloaded EPG/M3U files; upstream keeps them in the image layer, so they were
+            # lost on restart and not shared between web and celery.
+            - name: data
+              mountPath: /app/media
+              subPath: media
       volumes:
         - name: data
           persistentVolumeClaim:
