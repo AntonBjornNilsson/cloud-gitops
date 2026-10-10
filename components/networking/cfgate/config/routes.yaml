@@ -13,6 +13,8 @@ metadata:
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "auth.${domain}"
+    # Fail closed: 503 instead of forwarding if the Access app (access.yaml) is not Ready
+    cfgate.io/access-required: cfgate-system/auth
 spec:
   parentRefs:
     - name: cloudflare-tunnel
@@ -34,6 +36,8 @@ metadata:
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "stream.${domain}"
+    # Fail closed: 503 instead of forwarding if the Access app (access.yaml) is not Ready
+    cfgate.io/access-required: cfgate-system/stream
 spec:
   parentRefs:
     - name: cloudflare-tunnel
