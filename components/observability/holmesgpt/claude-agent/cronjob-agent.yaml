@@ -1,5 +1,5 @@
 # Daily cluster review. Two containers sharing /work:
-#   investigate (init): Claude with read-only kubectl, edits a clone of the repo. No GitHub credentials.
+#   investigate (init): Claude with cluster-admin kubectl, edits a clone of the repo. No GitHub credentials.
 #   publish:            guards and validates the diff, pushes a claude/* branch and opens the PR as
 #                       the GitHub App, then registers it with holmes-remediation for the ntfy buttons.
 apiVersion: batch/v1

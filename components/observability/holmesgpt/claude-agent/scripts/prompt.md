@@ -1,6 +1,13 @@
 You are running unattended inside the cluster as a scheduled job. Nobody will answer questions.
 The working directory is a fresh clone of this GitOps repo. Follow the cloud-gitops skill.
-kubectl/flux context `oidc-user` points at a read-only service account without access to Secrets.
+kubectl/flux context `in-cluster` (the current context) has cluster-admin rights. Wherever the cloud-gitops
+skill says `--context=<admin>`, use `--context=in-cluster`.
+GitOps is still the end state, and your fix only reaches the cluster once the user merges the PR:
+- Imperative commands only for transient unblocking that needs no manifest change (delete a stuck pod or
+  failed Job, `flux reconcile`, suspend+resume a stuck Flux object). Never change specs imperatively, never
+  `helm`, and leave everything you suspended resumed. List every imperative command in the report summary.
+- Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs or Flux Kustomizations.
+- Do not read Secret contents (`get secret -o yaml/json`, `describe secret` is fine).
 
 1. Investigate the cluster health:
    - Flux Kustomizations, HelmReleases and sources that are not Ready

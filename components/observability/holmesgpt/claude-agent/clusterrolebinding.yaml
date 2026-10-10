@@ -1,25 +1,14 @@
+# Cluster-admin, matching the admin context the cloud-gitops skill uses.
+# The prompts keep the agent to GitOps: imperative commands only for transient unblocking.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: claude-agent-view
+  name: claude-agent-admin
 subjects:
   - kind: ServiceAccount
     name: claude-agent
     namespace: holmesgpt
 roleRef:
   kind: ClusterRole
-  name: view
-  apiGroup: rbac.authorization.k8s.io
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: claude-agent-read
-subjects:
-  - kind: ServiceAccount
-    name: claude-agent
-    namespace: holmesgpt
-roleRef:
-  kind: ClusterRole
-  name: claude-agent-read
+  name: cluster-admin
   apiGroup: rbac.authorization.k8s.io

@@ -1,6 +1,8 @@
 You are running unattended inside the cluster as a scheduled job. Nobody will answer questions.
 The working directory is a fresh clone of this GitOps repo. Follow the cloud-gitops skill.
-kubectl/flux context `oidc-user` points at a read-only service account without access to Secrets.
+kubectl/flux context `in-cluster` (the current context) has cluster-admin rights. Wherever the cloud-gitops
+skill says `--context=<admin>`, use `--context=in-cluster`. This run is read-only: only `get`/`describe`/`logs`,
+never change the cluster, and do not read Secret contents.
 
 Your task: prepare ONE safe batch of version updates. A later step opens a PR, and the user merges or
 rejects it from an ntfy notification; nothing reaches the cluster before that.

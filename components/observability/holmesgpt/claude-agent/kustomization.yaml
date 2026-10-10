@@ -4,7 +4,6 @@ namespace: holmesgpt
 resources:
   - secret.yaml
   - serviceaccount.yaml
-  - clusterrole.yaml
   - clusterrolebinding.yaml
   - role.yaml
   - rolebinding.yaml

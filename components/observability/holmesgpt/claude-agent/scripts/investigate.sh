@@ -1,12 +1,12 @@
 #!/bin/bash
 # Init container: Claude investigates the cluster and edits a clone of the repo.
-# Has the Claude subscription token and a read-only kubeconfig, but no GitHub credentials.
+# Has the Claude subscription token and a cluster-admin kubeconfig, but no GitHub credentials.
 set -euo pipefail
 source /etc/claude-agent/common.sh
 trap 'notify_on_failure investigate' EXIT
 mkdir -p "$HOME/.kube" "$OUT"
 
-# kubeconfig with the same context name the repo skill uses
+# In-pod kubeconfig; the prompts map the skill's --context=<admin> to this context
 SA=/var/run/secrets/kubernetes.io/serviceaccount
 cat > "$HOME/.kube/config" <<EOF
 apiVersion: v1
@@ -21,11 +21,11 @@ users:
     user:
       tokenFile: $SA/token
 contexts:
-  - name: oidc-user
+  - name: in-cluster
     context:
       cluster: in-cluster
       user: claude-agent
-current-context: oidc-user
+current-context: in-cluster
 EOF
 
 # Public repo: clone and list PRs without credentials
@@ -72,10 +72,7 @@ claude -p "$PROMPT" \
   --max-turns "$CLAUDE_MAX_TURNS" \
   --add-dir "$OUT" \
   --allowedTools Read Grep Glob Edit Write \
-    "Bash(kubectl get:*)" "Bash(kubectl describe:*)" "Bash(kubectl logs:*)" "Bash(kubectl top:*)" "Bash(kubectl events:*)" \
-    "Bash(kubectl --context=oidc-user get:*)" "Bash(kubectl --context=oidc-user describe:*)" \
-    "Bash(kubectl --context=oidc-user logs:*)" "Bash(kubectl --context=oidc-user top:*)" "Bash(kubectl --context=oidc-user events:*)" \
-    "Bash(kubectl kustomize:*)" "Bash(flux get:*)" "Bash(flux --context=oidc-user get:*)" \
+    "Bash(kubectl:*)" "Bash(flux:*)" \
     "Bash(git status:*)" "Bash(git diff:*)" "Bash(git log:*)" "Bash(jq:*)" "$@" \
   --disallowedTools WebFetch WebSearch \
   | tee "$OUT/claude.log"

@@ -164,7 +164,7 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   `holmesgpt/config/scheduled-health-check.yaml`; trigger with `scripts/trigger.sh [list|all|<check>]`
   (note: this script creates a temporary Job, i.e. a cluster write — only run it when the user asks).
   Don't add `models.pull` to the Ollama HelmRelease values (makes Flux reconciliation slow).
-- `holmesgpt/claude-agent/`: daily CronJob running Claude Code (read-only kubectl) that opens `claude/*` PRs as a
+- `holmesgpt/claude-agent/`: daily CronJob running Claude Code (cluster-admin kubectl, context `in-cluster`; GitOps rules in its prompts) that opens `claude/*` PRs as a
   GitHub App; `holmes-remediation` sends the ntfy Merge/Reject buttons. Tooling image is built by
   `.github/workflows/claude-agent-image.yaml` (GHCR, `:latest`, pulled with `Always`); scripts live in `scripts/`.
 
