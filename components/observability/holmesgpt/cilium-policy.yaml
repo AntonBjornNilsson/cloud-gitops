@@ -9,13 +9,11 @@ spec:
     # Internal communication among holmes, holmes-operator, and github-mcp-server
     - fromEndpoints:
         - {}
-    # Internal cluster communication to Holmes API & Remediation Service
+    # Internal cluster communication to Remediation Service
     - fromEntities:
         - cluster
       toPorts:
         - ports:
-            - port: "80"
-              protocol: TCP
             - port: "8080"
               protocol: TCP
     # Web ingress from Traefik
@@ -77,11 +75,4 @@ spec:
         - ports:
             - port: "80"
               protocol: TCP
-    # Ollama LLM access
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: ollama
-      toPorts:
-        - ports:
-            - port: "11434"
-              protocol: TCP
+
