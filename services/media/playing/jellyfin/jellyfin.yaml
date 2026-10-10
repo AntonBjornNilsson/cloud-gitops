@@ -98,9 +98,11 @@ spec:
       periodSeconds: 10
       timeoutSeconds: 10
       failureThreshold: 30
+    # Readiness avoids /health: its database check stalls during guide refreshes while the
+    # server keeps answering, and dropping out of the Service turns that into 503s in Traefik.
     readinessProbe:
       httpGet:
-        path: /health
+        path: /System/Info/Public
         port: http
       initialDelaySeconds: 10
       periodSeconds: 10
