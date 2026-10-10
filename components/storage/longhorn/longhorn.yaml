@@ -56,6 +56,9 @@ spec:
       # node at a time. With 0 the volumes keep running the old engine and
       # instance-manager images (and their CVEs) until upgraded by hand.
       concurrentAutomaticEngineUpgradePerNodeLimit: 1
+      # Delete replica data and instances that no volume references any more
+      # (after the default 5 min grace period) instead of letting them fill disks.
+      orphanResourceAutoDeletion: "replica-data;instance"
 
     defaultBackupStore:
       backupTarget: ${s3_bucket_longhorn}

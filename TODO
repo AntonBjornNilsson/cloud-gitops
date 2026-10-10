@@ -1,7 +1,6 @@
 > secrets handling
 > Add Mutating Admission Webhook/Policy Engines, kyverno. Auto set anno/tls
 > Authentication
-oauth2-proxy being a proxy not reverse
 > - grafana
 > - oauth2-proxy
  - kubeapi

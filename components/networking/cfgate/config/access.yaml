@@ -14,7 +14,7 @@ spec:
   decision: allow
   include:
     - email:
-        addresses: ["${admin_email}"]
+        addresses: ["${cloudflare_admin_account}"]
 ---
 # GitHub cannot log in: the receiver authenticates deliveries with its HMAC secret
 apiVersion: cfgate.io/v1alpha1
