@@ -85,6 +85,7 @@ spec:
         cardBlur: sm
       kubernetes:
         mode: cluster
+      services: []
       bookmarks:
         - Developer:
             - GitHub:
