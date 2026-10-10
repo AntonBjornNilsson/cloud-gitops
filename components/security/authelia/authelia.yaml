@@ -241,7 +241,8 @@ spec:
               userinfo_signed_response_alg: none
 
             # Tailscale custom OIDC sign-in (WebFinger in webfinger.yaml)
-            - client_id: tailscale
+            # ID and plain secret (tailscale_oidc_client_*) go in the Tailscale sign-up form
+            - client_id: "${tailscale_oidc_client_id}"
               client_name: Tailscale
               client_secret:
                 value: "${authelia_tailscale_client_secret_hash}"
