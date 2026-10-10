@@ -15,8 +15,9 @@ metadata:
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "auth.${domain}"
-    # Fail closed: 503 instead of forwarding if the Access app (access.yaml) is not Ready
-    cfgate.io/access-required: cfgate-system/auth
+    # No cfgate.io/access-required: cfgate treats the bypass app of auth-oidc-machine
+    # on the same host as a conflict and would serve 503 for the whole login portal.
+    # The "auth" Access app still protects it at the edge.
 spec:
   parentRefs:
     - name: cloudflare-tunnel

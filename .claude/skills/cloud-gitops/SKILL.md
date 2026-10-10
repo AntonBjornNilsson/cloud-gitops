@@ -113,7 +113,8 @@ A service is public only if **all three** are in place:
 3. **Access application** in `components/networking/cfgate/config/access.yaml` targeting the route, with a policy:
    - people: `allow-admin` (Google login, `allowedIdps: ["${cloudflare_google_idp_id}"]`, `autoRedirectToIdentity: true`),
      and add `cfgate.io/access-required: cfgate-system/<app>` to the route so it serves 503 instead of going
-     unprotected if the app is not Ready;
+     unprotected if the app is not Ready. Not on a host that also has a path-scoped bypass app (e.g. auth +
+     auth-oidc-machine): cfgate treats the overlap as a conflict and serves 503 for the whole host;
    - machines (webhooks): `bypass-everyone` on a path-limited rule (`targetRef.sectionName: <rule name>`); the app
      must authenticate the request itself (e.g. HMAC). `access-required` does not accept bypass policies.
 
