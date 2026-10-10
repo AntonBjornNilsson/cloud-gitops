@@ -16,7 +16,7 @@ spec:
   dependsOn:
     - name: system-traefik
     - name: secrets-kustomization
-    - name: cloudflare-cert
+    - name: system-cert-manager-config
   postBuild:
     substituteFrom:
       - kind: Secret

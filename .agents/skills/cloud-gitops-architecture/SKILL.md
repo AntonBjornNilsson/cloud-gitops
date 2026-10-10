@@ -206,7 +206,7 @@ graph TD
 8. **`system-grafana`**:
    - `dependsOn: [system-victoriametrics, system-traefik]`
 9. **`system-authelia`**:
-   - `dependsOn: [system-traefik, system-longhorn-config, authelia-config, cloudflare-cert]`
+   - `dependsOn: [system-traefik, system-longhorn-config, authelia-config, system-cert-manager-config]`
 10. **`flux-services`**:
     - `dependsOn: [flux-components, system-traefik, system-cert-manager-config, system-longhorn]`
 
