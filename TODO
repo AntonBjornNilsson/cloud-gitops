@@ -41,3 +41,15 @@ Stalkarr (MAG/Stalker portal for Dispatcharr, own repo stalkarr; manifests in se
  - add Prometheus metrics to stalkarr (active streams, refresh errors), VMPodScrape, alert on refresh failures
  - add stalkarr to homepage
  - features: VOD/series from Dispatcharr, catch-up/timeshift, radio, parental lock, UI translations
+Resilience review (2026-10-10)
+ - single controller = single etcd member: plan 3 controllers for quorum (e.g. make two workers controller+worker)
+ - schedule k0s backup (etcd) to S3 outside GitOps + write a restore runbook
+ - control-plane node overloaded (media workload + RWX share-manager share its disk; iowait spikes -> Flux/kyverno/operators "leader election lost"): move media workload off it, ideally separate etcd disk
+ - workstation node is a Longhorn replica node and flaps often: every volume degrades/rebuilds on each reboot; exclude it from storage or add a third always-on storage node, consider replica count 2
+ - one worker hosts most platform pods (Flux, traefik, authelia, cert-manager, alerting): spread with topologySpread/anti-affinity
+ - Longhorn nodeDownPodDeletionPolicy is do-nothing: RWO pods stay Terminating on node loss; set delete-both-statefulset-and-deployment-pod
+ - traefik single replica, no PDB: 2 replicas + PDB + spread
+ - no dead-man's switch: Watchdog -> blackhole, alertmanager+ntfy on the same node; route Watchdog to an external heartbeat
+ - kyverno + longhorn webhooks failurePolicy Fail cover flux-system/longhorn-system/traefik: review exclusions for recovery after full outage
+ - Longhorn disk overcommit on workers (200%), check headroom
+ - not backed up (re-creatable): logs, traces, jellyfin cache, ollama, trivy
