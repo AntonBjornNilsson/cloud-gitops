@@ -81,3 +81,38 @@ spec:
     appLauncherVisible: false
   policyRefs:
     - name: bypass-everyone
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessApplication
+metadata:
+  name: webfinger
+  namespace: cfgate-system
+spec:
+  # Fetched by Tailscale's control plane; static JSON, no secrets
+  targetRef:
+    kind: HTTPRoute
+    name: webfinger
+    sectionName: webfinger
+  application:
+    name: webfinger
+    appLauncherVisible: false
+  policyRefs:
+    - name: bypass-everyone
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessApplication
+metadata:
+  name: auth-oidc-machine
+  namespace: cfgate-system
+spec:
+  # Discovery, JWKS, token and userinfo: protected by OIDC client credentials
+  # and tokens; the login itself (/api/oidc/authorization) stays behind "auth"
+  targetRef:
+    kind: HTTPRoute
+    name: auth-oidc-machine
+    sectionName: machine
+  application:
+    name: auth-oidc-machine
+    appLauncherVisible: false
+  policyRefs:
+    - name: bypass-everyone

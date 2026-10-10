@@ -74,3 +74,67 @@ spec:
         - path:
             type: PathPrefix
             value: /hook
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  # WebFinger on the email domain apex: points Tailscale's custom OIDC sign-in
+  # at Authelia (authelia/webfinger.yaml)
+  name: webfinger
+  namespace: cfgate-system
+  annotations:
+    cfgate.io/origin-protocol: "https"
+    cfgate.io/origin-ssl-verify: "true"
+    cfgate.io/origin-server-name: "${auth_domain}"
+spec:
+  parentRefs:
+    - name: cloudflare-tunnel
+  hostnames:
+    - ${auth_domain}
+  rules:
+    - name: webfinger
+      backendRefs:
+        - name: traefik-public
+          namespace: traefik
+          port: 443
+      matches:
+        - path:
+            type: Exact
+            value: /.well-known/webfinger
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  # Authelia OIDC endpoints that relying parties (Tailscale) call server to
+  # server, so they cannot pass the browser login of the "auth" Access app.
+  # More specific than the "auth" route, which keeps everything else.
+  name: auth-oidc-machine
+  namespace: cfgate-system
+  annotations:
+    cfgate.io/origin-protocol: "https"
+    cfgate.io/origin-ssl-verify: "true"
+    cfgate.io/origin-server-name: "auth.${domain}"
+spec:
+  parentRefs:
+    - name: cloudflare-tunnel
+  hostnames:
+    - auth.${domain}
+  rules:
+    - name: machine
+      backendRefs:
+        - name: traefik-public
+          namespace: traefik
+          port: 443
+      matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known
+        - path:
+            type: Exact
+            value: /jwks.json
+        - path:
+            type: Exact
+            value: /api/oidc/token
+        - path:
+            type: Exact
+            value: /api/oidc/userinfo

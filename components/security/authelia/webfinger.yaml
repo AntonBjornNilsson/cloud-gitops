@@ -1,6 +1,8 @@
 # WebFinger for Tailscale's custom OIDC sign-in: Tailscale looks up
 # https://<email domain>/.well-known/webfinger to find the issuer (Authelia)
-# for users whose email is on ${auth_domain}.
+# for users whose email is on ${auth_domain}. The issuer is auth.${domain}: it
+# has the valid certificate and is the issuer the cluster already uses.
+# Published through cfgate (cfgate/config/routes.yaml: webfinger, auth-oidc-machine).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -24,7 +26,7 @@ data:
         }
         default_type application/jrd+json;
         add_header Access-Control-Allow-Origin "*";
-        return 200 '{"subject":"acct:$wf_user@${auth_domain}","links":[{"rel":"http://openid.net/specs/connect/1.0/issuer","href":"https://auth.${auth_domain}"}]}';
+        return 200 '{"subject":"acct:$wf_user@${auth_domain}","links":[{"rel":"http://openid.net/specs/connect/1.0/issuer","href":"https://auth.${domain}"}]}';
       }
 
       location = /healthz {
@@ -53,7 +55,7 @@ spec:
         app: webfinger
       annotations:
         # Roll the pod when the nginx config changes
-        checksum/config: webfinger-v2
+        checksum/config: webfinger-v3
     spec:
       automountServiceAccountToken: false
       securityContext:

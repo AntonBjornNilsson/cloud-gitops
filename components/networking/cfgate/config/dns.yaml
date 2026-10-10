@@ -16,3 +16,22 @@ spec:
   defaults:
     proxied: true
   policy: sync
+---
+# Email domain zone (WebFinger apex). Separate resource so a problem with this
+# zone (token scope, pre-existing record) does not touch the main zone's records.
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareDNS
+metadata:
+  name: email-domain
+  namespace: cfgate-system
+spec:
+  tunnelRef:
+    name: homelab
+  zones:
+    - name: ${auth_domain}
+  source:
+    gatewayRoutes:
+      enabled: true
+  defaults:
+    proxied: true
+  policy: sync
