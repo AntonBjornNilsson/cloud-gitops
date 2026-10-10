@@ -148,6 +148,11 @@ metadata:
     enable-oauth: "false"
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: ""
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Ntfy"
+    gethomepage.dev/description: "Push Notifications"
+    gethomepage.dev/group: "Infrastructure & Management"
+    gethomepage.dev/icon: "ntfy.png"
 spec:
   rules:
     - host: ntfy.${domain}

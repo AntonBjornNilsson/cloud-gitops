@@ -56,6 +56,13 @@ spec:
       api_url: "${victoriametrics_api_url}"
       role_attribute_path: "contains(groups, 'admin') && 'Admin' || 'Viewer'"
   ingress:
+    metadata:
+      annotations:
+        gethomepage.dev/enabled: "true"
+        gethomepage.dev/name: "Grafana"
+        gethomepage.dev/description: "Monitoring & Metrics"
+        gethomepage.dev/group: "Infrastructure & Management"
+        gethomepage.dev/icon: "grafana.png"
     spec:
       ingressClassName: traefik
       rules:

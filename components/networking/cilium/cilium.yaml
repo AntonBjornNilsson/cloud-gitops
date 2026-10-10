@@ -119,6 +119,11 @@ spec:
             # Set explicitly: Kyverno's webhooks skip kube-system, so the
             # add-ingress-authelia mutation never reaches this Ingress.
             traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia-forward-auth@kubernetescrd
+            gethomepage.dev/enabled: "true"
+            gethomepage.dev/name: "Hubble"
+            gethomepage.dev/description: "Network Observability"
+            gethomepage.dev/group: "Infrastructure & Management"
+            gethomepage.dev/icon: "cilium.png"
           className: "traefik"
           hosts:
             - hubble.${domain}

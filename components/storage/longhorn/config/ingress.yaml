@@ -5,6 +5,12 @@ metadata:
   namespace: longhorn-system
   # labels:
   #   enable-oauth: "false"
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Longhorn"
+    gethomepage.dev/description: "Distributed Block Storage"
+    gethomepage.dev/group: "Infrastructure & Management"
+    gethomepage.dev/icon: "longhorn.png"
 
 spec:
   ingressClassName: traefik

@@ -78,6 +78,12 @@ spec:
       enabled: true
       class: "traefik"
       host: "ai.${domain}"
+      annotations:
+        gethomepage.dev/enabled: "true"
+        gethomepage.dev/name: "Open WebUI"
+        gethomepage.dev/description: "Local LLM Interface"
+        gethomepage.dev/group: "AI"
+        gethomepage.dev/icon: "open-webui.png"
 
     persistentVolume:
       enabled: true

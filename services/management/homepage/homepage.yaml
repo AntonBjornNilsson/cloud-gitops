@@ -41,6 +41,9 @@ spec:
       name: RetryOnFailure
       retryInterval: 3m
   values:
+    enableRbac: true
+    serviceAccount:
+      create: true
     env:
       - name: HOMEPAGE_ALLOWED_HOSTS
         value: "homepage.${domain},${domain}"
@@ -80,6 +83,8 @@ spec:
         color: slate
         headerStyle: boxed
         cardBlur: sm
+      kubernetes:
+        mode: cluster
       bookmarks:
         - Developer:
             - GitHub:
@@ -107,71 +112,6 @@ spec:
             - HBO Max:
                 - icon: max.png
                   href: https://max.com
-      services:
-        - Infrastructure & Management:
-            - Headlamp:
-                icon: headlamp.png
-                href: https://headlamp.${domain}
-                description: Kubernetes Dashboard
-            - Grafana:
-                icon: grafana.png
-                href: https://grafana.${domain}
-                description: Monitoring & Metrics
-            - Hubble:
-                icon: cilium.png
-                href: https://hubble.${domain}
-                description: Network Observability
-            - Longhorn:
-                icon: longhorn.png
-                href: https://longhorn.${domain}
-                description: Distributed Block Storage
-            - AdGuard Home:
-                icon: adguard-home.png
-                href: https://adguard.${domain}
-                description: DNS & Ad Blocking
-            - Ntfy:
-                icon: ntfy.png
-                href: https://ntfy.${domain}
-                description: Push Notifications
-        - Media & Entertainment:
-            - Jellyfin:
-                icon: jellyfin.png
-                href: https://stream.${domain}
-                description: Media Streaming
-            - Dispatcharr:
-                icon: dispatcharr.png
-                href: https://dispatcharr.${domain}
-                description: Stream Management
-            - Jellyseerr:
-                icon: jellyseerr.png
-                href: https://requests.${domain}
-                description: Media Requests
-        - Media Automation:
-            - Sonarr:
-                icon: sonarr.png
-                href: https://sonarr.${domain}
-                description: TV Series Management
-            - Radarr:
-                icon: radarr.png
-                href: https://radarr.${domain}
-                description: Movies Management
-            - Prowlarr:
-                icon: prowlarr.png
-                href: https://prowlarr.${domain}
-                description: Indexer Manager
-            - Bazarr:
-                icon: bazarr.png
-                href: https://bazarr.${domain}
-                description: Subtitle Management
-            - qBittorrent:
-                icon: qbittorrent.png
-                href: https://qbit.${domain}
-                description: Torrent Client
-        - AI:
-            - Open WebUI:
-                icon: open-webui.png
-                href: https://ai.${domain}
-                description: Local LLM Interface
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -209,10 +149,16 @@ spec:
           rules:
             dns:
               - matchPattern: "*"
+    # Kubernetes API Server for service and ingress auto-discovery
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
     # Internal cluster services queried by dashboard widgets
     - toEntities:
         - cluster
     # External services, icons, weather APIs
     - toEntities:
         - world
-
