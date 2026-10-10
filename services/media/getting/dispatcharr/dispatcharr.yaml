@@ -277,6 +277,18 @@ spec:
               value: dispatcharr.settings
             - name: PYTHONUNBUFFERED
               value: "1"
+          # The entrypoint backgrounds `celery beat` and nothing restarts it if it
+          # dies (e.g. a DNS blip), which silently stops EPG/M3U refreshes.
+          startupProbe:
+            exec:
+              command: ["pgrep", "-f", "dispatcharr beat"]
+            periodSeconds: 10
+            failureThreshold: 60
+          livenessProbe:
+            exec:
+              command: ["pgrep", "-f", "dispatcharr beat"]
+            periodSeconds: 60
+            failureThreshold: 3
           volumeMounts:
             - name: data
               mountPath: /data
@@ -306,6 +318,12 @@ kind: Ingress
 metadata:
   name: dispatcharr
   namespace: dispatcharr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Dispatcharr"
+    gethomepage.dev/description: "Stream Management"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "dispatcharr.png"
 spec:
   ingressClassName: traefik
   rules:
