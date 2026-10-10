@@ -10,6 +10,8 @@ metadata:
   name: auth
   namespace: cfgate-system
   annotations:
+    # Selects the CloudflareDNS resource (dns.yaml) that publishes this hostname
+    homelab/dns-zone: "domain"
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "auth.${domain}"
@@ -33,6 +35,8 @@ metadata:
   name: stream
   namespace: cfgate-system
   annotations:
+    # Selects the CloudflareDNS resource (dns.yaml) that publishes this hostname
+    homelab/dns-zone: "domain"
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "stream.${domain}"
@@ -56,6 +60,8 @@ metadata:
   name: flux-webhook
   namespace: cfgate-system
   annotations:
+    # Selects the CloudflareDNS resource (dns.yaml) that publishes this hostname
+    homelab/dns-zone: "domain"
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "flux-webhook.${domain}"
@@ -83,6 +89,8 @@ metadata:
   name: webfinger
   namespace: cfgate-system
   annotations:
+    # Selects the CloudflareDNS resource (dns.yaml) that publishes this hostname
+    homelab/dns-zone: "auth-domain"
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "${auth_domain}"
@@ -111,6 +119,8 @@ metadata:
   name: auth-oidc-machine
   namespace: cfgate-system
   annotations:
+    # Selects the CloudflareDNS resource (dns.yaml) that publishes this hostname
+    homelab/dns-zone: "domain"
     cfgate.io/origin-protocol: "https"
     cfgate.io/origin-ssl-verify: "true"
     cfgate.io/origin-server-name: "auth.${domain}"

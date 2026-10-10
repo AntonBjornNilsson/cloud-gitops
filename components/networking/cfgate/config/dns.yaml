@@ -13,6 +13,7 @@ spec:
   source:
     gatewayRoutes:
       enabled: true
+      annotationFilter: "homelab/dns-zone=domain"
   defaults:
     proxied: true
   policy: sync
@@ -32,6 +33,7 @@ spec:
   source:
     gatewayRoutes:
       enabled: true
+      annotationFilter: "homelab/dns-zone=auth-domain"
   defaults:
     proxied: true
   policy: sync

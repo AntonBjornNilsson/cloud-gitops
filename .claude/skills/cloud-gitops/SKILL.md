@@ -108,8 +108,9 @@ A service is public only if **all three** are in place:
    admits routes from there). Copy an existing one: backend `traefik-public` port 443 in `traefik` (the ReferenceGrant
    in `gateway.yaml` covers it), annotations `cfgate.io/origin-protocol: "https"`, `cfgate.io/origin-ssl-verify: "true"`
    and `cfgate.io/origin-server-name: "<host>"` (Traefik picks the wildcard cert by SNI). Limit paths with
-   `matches` + a named rule if only part of the app is public. The `CloudflareDNS` resource creates the proxied
-   CNAME from the route automatically.
+   `matches` + a named rule if only part of the app is public. Annotation `homelab/dns-zone: "domain"` (or
+   `"auth-domain"` for the email-domain zone) picks the `CloudflareDNS` resource in `dns.yaml` that creates the
+   proxied CNAME; without it no DNS record is published.
 3. **Access application** in `components/networking/cfgate/config/access.yaml` targeting the route, with a policy:
    - people: `allow-admin` (Google login, `allowedIdps: ["${cloudflare_google_idp_id}"]`, `autoRedirectToIdentity: true`),
      and add `cfgate.io/access-required: cfgate-system/<app>` to the route so it serves 503 instead of going
