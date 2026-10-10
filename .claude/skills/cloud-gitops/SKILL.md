@@ -87,13 +87,48 @@ Write a minimal Ingress with `host: <app>.${domain}`. Kyverno then mutates it to
 - cert-manager `cloudflare-wildcard-issuer` annotation and `spec.tls` with secret `<ingress-name>-tls` (if unset),
 - Authelia forward-auth middleware `authelia-authelia-forward-auth@kubernetescrd`.
 
-Ingresses are LAN/Tailscale-only by default (Traefik default entrypoint `websecure`). Internet-facing ones (auth, jellyfin, flux-webhook)
-add annotation `traefik.ingress.kubernetes.io/router.entrypoints: websecure,public`; the tunnel reaches only the `public` entrypoint.
-The Cloudflare tunnel, its DNS records and the public hostname list are managed by cfgate (`components/networking/cfgate/config/routes.yaml`, one HTTPRoute per hostname).
-cfgate is alpha and pinned exactly: read the chart upgrade notes before bumping it.
+Ingresses are LAN-only by default: Traefik's default entrypoint is `websecure` (the LoadBalancer IP; LAN DNS resolves
+`*.${domain}` there). Nothing else is published; see "Exposing a service to the internet" below.
 Opt out of Authelia with label `enable-oauth: "false"` (e.g. apps doing their own OIDC). Apps using Authelia OIDC
 (grafana, headlamp, homepage, open-webui) need a client entry + hashed secret in authelia config and secrets repo.
 Auth chain details: `components/networking/traefik/README.md`.
+
+## Exposing a service to the internet
+
+Internet traffic only enters via the Cloudflare tunnel, which cfgate (`components/networking/cfgate/`) manages from Git:
+tunnel, cloudflared connectors, DNS records and Access applications. Public DNS has **no wildcard**: a hostname
+resolves publicly only if cfgate published it. Path: Cloudflare edge -> Access -> tunnel -> cfgate cloudflared ->
+Service `traefik/traefik-public` (Traefik entrypoint `public`, port 8444, reachable only from the cfgate cloudflared
+pods) -> Ingress -> Authelia (unless opted out) -> app.
+
+A service is public only if **all three** are in place:
+1. **Ingress annotation** `traefik.ingress.kubernetes.io/router.entrypoints: websecure,public` (for a HelmRelease,
+   via the chart's ingress annotations or a postRenderer). Without it the tunnel gets a 404 from Traefik.
+2. **HTTPRoute** in `components/networking/cfgate/config/routes.yaml` (namespace `cfgate-system`; the Gateway only
+   admits routes from there). Copy an existing one: backend `traefik-public` port 443 in `traefik` (the ReferenceGrant
+   in `gateway.yaml` covers it), annotations `cfgate.io/origin-protocol: "https"`, `cfgate.io/origin-ssl-verify: "true"`
+   and `cfgate.io/origin-server-name: "<host>"` (Traefik picks the wildcard cert by SNI). Limit paths with
+   `matches` + a named rule if only part of the app is public. The `CloudflareDNS` resource creates the proxied
+   CNAME from the route automatically.
+3. **Access application** in `components/networking/cfgate/config/access.yaml` targeting the route, with a policy:
+   - people: `allow-admin` (Google login, `allowedIdps: ["${cloudflare_google_idp_id}"]`, `autoRedirectToIdentity: true`),
+     and add `cfgate.io/access-required: cfgate-system/<app>` to the route so it serves 503 instead of going
+     unprotected if the app is not Ready;
+   - machines (webhooks): `bypass-everyone` on a path-limited rule (`targetRef.sectionName: <rule name>`); the app
+     must authenticate the request itself (e.g. HMAC). `access-required` does not accept bypass policies.
+
+Then commit, push and verify:
+```bash
+kubectl --context=oidc-user -n cfgate-system get cloudflaretunnel,cloudflaredns,httproute,cloudflareaccessapplication
+dig +short <host> @<zone nameserver>      # resolves publicly only once published
+```
+From outside (mobile data) the host should redirect to Cloudflare Access; Traefik access logs show
+`"entryPointName":"public"` for tunnel traffic. Clients that cannot do a browser login (native/TV apps, APIs)
+fail behind an allow policy: decide per app whether to use a service token (`non_identity` policy) or a bypass.
+
+To unpublish: remove the HTTPRoute and its Access application (cfgate withdraws the DNS record) and drop `public`
+from the Ingress annotation. Never re-add a `*.${domain}` record in Cloudflare: it makes every LAN-only name resolve
+publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes before bumping it.
 
 ## Network policy (Cilium)
 
