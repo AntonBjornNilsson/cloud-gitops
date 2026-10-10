@@ -114,8 +114,8 @@ spec:
       session:
         name: authelia_session
         same_site: "lax"
-        expiration: "8 hour"
-        inactivity: "5 minutes"
+        expiration: "1 month"
+        inactivity: "1 month"
         remember_me: "1 month"
         encryption_key:
           value: "${authelia_session_secret}"

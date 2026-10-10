@@ -80,6 +80,9 @@ spec:
         # "cluster" label.
         externalLabels:
           cluster: homelab
+        extraArgs:
+          # Longhorn manager nodes with multiple volumes/snapshots exceed the default 16MB scrape size
+          promscrape.maxScrapeSize: "64MB"
         resources:
           requests:
             cpu: 50m
