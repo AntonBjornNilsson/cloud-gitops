@@ -6,10 +6,10 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # Intra-namespace (agent jobs -> remediation service)
+    # Intra-namespace
     - fromEndpoints:
         - {}
-    # Internal cluster communication to Remediation Service
+    # In-cluster probes (blackbox exporter) to the service
     - fromEntities:
         - cluster
       toPorts:
@@ -67,7 +67,7 @@ spec:
         - ports:
             - port: "8428"
               protocol: TCP
-    # ntfy notifications (remediation controller)
+    # ntfy notifications and questions
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: ntfy

@@ -38,7 +38,7 @@ stringData:
       - "alertmanager:${ntfy_alertmanager_password_hash}:user"
     auth-access:
       - "alertmanager:homelab-alerts:wo"
-      # claude-agent reports, sent by claude-agent-remediation with the same token
+      # claude-agent reports, sent by the claude-agent service with the same token
       - "alertmanager:claude-agent:wo"
     auth-tokens:
       - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"

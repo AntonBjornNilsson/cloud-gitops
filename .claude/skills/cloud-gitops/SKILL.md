@@ -1,6 +1,6 @@
 ---
 name: cloud-gitops
-description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, the claude-agent CronJob, Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
+description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, the claude-agent service, Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
 ---
 
 # cloud-gitops working guide
@@ -165,9 +165,16 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   (grafana.com id + revision; still Flux-substituted, so no `${...}` there).
   Trivy drilldowns (`trivy_*.jsonnet`, shared `trivy.libsonnet`) read trivy-operator's per-finding info metrics and use MetricsQL.
 - Ollama (`services/ai/ollama/`): don't add `models.pull` to its HelmRelease values (makes Flux reconciliation slow).
-- `components/observability/claude-agent/` (namespace `claude-agent`, Flux Kustomization `system-claude-agent`): twice-daily CronJob running Claude Code (cluster-admin kubectl, context `in-cluster`; GitOps rules in its prompts) that opens `claude/*` PRs as a
-  GitHub App; `claude-agent-remediation` posts to ntfy topic `claude-agent` (Merge/Reject buttons, or an all-clear listing problems that need a human when no PR is opened). Tooling image is built by
-  `.github/workflows/claude-agent-image.yaml` (GHCR, `:latest`, pulled with `Always`); scripts live in `scripts/`.
+- `components/observability/claude-agent/` (namespace `claude-agent`, Flux Kustomization `system-claude-agent`): always-on
+  Agent SDK service (TypeScript in `app/`, shipped as a ConfigMap and run by Node's type stripping; image in `image/`
+  built by `.github/workflows/claude-agent-image.yaml`, `:latest` + `Always`, so a new image needs a pod restart).
+  - Runs one session at a time: scheduled health reviews (`SCHEDULES`, UTC cron) and tasks started from the web UI
+    at `claude-agent.${domain}` (Authelia), which shows reasoning, commands, outputs and diffs live and can continue a session.
+  - `app/policy.ts` decides which Bash commands run directly (read-only kubectl/flux/git/text tools); every other
+    command, and the final "apply this diff", is a yes/no question on ntfy topic `claude-agent` (buttons POST to the
+    Authelia-free `/answer/<token>/` path; no answer in 4h = no). Rules for Claude: `app/rules.md`, `app/health.md`.
+  - On yes, the `publisher` sidecar (only container with the GitHub App key) opens a `claude/*` PR and squash-merges
+    it once `validate` passes. Runs end with an all-clear (listing anything that needs a human) when nothing changed.
 
 ## GitHub
 

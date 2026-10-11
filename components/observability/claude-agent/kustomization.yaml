@@ -2,21 +2,27 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: claude-agent
 resources:
-  - remediation.yaml
+  - deployment.yaml
   - cilium-policy.yaml
   - secret.yaml
   - serviceaccount.yaml
   - clusterrolebinding.yaml
-  - role.yaml
-  - rolebinding.yaml
-  - cronjob-agent.yaml
-  - cronjob-token-refresh.yaml
-# Scripts as real files; the hash suffix rolls the CronJobs when they change
+# Service code as real files; the hash suffix rolls the Deployment when they change.
+# Flux substitution is off for it: TypeScript template literals look like ${vars}.
 configMapGenerator:
-  - name: claude-agent-scripts
+  - name: claude-agent-app
+    options:
+      annotations:
+        kustomize.toolkit.fluxcd.io/substitute: disabled
     files:
-      - scripts/prompt.md
-      - scripts/common.sh
-      - scripts/investigate.sh
-      - scripts/publish.sh
-      - scripts/refresh-token.sh
+      - app/server.ts
+      - app/agent.ts
+      - app/publisher.ts
+      - app/policy.ts
+      - app/questions.ts
+      - app/store.ts
+      - app/ntfy.ts
+      - app/cron.ts
+      - app/ui.ts
+      - app/rules.md
+      - app/health.md

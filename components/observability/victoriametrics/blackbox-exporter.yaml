@@ -124,9 +124,9 @@ spec:
         - sourceLabels: [__meta_kubernetes_ingress_name]
           regex: flux-webhook.*
           action: drop
-        # Remediation action webhook ingress only accepts action tokens (/merge/<token>, /reject/<token>)
+        # claude-agent answer ingress only accepts action tokens (/answer/<token>/<yes|no>)
         - sourceLabels: [__meta_kubernetes_ingress_name]
-          regex: claude-agent-remediation-actions
+          regex: claude-agent-answers
           action: drop
         # Authelia is checked in-cluster (internal-http probe); one of its hosts
         # is intentionally served without TLS at the ingress
@@ -160,7 +160,7 @@ spec:
       targets:
         - http://ntfy.ntfy.svc.cluster.local/v1/health
         - http://authelia.authelia.svc.cluster.local/api/health
-        - http://claude-agent-remediation.claude-agent.svc.cluster.local:8080/healthz
+        - http://claude-agent.claude-agent.svc.cluster.local:8080/healthz
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMProbe

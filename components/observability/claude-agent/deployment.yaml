@@ -1,0 +1,228 @@
+# Always-on Claude agent. Two containers sharing /work (the per-run repo clones):
+#   agent:     Claude (Agent SDK) with cluster-admin kubectl, the scheduler, web UI and ntfy questions.
+#              Read-only commands run directly; cluster writes and repo applies wait for a yes on ntfy.
+#              No GitHub credentials.
+#   publisher: holds the GitHub App key; on an approved apply it opens a PR and merges it once
+#              `validate` passes. Listens on localhost only and never runs Claude.
+# Code lives in the claude-agent-app ConfigMap (app/), so changes roll out without an image build.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-agent
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+# Run history and Claude session transcripts (for "continue this session")
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claude-agent-data
+  namespace: claude-agent
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: claude-agent
+  namespace: claude-agent
+  labels:
+    app: claude-agent
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: claude-agent
+  template:
+    metadata:
+      labels:
+        app: claude-agent
+    spec:
+      serviceAccountName: claude-agent
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+      containers:
+        - name: agent
+          image: ghcr.io/${ghcr_repo}/claude-agent:latest
+          imagePullPolicy: Always
+          command: ["node", "/app/src/server.ts"]
+          env:
+            - name: HOME
+              value: /data/home
+            - name: DATA_DIR
+              value: /data
+            - name: WORK_DIR
+              value: /work
+            - name: BASE_URL
+              value: "https://claude-agent.${domain}"
+            - name: GITHUB_REPO
+              value: "${github_repo}"
+            - name: GITHUB_BRANCH
+              value: main
+            - name: CLAUDE_MODEL
+              value: claude-sonnet-5-5
+            - name: CLAUDE_MAX_TURNS
+              value: "80"
+            # Cron in UTC; "health" runs the scheduled health review
+            - name: SCHEDULES
+              value: '[{"name": "health", "cron": "30 6,18 * * *"}]'
+            # Unanswered questions count as "no" after this
+            - name: QUESTION_TIMEOUT_MINUTES
+              value: "240"
+            - name: NTFY_SERVER
+              value: http://ntfy.ntfy.svc.cluster.local
+            - name: NTFY_TOPIC
+              value: claude-agent
+            - name: NTFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: claude-agent-ntfy-token
+                  key: token
+            - name: CLAUDE_CODE_OAUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: claude-agent
+                  key: oauth-token
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: app
+              mountPath: /app/src
+            - name: data
+              mountPath: /data
+            - name: work
+              mountPath: /work
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 3Gi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+        - name: publisher
+          image: ghcr.io/${ghcr_repo}/claude-agent:latest
+          imagePullPolicy: Always
+          command: ["node", "/app/src/publisher.ts"]
+          env:
+            - name: HOME
+              value: /tmp
+            - name: GITHUB_REPO
+              value: "${github_repo}"
+            - name: GITHUB_BRANCH
+              value: main
+          volumeMounts:
+            - name: app
+              mountPath: /app/src
+            - name: work
+              mountPath: /work
+            - name: publisher-tmp
+              mountPath: /tmp
+            - name: github-app
+              mountPath: /etc/github-app
+              readOnly: true
+          resources:
+            requests:
+              cpu: 20m
+              memory: 96Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: app
+          configMap:
+            name: claude-agent-app
+        - name: data
+          persistentVolumeClaim:
+            claimName: claude-agent-data
+        - name: work
+          emptyDir:
+            sizeLimit: 5Gi
+        - name: tmp
+          emptyDir: {}
+        - name: publisher-tmp
+          emptyDir: {}
+        - name: github-app
+          secret:
+            secretName: claude-agent-github-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: claude-agent
+  namespace: claude-agent
+  labels:
+    app: claude-agent
+spec:
+  selector:
+    app: claude-agent
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+# Web UI (LAN, behind Authelia)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: claude-agent
+  namespace: claude-agent
+spec:
+  rules:
+    - host: claude-agent.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: claude-agent
+                port:
+                  number: 8080
+---
+# ntfy Yes/No buttons: the phone app POSTs without an Authelia session, so this path skips it.
+# Each answer URL carries a one-time random token that only exists in the (auth-protected) ntfy topic.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: claude-agent-answers
+  namespace: claude-agent
+  labels:
+    enable-oauth: "false"
+spec:
+  rules:
+    - host: claude-agent.${domain}
+      http:
+        paths:
+          - path: /answer/
+            pathType: Prefix
+            backend:
+              service:
+                name: claude-agent
+                port:
+                  number: 8080
