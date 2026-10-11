@@ -64,13 +64,21 @@ spec:
               WebUI\AuthSubnetWhitelistEnabled=true
               EOF
               fi
-              # Authelia is the only login: requests from the pod network (Traefik, Radarr, Sonarr,
-              # Prowlarr; Cilium decides who gets in) skip qBittorrent's own auth.
+              # set_pref <key> <value> [section, default Preferences]
               set_pref() {
+                SECTION="$3"; [ -n "$SECTION" ] || SECTION=Preferences
                 grep -v "^$(echo "$1" | sed 's/\\/\\\\/g')=" "$CONF" > "$CONF.tmp" || true
-                sed -i "/^\[Preferences\]/a $(echo "$1" | sed 's/\\/\\\\/g')=$2" "$CONF.tmp"
+                grep -q "^\[$SECTION\]" "$CONF.tmp" || printf '\n[%s]\n' "$SECTION" >> "$CONF.tmp"
+                sed -i "/^\[$SECTION\]/a $(echo "$1" | sed 's/\\/\\\\/g')=$2" "$CONF.tmp"
                 mv "$CONF.tmp" "$CONF"
               }
+              # Stop seeding after 3 days or a 3.0 ratio, whichever comes first. Imports are
+              # hardlinks, so removing the content only drops the copy in downloading/.
+              set_pref 'Session\GlobalMaxRatio' 3 BitTorrent
+              set_pref 'Session\GlobalMaxSeedingMinutes' 4320 BitTorrent
+              set_pref 'Session\ShareLimitAction' RemoveWithContent BitTorrent
+              # Authelia is the only login: requests from the pod network (Traefik, Radarr, Sonarr,
+              # Prowlarr; Cilium decides who gets in) skip qBittorrent's own auth.
               set_pref 'WebUI\HostHeaderValidation' false
               set_pref 'WebUI\LocalHostAuth' false
               set_pref 'WebUI\AuthSubnetWhitelistEnabled' true
