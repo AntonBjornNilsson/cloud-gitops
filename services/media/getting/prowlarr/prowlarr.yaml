@@ -96,10 +96,10 @@ spec:
           ports:
             - name: flaresolverr
               containerPort: 8191
+          # Exec, not httpGet: gluetun's firewall only lets the kubelet reach port 9696
           readinessProbe:
-            httpGet:
-              path: /health
-              port: flaresolverr
+            exec:
+              command: ["curl", "-fsS", "-m", "5", "http://localhost:8191/health"]
             periodSeconds: 30
             timeoutSeconds: 5
           resources:
