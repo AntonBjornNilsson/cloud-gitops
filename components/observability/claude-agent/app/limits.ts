@@ -9,9 +9,11 @@ import { bus, DATA } from './store.ts';
 export const PAUSE_AT = Number(process.env.LIMIT_PAUSE_PERCENT ?? 80);
 export const STOP_AT = Number(process.env.LIMIT_STOP_PERCENT ?? 90);
 
-export type Limit = { type: string; label: string; utilization?: number; resetsAt?: number; status?: string; updatedAt: string };
+export type Limit = { type: string; label: string; utilization?: number; resetsAt?: number; status?: string; surpassed?: number; updatedAt: string };
 export type Extra = { enabled?: boolean; inUse?: boolean; utilization?: number; updatedAt?: string };
-type Saved = { limits: Record<string, Limit>; extra: Extra; readAt?: string };
+// usageApi: whether the SDK's usage call answers (it needs a token with the profile scope; a
+// `claude setup-token` token only has inference, so then percentages arrive only as early warnings)
+type Saved = { limits: Record<string, Limit>; extra: Extra; readAt?: string; usageApi?: boolean };
 
 const FILE = join(DATA, 'limits.json');
 const saved: Saved = (() => {
@@ -43,7 +45,12 @@ function persist(): void {
 // From Query.usage_EXPERIMENTAL...(): utilization is a percentage, resets_at an ISO time
 export function recordUsage(res: any): boolean {
   const rl = res?.rate_limits;
-  if (!res?.rate_limits_available || !rl) return false;
+  const available = !!res?.rate_limits_available && !!rl;
+  if (saved.usageApi !== available) {
+    saved.usageApi = available;
+    persist();
+  }
+  if (!available) return false;
   const now = new Date().toISOString();
   const put = (key: string, label: string, w: any) => {
     if (!w || w.utilization == null) return;
@@ -72,6 +79,7 @@ export function recordEvent(info: any): void {
     status: info?.status,
     utilization: u,
     resetsAt: info?.resetsAt ? info.resetsAt * 1000 : prev?.resetsAt,
+    surpassed: typeof info?.surpassedThreshold === 'number' ? (info.surpassedThreshold <= 1 ? info.surpassedThreshold * 100 : info.surpassedThreshold) : undefined,
     updatedAt: new Date().toISOString(),
   };
   if (info?.isUsingOverage || info?.overageInUse) extra.inUse = true;
@@ -79,6 +87,7 @@ export function recordEvent(info: any): void {
 }
 
 export const readAge = () => (saved.readAt ? Date.now() - Date.parse(saved.readAt) : Infinity);
+export const usageApi = () => saved.usageApi;
 
 export type Verdict = { ok: true } | { ok: false; reason: string; until?: number };
 
@@ -90,11 +99,10 @@ export function check(threshold: number): Verdict {
   for (const l of live) {
     if (l.status === 'rejected') return { ok: false, reason: `${l.label} limit reached`, until: l.resetsAt };
     if (l.utilization != null && l.utilization >= threshold) return { ok: false, reason: `${l.label} limit at ${Math.round(l.utilization)}%`, until: l.resetsAt };
-  }
-  // Without any percentages, the SDK's own warning status is the signal
-  if (!live.some((l) => l.utilization != null)) {
-    const warn = live.find((l) => l.status === 'allowed_warning');
-    if (warn) return { ok: false, reason: `${warn.label} limit is close`, until: warn.resetsAt };
+    // An early warning without a percentage: the margin is unknown, so treat it as over the threshold
+    if (l.status === 'allowed_warning' && l.utilization == null) {
+      return { ok: false, reason: `${l.label} limit warning${l.surpassed ? ` (past ${Math.round(l.surpassed)}%)` : ''}`, until: l.resetsAt };
+    }
   }
   return { ok: true };
 }

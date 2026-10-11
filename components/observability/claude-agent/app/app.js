@@ -236,7 +236,9 @@ function renderFoot() {
   const s = app.state;
   if (!s) return;
   const lim = activeLimits(s.limits).filter((l) => l.utilization != null).slice(0, 3);
+  const warned = activeLimits(s.limits).filter((l) => l.utilization == null && l.status && l.status !== 'allowed');
   $('#limits-mini').innerHTML = (guardOf().paused ? `<div class="mini-paused">⏸ Paused: ${esc(guardOf().paused.reason)}</div>` : '')
+    + warned.map((l) => `<div class="mini-paused">${l.status === 'rejected' ? '■' : '◆'} ${esc(l.label)}: ${l.status === 'rejected' ? 'limit reached' : 'warning'}${l.resetsAt ? ` · resets ${esc(until(l.resetsAt))}` : ''}</div>`).join('')
     + lim.map((l) => `<a class="mini-meter" href="/usage" data-link title="${esc(l.label)}: ${Math.round(l.utilization)}%${l.resetsAt ? `, resets ${until(l.resetsAt)}` : ''}">
     <span>${esc(l.label.replace(/^Weekly \((.*)\)$/, '7d $1').replace('Weekly', '7-day'))}</span>${limitBar(l)}<span>${Math.round(l.utilization)}%</span></a>`).join('');
   const u = s.update;
@@ -415,10 +417,13 @@ async function viewUsage() {
     <div class="card">${limits.length ? limits.map((l) => `<div class="meter"><span>${esc(l.label)}</span>
       ${l.utilization != null ? limitBar(l) : `<span><span class="badge ${l.status === 'allowed' ? 'healthy' : l.status === 'rejected' ? 'failed' : 'findings'}">${esc({ allowed: 'within limit', allowed_warning: 'near limit', rejected: 'limit reached' }[l.status] || l.status || 'unknown')}</span></span>`}
       <span class="val">${l.utilization != null ? `${Math.round(l.utilization)}%` : ''}${l.resetsAt ? ` <span class="muted small">resets ${esc(until(l.resetsAt))}</span>` : ''}</span></div>`).join('')
-      : '<div class="muted">No readings yet.</div>'}
+      : `<div class="muted">${g.usageApi === false
+        ? 'No percentage yet. This token (from <code>claude setup-token</code>) cannot read the usage figures, so the API reports a percentage only as an early warning once a window passes its warning level. Until then usage is below that level.'
+        : 'No readings yet.'}</div>`}
       <div class="guard-note small">
         <span><i class="mark-key"></i>New runs wait from <b>${g.pauseAt}%</b></span>
         <span><i class="mark-key stop"></i>Running sessions stop at <b>${g.stopAt}%</b></span>
+        <span>A warning without a percentage counts as over the threshold</span>
         <span>Extra (paid) usage: <b>never used</b>${u.extra?.enabled != null ? ` · ${u.extra.enabled ? 'enabled' : 'disabled'} on the account` : ''}</span>
         <span class="muted">Updated ${esc(rel(limits.map((l) => l.updatedAt).sort().pop()))}. The windows are shared with your own Claude usage.</span>
       </div></div>

@@ -9,7 +9,7 @@ import { execute, sendMessage } from './agent.ts';
 import { cronMatches, validCron } from './cron.ts';
 import { BASE_URL, notify } from './ntfy.ts';
 import { meta, pollLimits, probe } from './meta.ts';
-import { check, extra, limits, PAUSE_AT, readAge, STOP_AT, type Verdict } from './limits.ts';
+import { check, extra, limits, PAUSE_AT, readAge, STOP_AT, usageApi, type Verdict } from './limits.ts';
 import { startUpdater, update } from './updater.ts';
 
 const APP = new URL('.', import.meta.url).pathname;
@@ -60,7 +60,7 @@ async function pump(): Promise<void> {
   if (current || gating || !queue.length) return;
   gating = true;
   try {
-    if (readAge() > 5 * 60_000) await pollLimits();
+    if (usageApi() !== false && readAge() > 5 * 60_000) await pollLimits();
   } finally {
     gating = false;
   }
@@ -122,7 +122,8 @@ void probe();
 setInterval(() => void probe(), 6 * 3600_000);
 // Keep limit readings fresh while idle (running sessions read them through their own query)
 setInterval(() => {
-  if (!current) void pollLimits().then(() => void pump());
+  if (!current && usageApi() !== false) void pollLimits().then(() => void pump());
+  else void pump();
 }, 10 * 60_000);
 startUpdater(isIdle);
 
@@ -134,7 +135,7 @@ function state() {
     pending: listPending(),
     limits,
     extra,
-    guard: { pauseAt: PAUSE_AT, stopAt: STOP_AT, paused: paused ? { reason: paused.reason, until: paused.until ?? null } : null },
+    guard: { pauseAt: PAUSE_AT, stopAt: STOP_AT, usageApi: usageApi() ?? null, paused: paused ? { reason: paused.reason, until: paused.until ?? null } : null },
     meta,
     update: { ...update, current: update.running && update.latest ? update.running === update.latest : null },
     schedules: SCHEDULES,
