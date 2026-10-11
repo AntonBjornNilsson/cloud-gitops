@@ -28,7 +28,7 @@ data:
     import urllib.request
     import urllib.error
 
-    NTFY_TOPIC    = os.environ.get("NTFY_TOPIC", "homelab-alerts")
+    NTFY_TOPIC    = os.environ.get("NTFY_TOPIC", "claude-agent")
     NTFY_SERVER   = os.environ.get("NTFY_SERVER", "http://ntfy.ntfy.svc.cluster.local").rstrip("/")
     NTFY_TOKEN    = os.environ.get("NTFY_TOKEN", "")
     NTFY_WEB_URL  = os.environ.get("NTFY_WEB_URL", "").rstrip("/")
@@ -293,6 +293,11 @@ data:
                 title       = data.get("title") or "Cluster finding"
                 description = data.get("summary") or ""
                 pr_number   = data.get("pr_number")
+                if data.get("status") == "healthy":
+                    send_ntfy_followup(f"✅ Claude Agent: {title[:80]}",
+                        description or "Cluster was looked into and everything was good.",
+                        tags=["white_check_mark", "robot"])
+                    self._json(200, {"status": "notified_healthy"}); return
                 if not pr_number:
                     send_ntfy_failure(title, description or "No details available.")
                     self._json(200, {"status": "notified_no_pr"}); return
@@ -390,7 +395,7 @@ spec:
       labels:
         app: holmes-remediation
       annotations:
-        holmes-remediation/script-revision: "6"
+        holmes-remediation/script-revision: "7"
     spec:
       serviceAccountName: holmes-remediation
       containers:
@@ -402,7 +407,7 @@ spec:
               name: http
           env:
             - name: NTFY_TOPIC
-              value: "homelab-alerts"
+              value: "claude-agent"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:

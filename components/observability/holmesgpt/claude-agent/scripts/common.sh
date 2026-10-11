@@ -6,12 +6,14 @@ WORK=/work/repo
 OUT=/work/out
 REPORT=$OUT/report.json
 
-# Hand the result to holmes-remediation; without a PR number it sends a plain ntfy alert
+# Hand the result to holmes-remediation; without a PR number it sends a plain ntfy alert,
+# or an all-clear when STATUS=healthy
 register() { # title summary [pr_number pr_url]
   local n="" u=""
   if [ $# -ge 4 ]; then n=$3; u=$4; fi
-  jq -n --arg t "$1" --arg s "$2" --arg n "$n" --arg u "$u" \
-    '{title: $t, summary: $s, pr_number: ($n | tonumber? // null), pr_url: (if $u == "" then null else $u end)}' \
+  jq -n --arg t "$1" --arg s "$2" --arg n "$n" --arg u "$u" --arg st "$(printenv STATUS || true)" \
+    '{title: $t, summary: $s, status: (if $st == "" then null else $st end),
+      pr_number: ($n | tonumber? // null), pr_url: (if $u == "" then null else $u end)}' \
     | curl -fsS -X POST -H 'Content-Type: application/json' --data-binary @- "$REMEDIATION/register"
   echo
 }

@@ -38,6 +38,8 @@ stringData:
       - "alertmanager:${ntfy_alertmanager_password_hash}:user"
     auth-access:
       - "alertmanager:homelab-alerts:wo"
+      # claude-agent reports, sent by holmes-remediation with the same token
+      - "alertmanager:claude-agent:wo"
     auth-tokens:
       - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"
 ---
@@ -78,7 +80,7 @@ spec:
         app: ntfy
       annotations:
         # Bump to restart ntfy after changing server.yml
-        config-version: "2"
+        config-version: "3"
     spec:
       containers:
         - name: ntfy

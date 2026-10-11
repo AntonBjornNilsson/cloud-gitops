@@ -12,7 +12,13 @@ echo "status=$STATUS title=$TITLE"
 git config --global --add safe.directory "$WORK"
 git add -A
 if git diff --cached --quiet; then
-  [ "$STATUS" = "healthy" ] || register "$TITLE" "$SUMMARY"
+  if [ "$STATUS" = "healthy" ]; then
+    STATUS=healthy register "$TITLE" "Looked into the cluster and everything was good, no PR needed.
+
+$SUMMARY"
+  else
+    register "$TITLE" "$SUMMARY"
+  fi
   trap - EXIT; exit 0
 fi
 
