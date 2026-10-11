@@ -1,0 +1,8 @@
+{
+  "name": "claude-agent",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.0.0"
+  }
+}
