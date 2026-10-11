@@ -4,7 +4,7 @@
 # every finding here is resolved by bumping the image. Finding alerts are
 # "info" and repeat weekly (alertmanager-config.yaml); details via
 # `kubectl get vulnerabilityreports -n <ns>`, the Headlamp Trivy plugin or
-# the "Trivy Operator" Grafana dashboard.
+# the "Trivy / Triage" and "Trivy / Workload drilldown" Grafana dashboards.
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:

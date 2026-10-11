@@ -1,0 +1,814 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: trivy-cve
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Security"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Which images and workloads a CVE or package affects, and the most widespread CVEs and packages.",
+       "links": [
+          {
+             "asDropdown": false,
+             "includeVars": true,
+             "keepTime": true,
+             "tags": [
+                "trivy"
+             ],
+             "title": "Trivy",
+             "type": "dashboards"
+          }
+       ],
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Summary",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (vuln_id) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "CVEs",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (resource) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Packages",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (image_repository, image_tag) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Images",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (namespace, resource_name) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Workloads",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "A CVE in many images usually comes from a shared base image or library.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "continuous-YlRd"
+                   },
+                   "links": [
+                      {
+                         "targetBlank": false,
+                         "title": "Filter on this CVE",
+                         "url": "/d/trivy-cve/?var-cve=${__field.labels.vuln_id}&var-package=All&${severity:queryparam}&${inactive:queryparam}&${__url_time_range}"
+                      }
+                   ]
+                }
+             },
+             "gridPos": {
+                "h": 12,
+                "w": 12,
+                "x": 0,
+                "y": 5
+             },
+             "id": 6,
+             "options": {
+                "displayMode": "basic",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                   "calcs": [
+                      "lastNotNull"
+                   ]
+                },
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "topk(20, count by (vuln_id) (count by (vuln_id, image_repository, image_tag) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))))",
+                   "format": "time_series",
+                   "instant": true,
+                   "legendFormat": "{{vuln_id}}",
+                   "refId": "A"
+                }
+             ],
+             "title": "Most widespread CVEs (images affected)",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Distinct CVEs per package across all images.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "continuous-YlRd"
+                   },
+                   "links": [
+                      {
+                         "targetBlank": false,
+                         "title": "Filter on this package",
+                         "url": "/d/trivy-cve/?var-cve=All&var-package=${__field.labels.resource}&${severity:queryparam}&${inactive:queryparam}&${__url_time_range}"
+                      }
+                   ]
+                }
+             },
+             "gridPos": {
+                "h": 12,
+                "w": 12,
+                "x": 12,
+                "y": 5
+             },
+             "id": 7,
+             "options": {
+                "displayMode": "basic",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                   "calcs": [
+                      "lastNotNull"
+                   ]
+                },
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "topk(20, count by (resource) (count by (resource, vuln_id) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))))",
+                   "format": "time_series",
+                   "instant": true,
+                   "legendFormat": "{{resource}}",
+                   "refId": "A"
+                }
+             ],
+             "title": "Packages with the most CVEs",
+             "type": "bargauge"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 17
+             },
+             "id": 8,
+             "title": "Details",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "filterable": true
+                   }
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Severity"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "Critical": {
+                                        "color": "dark-red",
+                                        "index": 0
+                                     },
+                                     "High": {
+                                        "color": "orange",
+                                        "index": 1
+                                     },
+                                     "Low": {
+                                        "color": "blue",
+                                        "index": 3
+                                     },
+                                     "Medium": {
+                                        "color": "yellow",
+                                        "index": 2
+                                     },
+                                     "Unknown": {
+                                        "color": "text",
+                                        "index": 4
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "CVE"
+                      },
+                      "properties": [
+                         {
+                            "id": "links",
+                            "value": [
+                               {
+                                  "targetBlank": true,
+                                  "title": "Advisory (osv.dev)",
+                                  "url": "https://osv.dev/vulnerability/${__value.raw}"
+                               },
+                               {
+                                  "targetBlank": false,
+                                  "title": "Filter on this CVE",
+                                  "url": "/d/trivy-cve/?var-cve=${__value.raw}&var-package=All&var-severity=All&${inactive:queryparam}&${__url_time_range}"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Title"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 600
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 18
+             },
+             "id": 9,
+             "options": {
+                "cellHeight": "sm",
+                "footer": {
+                   "enablePagination": true
+                },
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Images"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count by (vuln_id, severity, vuln_score, vuln_title, published_date, last_modified_date) (count by (vuln_id, severity, vuln_score, vuln_title, published_date, last_modified_date, image_repository, image_tag) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                }
+             ],
+             "title": "CVEs",
+             "transformations": [
+                {
+                   "id": "filterFieldsByName",
+                   "options": {
+                      "include": {
+                         "names": [
+                            "vuln_id",
+                            "severity",
+                            "vuln_score",
+                            "Value",
+                            "vuln_title",
+                            "published_date",
+                            "last_modified_date"
+                         ]
+                      }
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "indexByName": {
+                         "Value": 3,
+                         "last_modified_date": 6,
+                         "published_date": 5,
+                         "severity": 1,
+                         "vuln_id": 0,
+                         "vuln_score": 2,
+                         "vuln_title": 4
+                      },
+                      "renameByName": {
+                         "Value": "Images",
+                         "last_modified_date": "Modified",
+                         "published_date": "Published",
+                         "severity": "Severity",
+                         "vuln_id": "CVE",
+                         "vuln_score": "Score",
+                         "vuln_title": "Title"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Narrow with the CVE / Package variables; click a workload for everything else wrong with it.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "filterable": true
+                   }
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Severity"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "Critical": {
+                                        "color": "dark-red",
+                                        "index": 0
+                                     },
+                                     "High": {
+                                        "color": "orange",
+                                        "index": 1
+                                     },
+                                     "Low": {
+                                        "color": "blue",
+                                        "index": 3
+                                     },
+                                     "Medium": {
+                                        "color": "yellow",
+                                        "index": 2
+                                     },
+                                     "Unknown": {
+                                        "color": "text",
+                                        "index": 4
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Workload"
+                      },
+                      "properties": [
+                         {
+                            "id": "links",
+                            "value": [
+                               {
+                                  "targetBlank": false,
+                                  "title": "Workload drilldown",
+                                  "url": "/d/trivy-workload/?var-namespace=${__data.fields.namespace}&var-workload=${__data.fields.resource_name}&var-container=All&var-severity=All&${inactive:queryparam}&${__url_time_range}"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "CVE"
+                      },
+                      "properties": [
+                         {
+                            "id": "links",
+                            "value": [
+                               {
+                                  "targetBlank": true,
+                                  "title": "Advisory (osv.dev)",
+                                  "url": "https://osv.dev/vulnerability/${__value.raw}"
+                               }
+                            ]
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 14,
+                "w": 24,
+                "x": 0,
+                "y": 28
+             },
+             "id": 10,
+             "options": {
+                "cellHeight": "sm",
+                "footer": {
+                   "enablePagination": true
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (namespace, resource_kind, resource_name, container_name, image_repository, image_tag, resource, installed_version, fixed_version, vuln_id, severity) ((trivy_vulnerability_id{vuln_id=~\"$cve\", resource=~\"$package\", severity=~\"$severity\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                }
+             ],
+             "title": "Affected workloads",
+             "transformations": [
+                {
+                   "id": "filterFieldsByName",
+                   "options": {
+                      "include": {
+                         "names": [
+                            "namespace",
+                            "resource_kind",
+                            "resource_name",
+                            "container_name",
+                            "image_repository",
+                            "image_tag",
+                            "vuln_id",
+                            "severity",
+                            "resource",
+                            "installed_version",
+                            "fixed_version"
+                         ]
+                      }
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "indexByName": {
+                         "container_name": 3,
+                         "fixed_version": 10,
+                         "image_repository": 4,
+                         "image_tag": 5,
+                         "installed_version": 9,
+                         "namespace": 0,
+                         "resource": 8,
+                         "resource_kind": 1,
+                         "resource_name": 2,
+                         "severity": 7,
+                         "vuln_id": 6
+                      },
+                      "renameByName": {
+                         "container_name": "Container",
+                         "fixed_version": "Fixed in",
+                         "image_repository": "Image",
+                         "image_tag": "Tag",
+                         "installed_version": "Installed",
+                         "namespace": "Namespace",
+                         "resource": "Package",
+                         "resource_kind": "Kind",
+                         "resource_name": "Workload",
+                         "severity": "Severity",
+                         "vuln_id": "CVE"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          }
+       ],
+       "refresh": "5m",
+       "schemaVersion": 39,
+       "tags": [
+          "security",
+          "trivy"
+       ],
+       "templating": {
+          "list": [
+             {
+                "allValue": ".*",
+                "current": {
+                   "selected": true,
+                   "text": [
+                      "All"
+                   ],
+                   "value": [
+                      "$__all"
+                   ]
+                },
+                "datasource": {
+                   "type": "prometheus",
+                   "uid": "VictoriaMetrics"
+                },
+                "definition": "label_values(trivy_vulnerability_id{severity=~\"$severity\"}, vuln_id)",
+                "includeAll": true,
+                "label": "CVE",
+                "multi": true,
+                "name": "cve",
+                "query": {
+                   "query": "label_values(trivy_vulnerability_id{severity=~\"$severity\"}, vuln_id)",
+                   "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 2,
+                "regex": "",
+                "sort": 1,
+                "type": "query"
+             },
+             {
+                "allValue": ".*",
+                "current": {
+                   "selected": true,
+                   "text": [
+                      "All"
+                   ],
+                   "value": [
+                      "$__all"
+                   ]
+                },
+                "datasource": {
+                   "type": "prometheus",
+                   "uid": "VictoriaMetrics"
+                },
+                "definition": "label_values(trivy_vulnerability_id{vuln_id=~\"$cve\", severity=~\"$severity\"}, resource)",
+                "includeAll": true,
+                "label": "Package",
+                "multi": true,
+                "name": "package",
+                "query": {
+                   "query": "label_values(trivy_vulnerability_id{vuln_id=~\"$cve\", severity=~\"$severity\"}, resource)",
+                   "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 2,
+                "regex": "",
+                "sort": 1,
+                "type": "query"
+             },
+             {
+                "allValue": ".*",
+                "current": {
+                   "selected": true,
+                   "text": [
+                      "All"
+                   ],
+                   "value": [
+                      "$__all"
+                   ]
+                },
+                "includeAll": true,
+                "label": "Severity",
+                "multi": true,
+                "name": "severity",
+                "options": [ ],
+                "query": "Critical,High,Medium,Low,Unknown",
+                "type": "custom"
+             },
+             {
+                "current": {
+                   "selected": true,
+                   "text": "Hide",
+                   "value": "0"
+                },
+                "label": "Scaled-down ReplicaSets",
+                "name": "inactive",
+                "options": [ ],
+                "query": "Hide : 0,Show : -1",
+                "type": "custom"
+             }
+          ]
+       },
+       "time": {
+          "from": "now-1h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Trivy / CVE explorer",
+       "uid": "trivy-cve"
+    }

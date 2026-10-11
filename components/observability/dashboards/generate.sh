@@ -18,6 +18,10 @@ for file in "${SRC_DIR}"/*.jsonnet; do
   echo "  -> Compiling ${base_name}.jsonnet to ${target_file}"
   
   compiled_json="$(jsonnet -J "${SCRIPT_DIR}/vendor" "${file}")"
+  # Optional "// grafana-folder: <name>" line in the source picks the folder.
+  folder="$(sed -n 's|^// grafana-folder: ||p' "${file}" | head -n1)"
+  folder_line=""
+  [ -n "${folder}" ] && folder_line="  folder: \"${folder}\""$'\n'
 
   cat <<EOF > "${target_file}"
 apiVersion: grafana.integreatly.org/v1beta1
@@ -27,9 +31,12 @@ metadata:
   namespace: grafana
   labels:
     app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use \${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
   allowCrossNamespaceImport: true
-  instanceSelector:
+${folder_line}  instanceSelector:
     matchLabels:
       dashboards: "grafana"
   json: |

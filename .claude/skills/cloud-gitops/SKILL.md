@@ -160,7 +160,10 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   - New app with metrics: add a VMPodScrape in `scrapes/` and allow ingress from the `victoriametrics` namespace on its metrics port.
 - Dashboards: Jsonnet in `components/observability/dashboards/src/`, then run `components/observability/dashboards/generate.sh`
   (needs `jsonnet` + `jb install` for `vendor/`) and commit the regenerated `generated/*.yaml`. Never edit `generated/` by hand.
-  Never use `${var}` in dashboards (Flux substitutes it); use `$var`. Community dashboards: `dashboards/upstream.yaml` (grafana.com id + revision).
+  Generated dashboards carry `kustomize.toolkit.fluxcd.io/substitute: disabled`, so `${...}` (data links) is safe in Jsonnet;
+  a `// grafana-folder: <name>` line in the source sets the folder. Community dashboards: `dashboards/upstream.yaml`
+  (grafana.com id + revision; still Flux-substituted, so no `${...}` there).
+  Trivy drilldowns (`trivy_*.jsonnet`, shared `trivy.libsonnet`) read trivy-operator's per-finding info metrics and use MetricsQL.
 - HolmesGPT uses in-cluster Ollama (`llama3.1:8b`, chosen for tool-calling support). Scheduled checks in
   `holmesgpt/config/scheduled-health-check.yaml`; trigger with `scripts/trigger.sh [list|all|<check>]`
   (note: this script creates a temporary Job, i.e. a cluster write — only run it when the user asks).

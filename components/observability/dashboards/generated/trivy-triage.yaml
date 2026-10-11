@@ -1,0 +1,932 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: trivy-triage
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Security"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Cluster-wide Trivy entry point: worst images first, with links into the workload, CVE and config-audit drilldowns.",
+       "links": [
+          {
+             "asDropdown": false,
+             "includeVars": true,
+             "keepTime": true,
+             "tags": [
+                "trivy"
+             ],
+             "title": "Trivy",
+             "type": "dashboards"
+          }
+       ],
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Now",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Distinct fixable CVEs across all running images.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "dark-red",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (vuln_id) ((trivy_vulnerability_id{severity=\"Critical\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Critical CVEs",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (vuln_id) ((trivy_vulnerability_id{severity=\"High\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "High CVEs",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "yellow",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (vuln_id) ((trivy_vulnerability_id{severity=\"Medium\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Medium CVEs",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "dark-red",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 12,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count(count by (image_repository, image_tag) ((trivy_vulnerability_id{severity=\"Critical\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Images with criticals",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "purple",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count((trivy_exposedsecrets_info) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Exposed secrets",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(count((trivy_configaudits_info{config_audit_success=\"false\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) or vector(0)",
+                   "instant": true
+                }
+             ],
+             "title": "Failed config checks",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Sorted by critical CVEs. Click a workload for the packages to bump and the CVEs behind the counts.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "filterable": true
+                   }
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Critical"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "text",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "dark-red",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "High"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "text",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "orange",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Medium"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "text",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "yellow",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Packages to bump"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "text",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "blue",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Secrets"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "text",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "purple",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Workload"
+                      },
+                      "properties": [
+                         {
+                            "id": "links",
+                            "value": [
+                               {
+                                  "targetBlank": false,
+                                  "title": "Workload drilldown",
+                                  "url": "/d/trivy-workload/?var-namespace=${__data.fields.namespace}&var-workload=${__data.fields.resource_name}&var-container=All&var-severity=All&${inactive:queryparam}&${__url_time_range}"
+                               }
+                            ]
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 14,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 8,
+             "options": {
+                "cellHeight": "sm",
+                "footer": {
+                   "enablePagination": true
+                },
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Critical"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"Critical\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"High\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"Medium\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"Unknown\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "D"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, resource) (trivy_vulnerability_id{namespace=~\".*\", severity=~\"$severity\"})) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "E"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_exposedsecrets_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "F"
+                }
+             ],
+             "title": "Images by findings",
+             "transformations": [
+                {
+                   "id": "merge",
+                   "options": { }
+                },
+                {
+                   "id": "filterFieldsByName",
+                   "options": {
+                      "include": {
+                         "names": [
+                            "namespace",
+                            "resource_kind",
+                            "resource_name",
+                            "container_name",
+                            "image_registry",
+                            "image_repository",
+                            "image_tag",
+                            "image_os_family",
+                            "image_os_name",
+                            "Value #A",
+                            "Value #B",
+                            "Value #C",
+                            "Value #D",
+                            "Value #E",
+                            "Value #F"
+                         ]
+                      }
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "indexByName": {
+                         "Value #A": 9,
+                         "Value #B": 10,
+                         "Value #C": 11,
+                         "Value #D": 12,
+                         "Value #E": 13,
+                         "Value #F": 14,
+                         "container_name": 3,
+                         "image_os_family": 7,
+                         "image_os_name": 8,
+                         "image_registry": 4,
+                         "image_repository": 5,
+                         "image_tag": 6,
+                         "namespace": 0,
+                         "resource_kind": 1,
+                         "resource_name": 2
+                      },
+                      "renameByName": {
+                         "Value #A": "Critical",
+                         "Value #B": "High",
+                         "Value #C": "Medium",
+                         "Value #D": "Unknown",
+                         "Value #E": "Packages to bump",
+                         "Value #F": "Secrets",
+                         "container_name": "Container",
+                         "image_os_family": "OS",
+                         "image_os_name": "OS version",
+                         "image_registry": "Registry",
+                         "image_repository": "Repository",
+                         "image_tag": "Tag",
+                         "namespace": "Namespace",
+                         "resource_kind": "Kind",
+                         "resource_name": "Workload"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 19
+             },
+             "id": 9,
+             "title": "Trend",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "CVE x workload findings (a CVE in three workloads counts three times). Drops after update PRs merge; rises when new CVEs are published for unchanged images.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10
+                   }
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Critical"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "dark-red",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "High"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "orange",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Medium"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "yellow",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Low"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "blue",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Unknown"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "text",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 16,
+                "x": 0,
+                "y": 20
+             },
+             "id": 10,
+             "interval": "1h",
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "min",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (severity) (trivy_image_vulnerabilities{severity=~\"$severity\"})",
+                   "legendFormat": "{{severity}}"
+                }
+             ],
+             "title": "Vulnerability findings by severity",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 8,
+                "x": 16,
+                "y": 20
+             },
+             "id": 11,
+             "interval": "1h",
+             "options": {
+                "legend": {
+                   "displayMode": "list",
+                   "placement": "bottom"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(trivy_image_exposedsecrets)",
+                   "legendFormat": "exposed secrets"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(trivy_resource_configaudits)",
+                   "legendFormat": "config audit findings"
+                }
+             ],
+             "title": "Exposed secrets and failed config checks",
+             "type": "timeseries"
+          }
+       ],
+       "refresh": "5m",
+       "schemaVersion": 39,
+       "tags": [
+          "security",
+          "trivy"
+       ],
+       "templating": {
+          "list": [
+             {
+                "allValue": ".*",
+                "current": {
+                   "selected": true,
+                   "text": [
+                      "All"
+                   ],
+                   "value": [
+                      "$__all"
+                   ]
+                },
+                "includeAll": true,
+                "label": "Severity",
+                "multi": true,
+                "name": "severity",
+                "options": [ ],
+                "query": "Critical,High,Medium,Low,Unknown",
+                "type": "custom"
+             },
+             {
+                "current": {
+                   "selected": true,
+                   "text": "Hide",
+                   "value": "0"
+                },
+                "label": "Scaled-down ReplicaSets",
+                "name": "inactive",
+                "options": [ ],
+                "query": "Hide : 0,Show : -1",
+                "type": "custom"
+             }
+          ]
+       },
+       "time": {
+          "from": "now-30d",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Trivy / Triage",
+       "uid": "trivy-triage"
+    }

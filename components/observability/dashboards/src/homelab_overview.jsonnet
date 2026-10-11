@@ -2,8 +2,8 @@
 // Drill-down dashboards live in the Kubernetes / Networking / Platform /
 // Storage / Logs folders.
 //
-// NOTE: this file is rendered into a Flux-substituted manifest, so never use
-// the ${var} form for Grafana variables here; use $var.
+// NOTE: generate.sh marks the manifest kustomize.toolkit.fluxcd.io/substitute:
+// disabled, so ${...} (needed in data links) is safe; $var is still preferred.
 local grafonnet = import 'grafonnet-v11.0.0/main.libsonnet';
 
 local dashboard = grafonnet.dashboard;

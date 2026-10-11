@@ -4,4 +4,8 @@ resources:
   - generated/cluster-overview.yaml
   - generated/services-health.yaml
   - generated/homelab-overview.yaml
+  - generated/trivy-triage.yaml
+  - generated/trivy-workload.yaml
+  - generated/trivy-cve.yaml
+  - generated/trivy-config-audit.yaml
   - upstream.yaml
