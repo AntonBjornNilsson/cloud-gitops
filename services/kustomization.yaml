@@ -34,7 +34,7 @@ resources:
   - management/ntfy
 
   # Security
-  # - security/vaultwarden
+  - security/vaultwarden
 
   # Game Servers
   # - game-servers/skyrim-server

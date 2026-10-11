@@ -6,104 +6,145 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
+apiVersion: v1
+kind: Secret
 metadata:
-  name: gabe565
+  name: vaultwarden-env
   namespace: vaultwarden
-spec:
-  interval: 24h
-  url: https://charts.gabe565.com
+type: Opaque
+stringData:
+  # Admin panel (/admin). Prefer an Argon2 PHC string (`vaultwarden hash`) over
+  # a plain token; it is substituted verbatim, so its `$` signs are safe.
+  ADMIN_TOKEN: "${vaultwarden_admin_token}"
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vaultwarden-data
+  namespace: vaultwarden
+  labels:
+    backup.longhorn.io/enabled: "true"
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: vaultwarden
   namespace: vaultwarden
+  labels:
+    app: vaultwarden
 spec:
-  interval: 12h
-  chart:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vaultwarden
+  template:
+    metadata:
+      labels:
+        app: vaultwarden
     spec:
-      chart: vaultwarden
-      version: "*"
-      sourceRef:
-        kind: HelmRepository
-        name: gabe565
-        namespace: vaultwarden
-      interval: 12h
-  timeout: 30s
-  install:
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 2m
-  upgrade:
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 3m
-  values:
-    env:
-      ADMIN_TOKEN: ${vaultwarden_admin_token}
-      SIGNUPS_ALLOWED: "true"
-    ingress:
-      main:
-        enabled: true
-        className: "traefik"
-        hosts:
-          - host: vault.${domain}
-            paths:
-              - path: /
-                pathType: Prefix
-    persistence:
-      data:
-        enabled: true
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        size: 2Gi
-        globalMounts:
-          - path: /data
+      containers:
+        - name: vaultwarden
+          image: vaultwarden/server:1.37.4
+          env:
+            # Must match the Ingress host: used for links, WebAuthn and attachments
+            - name: DOMAIN
+              value: "https://vault.${domain}"
+            # No open registration: invite users from /admin. Without SMTP an
+            # invited email can register directly.
+            - name: SIGNUPS_ALLOWED
+              value: "false"
+            - name: INVITATIONS_ALLOWED
+              value: "true"
+            - name: SHOW_PASSWORD_HINT
+              value: "false"
+            # Real client IPs from Traefik for logs and login rate limiting
+            - name: IP_HEADER
+              value: "X-Forwarded-For"
+          envFrom:
+            - secretRef:
+                name: vaultwarden-env
+          ports:
+            - containerPort: 80
+              name: http
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /alive
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 15
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: vaultwarden-data
 ---
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
+apiVersion: v1
+kind: Service
 metadata:
   name: vaultwarden
   namespace: vaultwarden
+  labels:
+    app: vaultwarden
 spec:
-  endpointSelector: {}
-  ingress:
-    # Web and Bitwarden client sync ingress from Traefik
-    - fromEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: traefik
-      toPorts:
-        - ports:
-            - port: "80"
-              protocol: TCP
-            - port: "8080"
-              protocol: TCP
-            - port: "3012"
-              protocol: TCP
-    # Health checks and probes
-    - fromEntities:
-        - host
-        - remote-node
-        - health
-  egress:
-    # DNS resolution
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: kube-system
-            k8s-app: kube-dns
-      toPorts:
-        - ports:
-            - port: "53"
-              protocol: ANY
-    # Push notifications (Bitwarden push relay / icons)
-    - toEntities:
-        - world
-      toPorts:
-        - ports:
-            - port: "443"
-              protocol: TCP
-            - port: "80"
-              protocol: TCP
-
+  selector:
+    app: vaultwarden
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vaultwarden
+  namespace: vaultwarden
+  # Vaultwarden authenticates itself; Authelia would block the Bitwarden
+  # apps and browser extensions. LAN-only (websecure), also reached over the
+  # Tailscale subnet router; deliberately not published through cfgate.
+  labels:
+    enable-oauth: "false"
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: ""
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Vaultwarden"
+    gethomepage.dev/description: "Password Manager"
+    gethomepage.dev/group: "Infrastructure & Management"
+    gethomepage.dev/icon: "vaultwarden.png"
+spec:
+  rules:
+    - host: vault.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vaultwarden
+                port:
+                  number: 80
