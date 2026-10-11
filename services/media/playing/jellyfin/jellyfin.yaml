@@ -6,6 +6,23 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Config on a block (RWO) volume: SQLite locking over the RWX/NFS share made every
+# database read wait behind library-scan writes (~30s per request).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jellyfin-config-local
+  namespace: jellyfin
+  labels:
+    backup.longhorn.io/enabled: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -49,7 +66,7 @@ spec:
     replicaCount: 1
     image:
       tag: "12.1"
-    # Never run two pods against the shared SQLite database (config is RWX).
+    # Never run two pods at once: the RWO config volume must detach first.
     # Not Recreate: the live rollingUpdate defaults would make the patch invalid.
     deploymentStrategy:
       type: RollingUpdate
@@ -109,28 +126,10 @@ spec:
       timeoutSeconds: 10
       failureThreshold: 6
 
-    # SQLite on the NFS-backed RWX config volume hits "database is locked" with the
-    # default NoLock behavior; Optimistic retries conflicting writes instead of failing.
-    extraInitContainers:
-      - name: db-locking-behavior
-        image: busybox:1.37
-        command:
-          - sh
-          - -c
-          - |
-            f=/config/config/database.xml
-            [ -f "$f" ] && sed -i 's#<LockingBehavior>[^<]*</LockingBehavior>#<LockingBehavior>Optimistic</LockingBehavior>#' "$f"
-            exit 0
-        volumeMounts:
-          - mountPath: /config
-            name: config
-
     persistence:
       config:
         enabled: true
-        accessMode: ReadWriteMany
-        annotations:
-          backup.longhorn.io/enabled: "true"
+        existingClaim: jellyfin-config-local
       media:
         enabled: true
         type: hostPath
