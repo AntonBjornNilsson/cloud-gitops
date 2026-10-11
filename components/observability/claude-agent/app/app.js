@@ -215,9 +215,13 @@ const limitClass = (l) => (l.status === 'rejected' || (l.utilization ?? 0) >= 90
 function renderFoot() {
   const s = app.state;
   if (!s) return;
-  const lim = Object.values(s.limits || {}).filter((l) => l.utilization != null).slice(0, 3);
+  // The SDK reports utilization only for some readings; otherwise show the status and reset time
+  const STATUS = { allowed: 'OK', allowed_warning: 'near limit', rejected: 'limited' };
+  const lim = Object.values(s.limits || {}).slice(0, 3);
   $('#limits-mini').innerHTML = lim.map((l) => `<div class="mini-meter" title="${esc(l.status)}${l.resetsAt ? ` · resets ${until(l.resetsAt * 1000)}` : ''}">
-    <span>${esc(LIMIT_LABEL[l.type] || l.type)}</span><div class="bar ${limitClass(l)}"><span style="width:${Math.min(100, l.utilization).toFixed(0)}%"></span></div><span>${l.utilization.toFixed(0)}%</span></div>`).join('');
+    <span>${esc(LIMIT_LABEL[l.type] || l.type)}</span>${l.utilization != null
+      ? `<div class="bar ${limitClass(l)}"><span style="width:${Math.min(100, l.utilization).toFixed(0)}%"></span></div><span>${l.utilization.toFixed(0)}%</span>`
+      : `<span class="small" style="grid-column:span 2;color:var(--${l.status === 'rejected' ? 'bad' : l.status === 'allowed_warning' ? 'warn' : 'ok'})">${esc(STATUS[l.status] || l.status)}${l.resetsAt ? ` <span class="muted">· resets ${esc(until(l.resetsAt * 1000))}</span>` : ''}</span>`}</div>`).join('');
   const u = s.update;
   const upd = u.current === true ? 'up to date' : u.current === false ? (u.restarting ? 'updating…' : 'update pending') : '';
   $('#version').textContent = [s.meta.claudeCodeVersion && `Claude Code ${s.meta.claudeCodeVersion}`, upd].filter(Boolean).join(' · ');
@@ -390,7 +394,7 @@ async function viewUsage() {
     </div>
     <h2 class="section">Plan limits</h2>
     <div class="card">${limits.length ? limits.map((l) => `<div class="meter"><span>${esc(LIMIT_LABEL[l.type] || l.type)}</span>
-      ${l.utilization != null ? `<div class="bar ${limitClass(l)}" role="meter" aria-valuenow="${l.utilization.toFixed(0)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(100, l.utilization)}%"></span></div>` : `<span class="badge">${esc(l.status)}</span>`}
+      ${l.utilization != null ? `<div class="bar ${limitClass(l)}" role="meter" aria-valuenow="${l.utilization.toFixed(0)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(100, l.utilization)}%"></span></div>` : `<span><span class="badge ${l.status === 'allowed' ? 'healthy' : l.status === 'rejected' ? 'failed' : 'findings'}">${esc({ allowed: 'within limit', allowed_warning: 'near limit', rejected: 'limit reached' }[l.status] || l.status)}</span></span>`}
       <span class="val">${l.utilization != null ? `${l.utilization.toFixed(0)}%` : ''}${l.resetsAt ? ` <span class="muted small">resets ${esc(until(l.resetsAt * 1000))}</span>` : ''}</span></div>`).join('')
       + `<div class="small muted" style="margin-top:6px">Readings arrive with runs; last update ${esc(rel(limits.map((l) => l.updatedAt).sort().pop()))}.</div>`
       : '<div class="muted">No readings yet. The SDK reports plan limits during runs, so they appear after the next one.</div>'}</div>
