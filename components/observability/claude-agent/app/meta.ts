@@ -1,13 +1,13 @@
-// Service metadata for the UI: available models, account, versions (from an idle SDK session),
-// plus the latest claude.ai plan rate-limit readings reported during runs.
-import { query } from '@anthropic-ai/claude-agent-sdk';
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+// Service metadata for the UI (available models, account, versions) and plan-limit polling, both from
+// an idle SDK session: initialization and the usage call answer without a model request.
+import { query, type Query } from '@anthropic-ai/claude-agent-sdk';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { bus, DATA } from './store.ts';
+import { bus } from './store.ts';
+import { recordUsage } from './limits.ts';
 
 export type Model = { value: string; displayName: string; description?: string; efforts: string[] };
-export type Limit = { type: string; status: string; utilization?: number; resetsAt?: number; updatedAt: string };
 
 export const meta = {
   models: [] as Model[],
@@ -26,8 +26,8 @@ try {
   // version is cosmetic
 }
 
-// Spawns Claude Code without sending a prompt: initialization answers without an API call
-export async function probe(): Promise<void> {
+// Runs fn against a Claude Code process that never receives a prompt
+async function idleSession<T>(fn: (q: Query) => Promise<T>): Promise<T | undefined> {
   const abort = new AbortController();
   const never = (async function* () {
     await new Promise(() => {});
@@ -35,6 +35,30 @@ export async function probe(): Promise<void> {
   const timer = setTimeout(() => abort.abort(), 60_000);
   try {
     const q = query({ prompt: never as any, options: { abortController: abort, settingSources: [] } });
+    return await fn(q);
+  } catch (e) {
+    console.error(`[meta] idle session failed: ${e}`);
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+    abort.abort();
+  }
+}
+
+// The SDK marks this call experimental; if it disappears, rate-limit events still drive the guard
+export async function readLimits(q: Query): Promise<boolean> {
+  try {
+    return recordUsage(await q.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }));
+  } catch (e) {
+    console.error(`[limits] usage read failed: ${e}`);
+    return false;
+  }
+}
+
+export const pollLimits = () => idleSession(readLimits);
+
+export async function probe(): Promise<void> {
+  await idleSession(async (q) => {
     const init: any = await q.initializationResult();
     meta.models = (init.models ?? []).map((m: any) => ({
       value: m.value,
@@ -45,25 +69,7 @@ export async function probe(): Promise<void> {
     meta.account = { email: init.account?.email, organization: init.account?.organization, subscriptionType: init.account?.subscriptionType };
     meta.claudeCodeVersion = init.claude_code_version ?? '';
     meta.probedAt = new Date().toISOString();
+    await readLimits(q);
     bus.emit('state');
-  } catch (e) {
-    console.error(`[meta] probe failed: ${e}`);
-  } finally {
-    clearTimeout(timer);
-    abort.abort();
-  }
-}
-
-// ── plan limits ─────────────────────────────────────────────────────────────
-const LIMITS = join(DATA, 'limits.json');
-export const limits: Record<string, Limit> = existsSync(LIMITS) ? JSON.parse(readFileSync(LIMITS, 'utf8')) : {};
-
-export function recordLimit(info: any): void {
-  const type = info?.rateLimitType ?? 'unknown';
-  // utilization may come as a fraction or a percentage
-  const u = typeof info?.utilization === 'number' ? (info.utilization <= 1 ? info.utilization * 100 : info.utilization) : undefined;
-  limits[type] = { type, status: info?.status ?? 'allowed', utilization: u, resetsAt: info?.resetsAt, updatedAt: new Date().toISOString() };
-  writeFileSync(LIMITS + '.tmp', JSON.stringify(limits));
-  renameSync(LIMITS + '.tmp', LIMITS);
-  bus.emit('state');
+  });
 }

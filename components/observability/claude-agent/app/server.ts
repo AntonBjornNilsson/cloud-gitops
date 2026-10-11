@@ -7,8 +7,9 @@ import { bus, getRun, listRuns, markInterrupted, newRunId, readEvents, saveRun, 
 import { answerById, answerByToken, cancelRun, listPending, type Answer } from './questions.ts';
 import { execute, sendMessage } from './agent.ts';
 import { cronMatches, validCron } from './cron.ts';
-import { BASE_URL } from './ntfy.ts';
-import { limits, meta, probe } from './meta.ts';
+import { BASE_URL, notify } from './ntfy.ts';
+import { meta, pollLimits, probe } from './meta.ts';
+import { check, extra, limits, PAUSE_AT, readAge, STOP_AT, type Verdict } from './limits.ts';
 import { startUpdater, update } from './updater.ts';
 
 const APP = new URL('.', import.meta.url).pathname;
@@ -50,10 +51,40 @@ function enqueue(fields: Pick<Run, 'kind' | 'trigger'> & Partial<Run>): Run {
   return run;
 }
 
+// Plan-limit gate: nothing starts at PAUSE_AT% or above; the queue resumes by itself after the reset
+let paused: (Verdict & { ok: false }) | undefined;
+let gating = false;
+let retry: NodeJS.Timeout | undefined;
+
 async function pump(): Promise<void> {
-  if (current) return;
-  const run = queue.shift();
-  if (!run) return;
+  if (current || gating || !queue.length) return;
+  gating = true;
+  try {
+    if (readAge() > 5 * 60_000) await pollLimits();
+  } finally {
+    gating = false;
+  }
+  if (current || !queue.length) return;
+  const v = check(PAUSE_AT);
+  if (!v.ok) {
+    if (paused?.reason !== v.reason) {
+      console.log(`[limits] queue paused: ${v.reason}`);
+      void notify({
+        title: '⏸ Claude Agent paused',
+        message: `${v.reason}, so no new run starts (pauses at ${PAUSE_AT}%). ${queue.length} queued; they start by themselves${v.until ? ` after the reset ${new Date(v.until).toISOString().slice(11, 16)} UTC` : ' once usage drops'}.`,
+        tags: ['pause_button', 'robot'],
+      });
+    }
+    paused = v;
+    bus.emit('state');
+    clearTimeout(retry);
+    const wait = v.until ? Math.min(Math.max(v.until - Date.now() + 60_000, 60_000), 30 * 60_000) : 10 * 60_000;
+    retry = setTimeout(() => void pump(), wait);
+    return;
+  }
+  if (paused) console.log('[limits] queue resumed');
+  paused = undefined;
+  const run = queue.shift()!;
   current = { run, abort: new AbortController() };
   bus.emit('state');
   try {
@@ -89,6 +120,10 @@ setInterval(() => {
 
 void probe();
 setInterval(() => void probe(), 6 * 3600_000);
+// Keep limit readings fresh while idle (running sessions read them through their own query)
+setInterval(() => {
+  if (!current) void pollLimits().then(() => void pump());
+}, 10 * 60_000);
 startUpdater(isIdle);
 
 // ── views ───────────────────────────────────────────────────────────────────
@@ -98,6 +133,8 @@ function state() {
     queued: queue.map((r) => r.id),
     pending: listPending(),
     limits,
+    extra,
+    guard: { pauseAt: PAUSE_AT, stopAt: STOP_AT, paused: paused ? { reason: paused.reason, until: paused.until ?? null } : null },
     meta,
     update: { ...update, current: update.running && update.latest ? update.running === update.latest : null },
     schedules: SCHEDULES,
@@ -121,7 +158,7 @@ function usage() {
       for (const k of ['input', 'output', 'cacheRead', 'cacheWrite'] as const) m[k] += t[k];
     }
   }
-  return { days: Object.entries(days).map(([day, v]) => ({ day, ...v })), models, limits };
+  return { days: Object.entries(days).map(([day, v]) => ({ day, ...v })), models, limits, extra };
 }
 
 // ── HTTP ────────────────────────────────────────────────────────────────────

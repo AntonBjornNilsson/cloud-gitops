@@ -82,6 +82,12 @@ spec:
             # Unanswered questions count as "no" after this
             - name: QUESTION_TIMEOUT_MINUTES
               value: "240"
+            # claude.ai plan limits (shared with your own Claude usage): no new run starts from
+            # LIMIT_PAUSE_PERCENT, a running session is stopped at LIMIT_STOP_PERCENT
+            - name: LIMIT_PAUSE_PERCENT
+              value: "80"
+            - name: LIMIT_STOP_PERCENT
+              value: "90"
             # Restart onto a newly published :latest image once idle (checks GHCR every 15 min)
             - name: AUTO_UPDATE
               value: "true"

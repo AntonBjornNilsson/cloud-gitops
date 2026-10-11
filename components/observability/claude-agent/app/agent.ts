@@ -9,10 +9,11 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { appendEvent, getRun, saveRun, type Report, type Run, type Tokens, type Usage } from './store.ts';
-import { ask } from './questions.ts';
+import { ask, cancelRun } from './questions.ts';
 import { checkCommand } from './policy.ts';
 import { clip, notify, runUrl } from './ntfy.ts';
-import { meta, recordLimit } from './meta.ts';
+import { meta, readLimits } from './meta.ts';
+import { check, recordEvent, STOP_AT } from './limits.ts';
 
 const exec = promisify(execFile);
 const APP = new URL('.', import.meta.url).pathname;
@@ -170,7 +171,20 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
   let report: Report | undefined;
   const inbox = new Inbox();
   inboxes.set(run.id, inbox);
+  // Hard stop before a plan limit: checked before every tool call, on rate-limit events and on usage reads
+  let limitStop: string | undefined;
+  const guard = (): boolean => {
+    const v = check(STOP_AT);
+    if (v.ok || abort.signal.aborted) return v.ok;
+    limitStop = v.reason;
+    appendEvent(run.id, { type: 'status', text: `Stopping: ${v.reason} (the service stops at ${STOP_AT}%)` });
+    cancelRun(run.id);
+    abort.abort();
+    return false;
+  };
+  let usageTimer: NodeJS.Timeout | undefined;
   try {
+    if (!guard()) throw new Error('plan limit');
     const repo = await prepareWorkdir(run);
     const prev = run.continueFrom ? getRun(run.continueFrom) : undefined;
 
@@ -182,6 +196,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
     };
 
     const canUseTool: CanUseTool = async (name, input, opts): Promise<PermissionResult> => {
+      if (!guard()) return { behavior: 'deny', message: 'Stopped to stay under the plan limit.', interrupt: true };
       const allow: PermissionResult = { behavior: 'allow', updatedInput: input };
       if (opts.mcpServer?.source === 'sdk' || SAFE_TOOLS.has(name)) return allow;
       let reason = `${name} is not pre-approved`;
@@ -270,6 +285,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
       },
     });
 
+    usageTimer = setInterval(() => void readLimits(q).then(guard), 120_000);
     const perMessage = new Map<string, Tokens & { model: string }>();
     let lastUsageSave = 0;
     for await (const msg of q) {
@@ -278,7 +294,8 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
         update(run, { sessionId: m.session_id, model: m.model ?? run.model });
         if (m.claude_code_version) meta.claudeCodeVersion = m.claude_code_version;
       } else if (m.type === 'rate_limit_event') {
-        recordLimit(m.rate_limit_info);
+        recordEvent(m.rate_limit_info);
+        guard();
       } else if (m.type === 'assistant') {
         const sub = m.parent_tool_use_id ? true : undefined;
         const u = m.message?.usage;
@@ -327,6 +344,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
           turns: (run.turns ?? 0) + (m.num_turns ?? 0),
         });
         appendEvent(run.id, { type: 'result', subtype: m.subtype, turns: m.num_turns, costUsd: run.costUsd, durationMs: m.duration_ms });
+        if (await readLimits(q)) guard();
         if (m.subtype !== 'success') throw new Error(`Claude stopped: ${m.subtype}`);
         for (const u of m.user_message_uuids ?? [...outstanding]) outstanding.delete(u);
         // Idle with nothing queued: end the input so the session finishes
@@ -340,6 +358,13 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
     await finish(run, repo, report);
   } catch (e) {
     inbox.close();
+    if (limitStop) {
+      const error = `Stopped to stay under the plan limit: ${limitStop}`;
+      appendEvent(run.id, { type: 'status', text: error });
+      update(run, { status: 'stopped', error, endedAt: new Date().toISOString(), report });
+      await notify({ title: '⏸ Claude Agent stopped at the plan limit', message: `${limitStop}. Continue the run once the limit has reset.`, tags: ['pause_button', 'robot'], priority: 4, click: runUrl(run.id) });
+      return;
+    }
     const stopped = abort.signal.aborted;
     const error = stopped ? 'stopped from the web UI' : String((e as Error)?.message ?? e);
     appendEvent(run.id, { type: 'status', text: `Run ${stopped ? 'stopped' : 'failed'}: ${error}` });
@@ -348,6 +373,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
       await notify({ title: '🚨 Claude Agent run failed', message: error, tags: ['rotating_light', 'robot'], priority: 4, click: runUrl(run.id) });
     }
   } finally {
+    clearInterval(usageTimer);
     inboxes.delete(run.id);
   }
 }

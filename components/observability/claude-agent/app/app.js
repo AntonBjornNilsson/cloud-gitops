@@ -209,19 +209,36 @@ function renderHistory() {
   $('#history-list').innerHTML = html || '<div class="empty small">No runs yet</div>';
 }
 
-const LIMIT_LABEL = { five_hour: '5-hour', seven_day: 'Weekly', seven_day_opus: 'Weekly Opus', seven_day_sonnet: 'Weekly Sonnet', overage: 'Extra', seven_day_overage_included: 'Weekly incl.' };
-const limitClass = (l) => (l.status === 'rejected' || (l.utilization ?? 0) >= 90 ? 'bad' : l.status === 'allowed_warning' || (l.utilization ?? 0) >= 75 ? 'warn' : '');
+const guardOf = () => app.state?.guard ?? { pauseAt: 80, stopAt: 90, paused: null };
+const limitClass = (l) => {
+  const g = guardOf();
+  return l.status === 'rejected' || (l.utilization ?? 0) >= g.stopAt ? 'bad' : l.status === 'allowed_warning' || (l.utilization ?? 0) >= g.pauseAt ? 'warn' : '';
+};
+// Windows past their reset no longer apply; the most used first
+function activeLimits(map) {
+  const now = Date.now();
+  return Object.values(map || {}).filter((l) => !l.resetsAt || l.resetsAt > now)
+    .sort((a, b) => (b.utilization ?? -1) - (a.utilization ?? -1));
+}
+// A meter with tick marks where new runs pause and running sessions stop
+function limitBar(l) {
+  const g = guardOf();
+  return `<div class="bar ${limitClass(l)}" role="meter" aria-label="${esc(l.label)}" aria-valuenow="${Math.round(l.utilization)}" aria-valuemin="0" aria-valuemax="100">
+    <span style="width:${Math.min(100, l.utilization)}%"></span><i class="mark" style="left:${g.pauseAt}%" title="New runs pause at ${g.pauseAt}%"></i><i class="mark stop" style="left:${g.stopAt}%" title="Running sessions stop at ${g.stopAt}%"></i></div>`;
+}
+function pausedBanner() {
+  const p = guardOf().paused;
+  if (!p) return '';
+  return `<div class="banner"><b>⏸ Paused to stay under the plan limit.</b> ${esc(p.reason)}. Queued runs start by themselves${p.until ? ` ${esc(until(p.until))}` : ' once usage drops'}.</div>`;
+}
 
 function renderFoot() {
   const s = app.state;
   if (!s) return;
-  // The SDK reports utilization only for some readings; otherwise show the status and reset time
-  const STATUS = { allowed: 'OK', allowed_warning: 'near limit', rejected: 'limited' };
-  const lim = Object.values(s.limits || {}).slice(0, 3);
-  $('#limits-mini').innerHTML = lim.map((l) => `<div class="mini-meter" title="${esc(l.status)}${l.resetsAt ? ` · resets ${until(l.resetsAt * 1000)}` : ''}">
-    <span>${esc(LIMIT_LABEL[l.type] || l.type)}</span>${l.utilization != null
-      ? `<div class="bar ${limitClass(l)}"><span style="width:${Math.min(100, l.utilization).toFixed(0)}%"></span></div><span>${l.utilization.toFixed(0)}%</span>`
-      : `<span class="small" style="grid-column:span 2;color:var(--${l.status === 'rejected' ? 'bad' : l.status === 'allowed_warning' ? 'warn' : 'ok'})">${esc(STATUS[l.status] || l.status)}${l.resetsAt ? ` <span class="muted">· resets ${esc(until(l.resetsAt * 1000))}</span>` : ''}</span>`}</div>`).join('');
+  const lim = activeLimits(s.limits).filter((l) => l.utilization != null).slice(0, 3);
+  $('#limits-mini').innerHTML = (guardOf().paused ? `<div class="mini-paused">⏸ Paused: ${esc(guardOf().paused.reason)}</div>` : '')
+    + lim.map((l) => `<a class="mini-meter" href="/usage" data-link title="${esc(l.label)}: ${Math.round(l.utilization)}%${l.resetsAt ? `, resets ${until(l.resetsAt)}` : ''}">
+    <span>${esc(l.label.replace(/^Weekly \((.*)\)$/, '7d $1').replace('Weekly', '7-day'))}</span>${limitBar(l)}<span>${Math.round(l.utilization)}%</span></a>`).join('');
   const u = s.update;
   const upd = u.current === true ? 'up to date' : u.current === false ? (u.restarting ? 'updating…' : 'update pending') : '';
   $('#version').textContent = [s.meta.claudeCodeVersion && `Claude Code ${s.meta.claudeCodeVersion}`, upd].filter(Boolean).join(' · ');
@@ -340,7 +357,7 @@ function viewHome() {
   const todayTokens = runs.filter((r) => (r.startedAt || r.createdAt).slice(0, 10) === today).reduce((n, r) => n + totalTokens(r.usage), 0);
   const current = runs.find((r) => r.id === s?.current);
   view.className = 'view';
-  view.innerHTML = `
+  view.innerHTML = `${pausedBanner()}
     <div class="welcome">
       <div class="head"><span class="spark">✻</span><div><b>Claude in the cluster</b><div class="small muted">Read-only commands run straight away. Cluster writes and repo changes come to you as yes/no questions here and on ntfy.</div></div></div>
       ${composerHtml({ placeholder: 'What should Claude look into? (Enter to start, Shift+Enter for a new line)' })}
@@ -384,7 +401,8 @@ async function viewUsage() {
   const sum = (days) => days.reduce((a, d) => ({ tokens: a.tokens + totalTokens(d), output: a.output + d.output, cost: a.cost + d.cost, runs: a.runs + d.runs }), { tokens: 0, output: 0, cost: 0, runs: 0 });
   const today = sum(u.days.slice(-1)), week = sum(u.days.slice(-7)), month = sum(u.days);
   const cat = u.days.reduce((a, d) => ({ input: a.input + d.input, output: a.output + d.output, cacheRead: a.cacheRead + d.cacheRead, cacheWrite: a.cacheWrite + d.cacheWrite }), { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
-  const limits = Object.values(u.limits || {});
+  const limits = activeLimits(u.limits);
+  const g = guardOf();
   view.innerHTML = `<h1 class="page">Usage</h1><p class="subtitle">Tokens per run as reported by the Agent SDK, and the latest claude.ai plan limit readings.</p>
     <div class="cards">
       <div class="card stat"><div class="label">Today</div><div class="value">${fmtTokens(today.tokens)}</div><div class="hint">${today.runs} run${today.runs === 1 ? '' : 's'} · ${fmtTokens(today.output)} output</div></div>
@@ -393,11 +411,17 @@ async function viewUsage() {
       <div class="card stat"><div class="label">API-equivalent, 30 days</div><div class="value">${fmtCost(month.cost)}</div><div class="hint">SDK estimate; the subscription is not billed per token</div></div>
     </div>
     <h2 class="section">Plan limits</h2>
-    <div class="card">${limits.length ? limits.map((l) => `<div class="meter"><span>${esc(LIMIT_LABEL[l.type] || l.type)}</span>
-      ${l.utilization != null ? `<div class="bar ${limitClass(l)}" role="meter" aria-valuenow="${l.utilization.toFixed(0)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(100, l.utilization)}%"></span></div>` : `<span><span class="badge ${l.status === 'allowed' ? 'healthy' : l.status === 'rejected' ? 'failed' : 'findings'}">${esc({ allowed: 'within limit', allowed_warning: 'near limit', rejected: 'limit reached' }[l.status] || l.status)}</span></span>`}
-      <span class="val">${l.utilization != null ? `${l.utilization.toFixed(0)}%` : ''}${l.resetsAt ? ` <span class="muted small">resets ${esc(until(l.resetsAt * 1000))}</span>` : ''}</span></div>`).join('')
-      + `<div class="small muted" style="margin-top:6px">Readings arrive with runs; last update ${esc(rel(limits.map((l) => l.updatedAt).sort().pop()))}.</div>`
-      : '<div class="muted">No readings yet. The SDK reports plan limits during runs, so they appear after the next one.</div>'}</div>
+    ${pausedBanner()}
+    <div class="card">${limits.length ? limits.map((l) => `<div class="meter"><span>${esc(l.label)}</span>
+      ${l.utilization != null ? limitBar(l) : `<span><span class="badge ${l.status === 'allowed' ? 'healthy' : l.status === 'rejected' ? 'failed' : 'findings'}">${esc({ allowed: 'within limit', allowed_warning: 'near limit', rejected: 'limit reached' }[l.status] || l.status || 'unknown')}</span></span>`}
+      <span class="val">${l.utilization != null ? `${Math.round(l.utilization)}%` : ''}${l.resetsAt ? ` <span class="muted small">resets ${esc(until(l.resetsAt))}</span>` : ''}</span></div>`).join('')
+      : '<div class="muted">No readings yet.</div>'}
+      <div class="guard-note small">
+        <span><i class="mark-key"></i>New runs wait from <b>${g.pauseAt}%</b></span>
+        <span><i class="mark-key stop"></i>Running sessions stop at <b>${g.stopAt}%</b></span>
+        <span>Extra (paid) usage: <b>never used</b>${u.extra?.enabled != null ? ` · ${u.extra.enabled ? 'enabled' : 'disabled'} on the account` : ''}</span>
+        <span class="muted">Updated ${esc(rel(limits.map((l) => l.updatedAt).sort().pop()))}. The windows are shared with your own Claude usage.</span>
+      </div></div>
     <h2 class="section">Tokens per day</h2>
     <div class="card"><div class="row spread" style="margin-bottom:6px"><span class="small muted">All tokens processed (input, output and cache), UTC days</span>
       <button class="btn sm ghost" id="toggle-table">Show table</button></div>

@@ -338,3 +338,16 @@ table.list a:hover { color: var(--accent); }
 }
 @media (min-width: 821px) { .kbd-hint { display: inline-block; font-family: var(--mono); font-size: 10.5px; border: 1px solid color-mix(in srgb, var(--accent-ink) 40%, transparent); border-radius: 4px; padding: 0 4px; opacity: .8; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* plan-limit guard */
+.bar .mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--warn); opacity: .9; }
+.bar .mark.stop { background: var(--bad); }
+.mini-meter .bar { overflow: visible; }
+.mini-meter .bar .mark { top: -2px; bottom: -2px; }
+a.mini-meter:hover { color: var(--text); }
+.mini-paused { color: var(--warn); font-weight: 500; margin-bottom: 2px; }
+.banner { border: 1px solid var(--warn); background: var(--warn-soft); color: var(--text); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 14px; font-size: 13.5px; }
+.banner b { color: var(--warn); }
+.guard-note { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--text-2); }
+.mark-key { display: inline-block; width: 2px; height: 11px; background: var(--warn); margin-right: 6px; vertical-align: -1px; }
+.mark-key.stop { background: var(--bad); }

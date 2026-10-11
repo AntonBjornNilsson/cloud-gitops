@@ -25,6 +25,7 @@ configMapGenerator:
       - app/cron.ts
       - app/meta.ts
       - app/updater.ts
+      - app/limits.ts
       - app/rules.md
       - app/health.md
       - app/index.html
