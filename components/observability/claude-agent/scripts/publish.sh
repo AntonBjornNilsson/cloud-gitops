@@ -25,7 +25,7 @@ reject() {
   trap - EXIT; exit 0
 }
 FORBIDDEN=$(git diff --cached --name-only \
-  | grep -E '^(cluster/flux-system/|\.github/|\.claude/|components/storage/longhorn/config/restore/|components/observability/holmesgpt/claude-agent/)' || true)
+  | grep -E '^(cluster/flux-system/|\.github/|\.claude/|components/storage/longhorn/config/restore/|components/observability/claude-agent/)' || true)
 [ -z "$FORBIDDEN" ] || reject "change touches protected paths: $FORBIDDEN"
 TOKEN=$(cat "$GITHUB_TOKEN_FILE")
 if git diff --cached | grep -F "$TOKEN" > /dev/null; then reject "diff contains a credential"; fi

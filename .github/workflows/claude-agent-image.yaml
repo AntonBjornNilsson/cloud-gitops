@@ -6,11 +6,11 @@ on:
   push:
     branches: [main]
     paths:
-      - components/observability/holmesgpt/claude-agent/image/**
+      - components/observability/claude-agent/image/**
       - .github/workflows/claude-agent-image.yaml
   pull_request:
     paths:
-      - components/observability/holmesgpt/claude-agent/image/**
+      - components/observability/claude-agent/image/**
       - .github/workflows/claude-agent-image.yaml
   schedule:
     - cron: "0 4 * * *"
@@ -21,7 +21,7 @@ permissions:
 concurrency:
   group: claude-agent-image-${{ github.ref }}
 env:
-  CONTEXT: components/observability/holmesgpt/claude-agent/image
+  CONTEXT: components/observability/claude-agent/image
 jobs:
   build:
     runs-on: ubuntu-latest

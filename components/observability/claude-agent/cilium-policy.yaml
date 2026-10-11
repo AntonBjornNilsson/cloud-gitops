@@ -1,12 +1,12 @@
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
-  name: holmesgpt
-  namespace: holmesgpt
+  name: claude-agent
+  namespace: claude-agent
 spec:
   endpointSelector: {}
   ingress:
-    # Internal communication among holmes, holmes-operator, and github-mcp-server
+    # Intra-namespace (agent jobs -> remediation service)
     - fromEndpoints:
         - {}
     # Internal cluster communication to Remediation Service
@@ -47,7 +47,7 @@ spec:
         - ports:
             - port: "6443"
               protocol: TCP
-    # Google AI (Gemini) and GitHub APIs
+    # Anthropic, GitHub and GHCR APIs
     - toEntities:
         - world
       toPorts:
@@ -56,7 +56,7 @@ spec:
               protocol: TCP
             - port: "80"
               protocol: TCP
-    # Internal communication between pods in holmesgpt namespace
+    # Intra-namespace
     - toEndpoints:
         - {}
     # VictoriaMetrics cluster metrics access

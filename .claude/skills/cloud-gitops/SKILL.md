@@ -1,6 +1,6 @@
 ---
 name: cloud-gitops
-description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, HolmesGPT/Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
+description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, the claude-agent CronJob, Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
 ---
 
 # cloud-gitops working guide
@@ -42,7 +42,7 @@ components/kustomization.yaml    ON/OFF switch for infrastructure (list of syste
 components/<category>/<name>/    hardware | networking | observability | security | storage
 services/kustomization.yaml      ON/OFF switch for user apps (list of directories)
 services/<category>/<name>/      ai | demo | game-servers | home-automation | management | media/{getting,sorting,playing} | security
-scripts/                         flux-all.sh (suspend|resume all), trigger.sh (HolmesGPT checks), sync-longhorn-backups.py
+scripts/                         flux-all.sh (suspend|resume all), sync-longhorn-backups.py
 TODO                             user's backlog (">" = done)
 ```
 
@@ -164,12 +164,9 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   a `// grafana-folder: <name>` line in the source sets the folder. Community dashboards: `dashboards/upstream.yaml`
   (grafana.com id + revision; still Flux-substituted, so no `${...}` there).
   Trivy drilldowns (`trivy_*.jsonnet`, shared `trivy.libsonnet`) read trivy-operator's per-finding info metrics and use MetricsQL.
-- HolmesGPT uses in-cluster Ollama (`llama3.1:8b`, chosen for tool-calling support). Scheduled checks in
-  `holmesgpt/config/scheduled-health-check.yaml`; trigger with `scripts/trigger.sh [list|all|<check>]`
-  (note: this script creates a temporary Job, i.e. a cluster write — only run it when the user asks).
-  Don't add `models.pull` to the Ollama HelmRelease values (makes Flux reconciliation slow).
-- `holmesgpt/claude-agent/`: twice-daily CronJob running Claude Code (cluster-admin kubectl, context `in-cluster`; GitOps rules in its prompts) that opens `claude/*` PRs as a
-  GitHub App; `holmes-remediation` posts to ntfy topic `claude-agent` (Merge/Reject buttons, or an all-clear listing problems that need a human when no PR is opened). Tooling image is built by
+- Ollama (`services/ai/ollama/`): don't add `models.pull` to its HelmRelease values (makes Flux reconciliation slow).
+- `components/observability/claude-agent/` (namespace `claude-agent`, Flux Kustomization `system-claude-agent`): twice-daily CronJob running Claude Code (cluster-admin kubectl, context `in-cluster`; GitOps rules in its prompts) that opens `claude/*` PRs as a
+  GitHub App; `claude-agent-remediation` posts to ntfy topic `claude-agent` (Merge/Reject buttons, or an all-clear listing problems that need a human when no PR is opened). Tooling image is built by
   `.github/workflows/claude-agent-image.yaml` (GHCR, `:latest`, pulled with `Always`); scripts live in `scripts/`.
 
 ## GitHub

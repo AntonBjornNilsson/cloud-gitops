@@ -15,7 +15,7 @@ resources:
   - networking/tailscale/system-tailscale.yaml
 
   # Observability
-  - observability/holmesgpt/system-holmesgpt.yaml
+  - observability/claude-agent/system-claude-agent.yaml
   - observability/victoriametrics/system-victoriametrics.yaml
   - observability/grafana/system-grafana.yaml
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Exchanges the GitHub App private key for an installation token (valid 1h) and stores it in
-# the github-app-token Secret, used by claude-agent and holmes-remediation.
+# the github-app-token Secret, used by claude-agent and claude-agent-remediation.
 # Flux postBuild substitution rewrites dollar-brace variables: only use $var and $(...) here.
 set -euo pipefail
 

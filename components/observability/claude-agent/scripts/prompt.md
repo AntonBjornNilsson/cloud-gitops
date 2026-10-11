@@ -19,7 +19,7 @@ GitOps is still the end state, and your fix only reaches the cluster once the us
    it, name it in the summary ("merging #N should fix...").
    Skip issues that already have an open PR (listed below). Make the smallest correct edit.
    - Never touch cluster/flux-system/, .github/, .claude/, components/storage/longhorn/config/restore/
-     or components/observability/holmesgpt/claude-agent/. These changes are rejected automatically.
+     or components/observability/claude-agent/. These changes are rejected automatically.
    - Never write setup-specific info (hostnames, IPs, node names, account names, secrets); use the
      Flux postBuild substitution variables described in the cloud-gitops skill instead.
    - Validate with `kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null`.

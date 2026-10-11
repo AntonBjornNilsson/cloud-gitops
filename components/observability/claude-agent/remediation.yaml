@@ -2,15 +2,15 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: holmesgpt
+  name: claude-agent
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: holmes-remediation-script
-  namespace: holmesgpt
+  name: claude-agent-remediation-script
+  namespace: claude-agent
 data:
   controller.py: |
     import os
@@ -39,8 +39,8 @@ data:
     K8S_TOKEN_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"
     K8S_CA_PATH    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
     K8S_API        = "https://kubernetes.default.svc"
-    NAMESPACE      = "holmesgpt"
-    STATE_CONFIGMAP = "holmes-remediation-state"
+    NAMESPACE      = "claude-agent"
+    STATE_CONFIGMAP = "claude-agent-remediation-state"
     STATE_MAX_AGE   = 30 * 86400
 
     remediations = {}
@@ -110,7 +110,7 @@ data:
                 "apiVersion": "v1",
                 "kind":       "ConfigMap",
                 "metadata":   {"name": STATE_CONFIGMAP, "namespace": NAMESPACE,
-                               "labels": {"app": "holmes-remediation"}},
+                               "labels": {"app": "claude-agent-remediation"}},
                 "data": {
                     "remediations.json": json.dumps(keep)
                 }
@@ -346,8 +346,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: holmes-ntfy-token
-  namespace: holmesgpt
+  name: claude-agent-ntfy-token
+  namespace: claude-agent
 type: Opaque
 stringData:
   token: "${ntfy_alertmanager_token}"
@@ -355,19 +355,19 @@ stringData:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: holmes-remediation
-  namespace: holmesgpt
+  name: claude-agent-remediation
+  namespace: claude-agent
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: holmes-remediation-role
-  namespace: holmesgpt
+  name: claude-agent-remediation-role
+  namespace: claude-agent
 rules:
   # Persisted button tokens (hashed)
   - apiGroups: [""]
     resources: ["configmaps"]
-    resourceNames: ["holmes-remediation-state"]
+    resourceNames: ["claude-agent-remediation-state"]
     verbs: ["get", "update"]
   - apiGroups: [""]
     resources: ["configmaps"]
@@ -376,37 +376,37 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: holmes-remediation-binding
-  namespace: holmesgpt
+  name: claude-agent-remediation-binding
+  namespace: claude-agent
 subjects:
   - kind: ServiceAccount
-    name: holmes-remediation
-    namespace: holmesgpt
+    name: claude-agent-remediation
+    namespace: claude-agent
 roleRef:
   kind: Role
-  name: holmes-remediation-role
+  name: claude-agent-remediation-role
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: holmes-remediation
-  namespace: holmesgpt
+  name: claude-agent-remediation
+  namespace: claude-agent
   labels:
-    app: holmes-remediation
+    app: claude-agent-remediation
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: holmes-remediation
+      app: claude-agent-remediation
   template:
     metadata:
       labels:
-        app: holmes-remediation
+        app: claude-agent-remediation
       annotations:
-        holmes-remediation/script-revision: "8"
+        claude-agent-remediation/script-revision: "8"
     spec:
-      serviceAccountName: holmes-remediation
+      serviceAccountName: claude-agent-remediation
       containers:
         - name: remediation-controller
           image: python:3.11-alpine
@@ -420,14 +420,14 @@ spec:
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: holmes-ntfy-token
+                  name: claude-agent-ntfy-token
                   key: token
             - name: NTFY_SERVER
               value: "http://ntfy.ntfy.svc.cluster.local"
             - name: NTFY_WEB_URL
               value: "https://ntfy.${domain}"
             - name: BASE_URL
-              value: "https://holmes-remediation.${domain}"
+              value: "https://claude-agent-remediation.${domain}"
             - name: GITHUB_REPO
               value: "${github_repo}"
             - name: GITHUB_BRANCH
@@ -461,7 +461,7 @@ spec:
       volumes:
         - name: script
           configMap:
-            name: holmes-remediation-script
+            name: claude-agent-remediation-script
         - name: github-token
           secret:
             secretName: github-app-token
@@ -469,13 +469,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: holmes-remediation
-  namespace: holmesgpt
+  name: claude-agent-remediation
+  namespace: claude-agent
   labels:
-    app: holmes-remediation
+    app: claude-agent-remediation
 spec:
   selector:
-    app: holmes-remediation
+    app: claude-agent-remediation
   ports:
     - name: http
       port: 8080
@@ -484,27 +484,27 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: holmes-remediation-actions
-  namespace: holmesgpt
+  name: claude-agent-remediation-actions
+  namespace: claude-agent
   labels:
     enable-oauth: "false"
 spec:
   ingressClassName: traefik
   rules:
-    - host: holmes-remediation.${domain}
+    - host: claude-agent-remediation.${domain}
       http:
         paths:
           - path: /merge/
             pathType: Prefix
             backend:
               service:
-                name: holmes-remediation
+                name: claude-agent-remediation
                 port:
                   number: 8080
           - path: /reject/
             pathType: Prefix
             backend:
               service:
-                name: holmes-remediation
+                name: claude-agent-remediation
                 port:
                   number: 8080

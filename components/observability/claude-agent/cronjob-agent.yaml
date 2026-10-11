@@ -1,12 +1,12 @@
 # Twice-daily cluster review. Two containers sharing /work:
 #   investigate (init): Claude with cluster-admin kubectl, edits a clone of the repo. No GitHub credentials.
 #   publish:            guards and validates the diff, pushes a claude/* branch and opens the PR as
-#                       the GitHub App, then registers it with holmes-remediation for the ntfy buttons.
+#                       the GitHub App, then registers it with claude-agent-remediation for the ntfy buttons.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: claude-agent
-  namespace: holmesgpt
+  namespace: claude-agent
 spec:
   schedule: "30 6,18 * * *"
   concurrencyPolicy: Forbid
