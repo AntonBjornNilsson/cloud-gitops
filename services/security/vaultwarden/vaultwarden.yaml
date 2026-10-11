@@ -16,6 +16,8 @@ stringData:
   # Admin panel (/admin). Prefer an Argon2 PHC string (`vaultwarden hash`) over
   # a plain token; it is substituted verbatim, so its `$` signs are safe.
   ADMIN_TOKEN: "${vaultwarden_admin_token}"
+  # Plain secret of the Authelia "vaultwarden" OIDC client
+  SSO_CLIENT_SECRET: "${vaultwarden_sso_client_secret}"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -71,6 +73,23 @@ spec:
             # Real client IPs from Traefik for logs and login rate limiting
             - name: IP_HEADER
               value: "X-Forwarded-For"
+            # Log in through Authelia; the master password still decrypts the
+            # vault. Existing accounts link on first SSO login by email, new
+            # ones still need an invite. Password login stays as a fallback.
+            - name: SSO_ENABLED
+              value: "true"
+            - name: SSO_ONLY
+              value: "false"
+            # Must equal the issuer in Authelia's discovery document
+            - name: SSO_AUTHORITY
+              value: "https://auth.${domain}"
+            - name: SSO_CLIENT_ID
+              value: "vaultwarden"
+            # offline_access: refresh tokens, so sessions outlive the access token
+            - name: SSO_SCOPES
+              value: "email profile offline_access"
+            - name: SSO_PKCE
+              value: "true"
           envFrom:
             - secretRef:
                 name: vaultwarden-env

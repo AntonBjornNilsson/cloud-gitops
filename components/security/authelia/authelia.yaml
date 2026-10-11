@@ -247,6 +247,33 @@ spec:
                 - code
               userinfo_signed_response_alg: none
 
+            # Vaultwarden SSO. Plain secret (vaultwarden_sso_client_secret) goes in
+            # the vaultwarden-env Secret; the master password is still required.
+            - client_id: vaultwarden
+              client_name: Vaultwarden
+              client_secret:
+                value: "${authelia_vaultwarden_client_secret_hash}"
+              public: false
+              authorization_policy: one_factor
+              consent_mode: implicit
+              require_pkce: true
+              pkce_challenge_method: S256
+              token_endpoint_auth_method: client_secret_basic
+              redirect_uris:
+                - "https://vault.${domain}/identity/connect/oidc-signin"
+              scopes:
+                - openid
+                - profile
+                - email
+                - offline_access
+              grant_types:
+                - authorization_code
+                - refresh_token
+              response_types:
+                - code
+              access_token_signed_response_alg: none
+              userinfo_signed_response_alg: none
+
             # Tailscale custom OIDC sign-in (WebFinger in webfinger.yaml)
             # ID and plain secret (tailscale_oidc_client_*) go in the Tailscale sign-up form
             - client_id: "${tailscale_oidc_client_id}"
