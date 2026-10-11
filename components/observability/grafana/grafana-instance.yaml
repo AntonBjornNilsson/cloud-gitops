@@ -63,6 +63,8 @@ spec:
         gethomepage.dev/description: "Monitoring & Metrics"
         gethomepage.dev/group: "Infrastructure & Management"
         gethomepage.dev/icon: "grafana.png"
+        # Homepage looks for app.kubernetes.io/name=<ingress> by default
+        gethomepage.dev/pod-selector: "app=grafana"
     spec:
       ingressClassName: traefik
       rules:

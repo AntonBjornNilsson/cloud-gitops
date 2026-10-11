@@ -155,6 +155,8 @@ metadata:
     gethomepage.dev/description: "Push Notifications"
     gethomepage.dev/group: "Infrastructure & Management"
     gethomepage.dev/icon: "ntfy.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=ntfy"
 spec:
   rules:
     - host: ntfy.${domain}

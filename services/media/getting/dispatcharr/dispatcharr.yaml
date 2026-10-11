@@ -345,6 +345,8 @@ metadata:
     gethomepage.dev/description: "Stream Management"
     gethomepage.dev/group: "Media & Entertainment"
     gethomepage.dev/icon: "dispatcharr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=dispatcharr-web"
 spec:
   ingressClassName: traefik
   rules:
