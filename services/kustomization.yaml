@@ -12,7 +12,7 @@ resources:
   # Getting
   - media/getting/qbittorrent
   - media/getting/prowlarr
-  # - media/getting/jellyseerr
+  - media/getting/jellyseerr
   - media/getting/dispatcharr
 
   # Sorting

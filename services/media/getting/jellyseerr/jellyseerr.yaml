@@ -10,6 +10,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: jellyseerr-config
   namespace: jellyseerr
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -23,6 +25,9 @@ metadata:
   name: jellyseerr
   namespace: jellyseerr
 spec:
+  # Single SQLite database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: jellyseerr
@@ -31,9 +36,14 @@ spec:
       labels:
         app: jellyseerr
     spec:
+      # Seerr runs as the image's node user (1000); make the config volume writable for it
+      securityContext:
+        fsGroup: 1000
       containers:
+        # Jellyseerr continues as Seerr (Jellyseerr + Overseerr merged); names kept so the
+        # Radarr/Sonarr/Jellyfin policies that allow the jellyseerr namespace still match.
         - name: jellyseerr
-          image: fallenbagel/jellyseerr:latest
+          image: ghcr.io/seerr-team/seerr:v3.5.0
           env:
             - name: LOG_LEVEL
               value: "info"
@@ -42,6 +52,31 @@ spec:
           ports:
             - name: http
               containerPort: 5055
+          startupProbe:
+            httpGet:
+              path: /api/v1/status
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /api/v1/status
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/v1/status
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
           volumeMounts:
             - name: config
               mountPath: /app/config
@@ -68,6 +103,15 @@ kind: Ingress
 metadata:
   name: jellyseerr
   namespace: jellyseerr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Seerr"
+    gethomepage.dev/description: "Media Requests"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "jellyseerr.png"
+    gethomepage.dev/href: "https://requests.${domain}"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=jellyseerr"
 spec:
   ingressClassName: traefik
   rules:
