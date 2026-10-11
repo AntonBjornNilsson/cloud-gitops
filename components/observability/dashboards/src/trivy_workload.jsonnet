@@ -95,6 +95,7 @@ dashboard.new('Trivy / Workload drilldown')
       t.severityColumn('Severity'),
       t.linkColumn('CVE', [t.osvLink, t.cveLink]),
       t.override('Title', { 'custom.width': 500 }),
+      t.override('Score', { decimals: 1, 'custom.width': 70 }),
     ],
     'Score',
     'Click a CVE for the advisory or for every workload it affects.',

@@ -547,6 +547,102 @@ spec:
                             ]
                          }
                       ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Kind"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Critical"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "High"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Medium"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Unknown"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Secrets"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "OS"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "OS version"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
                    }
                 ]
              },
@@ -576,7 +672,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"Critical\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, vuln_id) (trivy_vulnerability_id{namespace=~\".*\", severity=\"Critical\"})) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "A"
@@ -586,7 +682,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"High\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, vuln_id) (trivy_vulnerability_id{namespace=~\".*\", severity=\"High\"})) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "B"
@@ -596,7 +692,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"Medium\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, vuln_id) (trivy_vulnerability_id{namespace=~\".*\", severity=\"Medium\"})) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "C"
@@ -606,7 +702,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_vulnerability_id{namespace=~\".*\", severity=\"Unknown\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
+                   "expr": "(count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, vuln_id) (trivy_vulnerability_id{namespace=~\".*\", severity=\"Unknown\"})) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\")) or 0 * count by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) ((trivy_image_info{namespace=~\".*\"}) unless on (namespace, resource_name) label_replace(kube_replicaset_spec_replicas <= $inactive, \"resource_name\", \"$1\", \"replicaset\", \"(.*)\"))) * on (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag) group_left (image_os_family, image_os_name) max by (namespace, resource_kind, resource_name, container_name, image_registry, image_repository, image_tag, image_os_family, image_os_name) (trivy_image_info{namespace=~\".*\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "D"
@@ -647,7 +743,6 @@ spec:
                             "resource_kind",
                             "resource_name",
                             "container_name",
-                            "image_registry",
                             "image_repository",
                             "image_tag",
                             "image_os_family",
@@ -666,18 +761,17 @@ spec:
                    "id": "organize",
                    "options": {
                       "indexByName": {
-                         "Value #A": 9,
-                         "Value #B": 10,
-                         "Value #C": 11,
-                         "Value #D": 12,
-                         "Value #E": 13,
-                         "Value #F": 14,
+                         "Value #A": 8,
+                         "Value #B": 9,
+                         "Value #C": 10,
+                         "Value #D": 11,
+                         "Value #E": 12,
+                         "Value #F": 13,
                          "container_name": 3,
-                         "image_os_family": 7,
-                         "image_os_name": 8,
-                         "image_registry": 4,
-                         "image_repository": 5,
-                         "image_tag": 6,
+                         "image_os_family": 6,
+                         "image_os_name": 7,
+                         "image_repository": 4,
+                         "image_tag": 5,
                          "namespace": 0,
                          "resource_kind": 1,
                          "resource_name": 2
@@ -692,7 +786,6 @@ spec:
                          "container_name": "Container",
                          "image_os_family": "OS",
                          "image_os_name": "OS version",
-                         "image_registry": "Registry",
                          "image_repository": "Repository",
                          "image_tag": "Tag",
                          "namespace": "Namespace",

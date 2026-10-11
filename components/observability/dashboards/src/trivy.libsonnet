@@ -169,7 +169,8 @@ local ds = { type: 'prometheus', uid: 'VictoriaMetrics' };
     local perImage(expr) =
       '(count by (%s) (%s) or 0 * count by (%s) (%s)) * on (%s) group_left (image_os_family, image_os_name) max by (%s, image_os_family, image_os_name) (%s)'
       % [L, $.active(expr), L, $.active(info), L, L, info];
-    local vuln(sev) = 'trivy_vulnerability_id{%s, severity="%s"}' % [filter, sev];
+    // Distinct CVEs per image, like the stat panels (one CVE can hit several packages).
+    local vuln(sev) = 'count by (%s, vuln_id) (trivy_vulnerability_id{%s, severity="%s"})' % [L, filter, sev];
     $.tablePanel(
       title,
       [
@@ -185,7 +186,6 @@ local ds = { type: 'prometheus', uid: 'VictoriaMetrics' };
         ['resource_kind', 'Kind'],
         ['resource_name', 'Workload'],
         ['container_name', 'Container'],
-        ['image_registry', 'Registry'],
         ['image_repository', 'Repository'],
         ['image_tag', 'Tag'],
         ['image_os_family', 'OS'],
@@ -204,6 +204,9 @@ local ds = { type: 'prometheus', uid: 'VictoriaMetrics' };
         $.countColumn('Packages to bump', 'blue'),
         $.countColumn('Secrets', 'purple'),
         $.linkColumn('Workload', [$.workloadLink]),
+      ] + [
+        $.override(c, { 'custom.width': 90 })
+        for c in ['Kind', 'Critical', 'High', 'Medium', 'Unknown', 'Secrets', 'OS', 'OS version']
       ],
       'Critical',
       description,
