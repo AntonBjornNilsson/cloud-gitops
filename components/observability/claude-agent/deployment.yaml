@@ -208,6 +208,13 @@ kind: Ingress
 metadata:
   name: claude-agent
   namespace: claude-agent
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Claude Agent"
+    gethomepage.dev/description: "Autonomous Agent"
+    gethomepage.dev/group: "AI"
+    gethomepage.dev/icon: "claude-ai.png"
+    gethomepage.dev/pod-selector: "app=claude-agent"
 spec:
   rules:
     - host: claude-agent.${domain}
