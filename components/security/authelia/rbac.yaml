@@ -41,7 +41,6 @@ rules:
       - frrk8s.metallb.io
       - gateway.networking.k8s.io
       - grafana.integreatly.org
-      - holmesgpt.dev
       - hub.traefik.io
       - k0s.k0sproject.io
       - kyverno.io
