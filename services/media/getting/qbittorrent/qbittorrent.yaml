@@ -99,6 +99,11 @@ spec:
               value: "${pia_password}"
             - name: SERVER_REGIONS
               value: "${pia_region}"
+            # Pinned: the CiliumNetworkPolicy only lets this pod reach the internet on this port
+            - name: OPENVPN_PROTOCOL
+              value: "udp"
+            - name: VPN_ENDPOINT_PORT
+              value: "8080"
             - name: VPN_PORT_FORWARDING
               value: "on"
             - name: VPN_PORT_FORWARDING_PROVIDER
@@ -328,9 +333,15 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # VPN tunnel / BitTorrent peers and trackers to world
+    # Internet only through the VPN: the OpenVPN connection to PIA (UDP 8080, pinned in gluetun).
+    # Peers and trackers travel inside the tunnel; anything that would bypass it shows up as
+    # DROPPED in Hubble. A second kill switch next to gluetun's firewall.
     - toEntities:
         - world
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: UDP
     # Intra-namespace communication
     - toEndpoints:
         - {}
