@@ -10,14 +10,14 @@ resources:
 
   # Media
   # Getting
-  # - media/getting/qbittorrent
+  - media/getting/qbittorrent
   - media/getting/prowlarr
   # - media/getting/jellyseerr
   - media/getting/dispatcharr
 
   # Sorting
-  # - media/sorting/radarr
-  # - media/sorting/sonarr
+  - media/sorting/radarr
+  - media/sorting/sonarr
   # - media/sorting/bazarr
 
   # Playing

@@ -10,6 +10,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: qbittorrent-config
   namespace: qbittorrent
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -23,6 +25,9 @@ metadata:
   name: qbittorrent
   namespace: qbittorrent
 spec:
+  # RWO config volume, and two clients must never share the download directory
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: qbittorrent
@@ -57,19 +62,28 @@ spec:
               WebUI\HostHeaderValidation=false
               WebUI\LocalHostAuth=false
               WebUI\AuthSubnetWhitelistEnabled=true
-              WebUI\AuthSubnetWhitelist=127.0.0.1/32
               EOF
-              else
-                grep -q "WebUI\\\HostHeaderValidation" "$CONF" || echo "WebUI\\HostHeaderValidation=false" >> "$CONF"
-                grep -q "WebUI\\\LocalHostAuth" "$CONF" || echo "WebUI\\LocalHostAuth=false" >> "$CONF"
               fi
+              # Authelia is the only login: requests from the pod network (Traefik, Radarr, Sonarr,
+              # Prowlarr; Cilium decides who gets in) skip qBittorrent's own auth.
+              set_pref() {
+                grep -v "^$(echo "$1" | sed 's/\\/\\\\/g')=" "$CONF" > "$CONF.tmp" || true
+                sed -i "/^\[Preferences\]/a $(echo "$1" | sed 's/\\/\\\\/g')=$2" "$CONF.tmp"
+                mv "$CONF.tmp" "$CONF"
+              }
+              set_pref 'WebUI\HostHeaderValidation' false
+              set_pref 'WebUI\LocalHostAuth' false
+              set_pref 'WebUI\AuthSubnetWhitelistEnabled' true
+              set_pref 'WebUI\AuthSubnetWhitelist' '127.0.0.1/32, 10.244.0.0/16'
               chown -R 1000:1000 /config
           volumeMounts:
             - name: config
               mountPath: /config
-      containers:
+        # Native sidecar: qBittorrent only starts once the VPN is up; the kill switch blocks
+        # all egress outside the tunnel until then.
         - name: gluetun
-          image: qmcgaw/gluetun:v3.39.1
+          image: qmcgaw/gluetun:v3.41.3
+          restartPolicy: Always
           securityContext:
             capabilities:
               add:
@@ -91,16 +105,35 @@ spec:
               value: "private internet access"
             - name: VPN_PORT_FORWARDING_STATUS_FILE
               value: "/tmp/gluetun/forwarded_port"
+            # Cluster traffic (DNS, Radarr/Sonarr callbacks) bypasses the tunnel
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
-          ports:
-            - name: http
-              containerPort: 8080
+            # Web UI / API for Traefik, Radarr, Sonarr, Prowlarr and the kubelet
+            - name: FIREWALL_INPUT_PORTS
+              value: "8080"
+            - name: IP6TABLES
+              value: "off"
+            # Keep cluster DNS: gluetun's own forwarder is dead whenever the tunnel is down
+            - name: DNS_KEEP_NAMESERVER
+              value: "on"
+          # Healthy only while the tunnel is up. No liveness probe: gluetun reconnects by itself.
+          startupProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 5
+            failureThreshold: 120
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              memory: 256Mi
           volumeMounts:
             - name: gluetun-data
               mountPath: /tmp/gluetun
             - name: tun
               mountPath: /dev/net/tun
+      containers:
         - name: qbittorrent
           image: lscr.io/linuxserver/qbittorrent:latest
           env:
@@ -112,6 +145,30 @@ spec:
               value: "Europe/Stockholm"
             - name: WEBUI_PORT
               value: "8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          # TCP, not the API: the kubelet's node IP is outside the auth whitelist (403)
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 2Gi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -173,6 +230,14 @@ kind: Ingress
 metadata:
   name: qbittorrent
   namespace: qbittorrent
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "qBittorrent"
+    gethomepage.dev/description: "Download Client"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "qbittorrent.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=qbittorrent"
 spec:
   ingressClassName: traefik
   rules:

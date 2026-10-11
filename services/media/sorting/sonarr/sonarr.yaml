@@ -10,6 +10,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: sonarr-config
   namespace: sonarr
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -23,6 +25,9 @@ metadata:
   name: sonarr
   namespace: sonarr
 spec:
+  # Single SQLite database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sonarr
@@ -46,9 +51,40 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Stockholm"
+            # Authelia guards the UI; without this Sonarr forces its own login on first start.
+            # The API still requires the API key (Prowlarr and Jellyseerr connect in-cluster).
+            - name: SONARR__AUTH__METHOD
+              value: External
+            - name: SONARR__AUTH__REQUIRED
+              value: Enabled
           ports:
             - name: http
               containerPort: 8989
+          startupProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -80,6 +116,14 @@ kind: Ingress
 metadata:
   name: sonarr
   namespace: sonarr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Sonarr"
+    gethomepage.dev/description: "TV Management"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "sonarr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=sonarr"
 spec:
   ingressClassName: traefik
   rules:

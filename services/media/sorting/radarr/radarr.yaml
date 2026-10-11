@@ -10,6 +10,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: radarr-config
   namespace: radarr
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -23,6 +25,9 @@ metadata:
   name: radarr
   namespace: radarr
 spec:
+  # Single SQLite database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: radarr
@@ -46,9 +51,40 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Stockholm"
+            # Authelia guards the UI; without this Radarr forces its own login on first start.
+            # The API still requires the API key (Prowlarr and Jellyseerr connect in-cluster).
+            - name: RADARR__AUTH__METHOD
+              value: External
+            - name: RADARR__AUTH__REQUIRED
+              value: Enabled
           ports:
             - name: http
               containerPort: 7878
+          startupProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -80,6 +116,14 @@ kind: Ingress
 metadata:
   name: radarr
   namespace: radarr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Radarr"
+    gethomepage.dev/description: "Movie Management"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "radarr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=radarr"
 spec:
   ingressClassName: traefik
   rules:
