@@ -10,6 +10,9 @@ mkdirSync(RUNS, { recursive: true });
 
 export type RunStatus = 'queued' | 'running' | 'waiting' | 'done' | 'failed' | 'stopped' | 'interrupted';
 export type Report = { status: 'healthy' | 'findings' | 'fixed'; title: string; summary: string };
+export type Tokens = { input: number; output: number; cacheRead: number; cacheWrite: number };
+export type Usage = Tokens & { byModel: Record<string, Tokens> };
+export type Todo = { content: string; status: string; activeForm?: string };
 export type Run = {
   id: string;
   kind: 'health' | 'task';
@@ -20,11 +23,19 @@ export type Run = {
   startedAt?: string;
   endedAt?: string;
   status: RunStatus;
+  model?: string;
+  effort?: string;
   sessionId?: string;
   workdir?: string;
   report?: Report;
   outcome?: string;
+  // Estimated API-equivalent cost of this run; sessionCostUsd is the SDK's running total for the session
   costUsd?: number;
+  sessionCostUsd?: number;
+  usage?: Usage;
+  context?: { percentage: number; totalTokens: number; maxTokens: number };
+  todos?: Todo[];
+  turns?: number;
   error?: string;
 };
 export type RunEvent = { t: string; type: string; [k: string]: unknown };

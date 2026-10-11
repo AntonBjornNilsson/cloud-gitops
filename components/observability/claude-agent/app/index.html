@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Claude Agent</title>
+  <meta name="theme-color" content="#1f1e1b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#faf8f3" media="(prefers-color-scheme: light)">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/app.css">
+  <script>
+    // Apply the saved theme before first paint
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+  </script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <a href="/" class="logo" data-link aria-label="Claude Agent home">
+          <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 53.6 19.5v25L32 57 10.4 44.5v-25Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round"/><g stroke="currentColor" stroke-width="4.6" stroke-linecap="round"><path d="M32 21v22"/><path d="M22.5 26.5l19 11"/><path d="M41.5 26.5l-19 11"/></g></svg>
+          <span>Claude Agent</span>
+        </a>
+        <span class="pill" id="agent-status">…</span>
+      </div>
+      <a href="/new" class="btn primary block" data-link id="new-run"><span class="kbd-hint">N</span>New run</a>
+      <nav class="nav">
+        <a href="/" data-link data-nav="home">Overview</a>
+        <a href="/usage" data-link data-nav="usage">Usage</a>
+      </nav>
+      <section id="inbox" class="inbox" hidden>
+        <h3>Waiting for you</h3>
+        <div id="inbox-list"></div>
+      </section>
+      <section class="history">
+        <h3>History</h3>
+        <input type="search" id="history-filter" placeholder="Filter runs" aria-label="Filter runs">
+        <div id="history-list" class="history-list"></div>
+      </section>
+      <footer class="side-foot">
+        <div id="limits-mini"></div>
+        <div class="foot-row">
+          <span id="version" class="muted"></span>
+          <button class="icon-btn" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+        </div>
+      </footer>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn" id="menu" aria-label="Open menu">☰</button>
+        <span class="topbar-title" id="topbar-title">Claude Agent</span>
+      </header>
+      <div id="view" class="view"></div>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

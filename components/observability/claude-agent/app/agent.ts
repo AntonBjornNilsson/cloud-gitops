@@ -1,21 +1,24 @@
 // One agent run: prepare a repo clone, run Claude with the permission hook, then offer the diff for apply.
-import { query, tool, createSdkMcpServer, type CanUseTool, type PermissionResult } from '@anthropic-ai/claude-agent-sdk';
+// Input is streamed, so the user can message a live session; the run ends once Claude is idle with
+// nothing left in its inbox.
+import { query, tool, createSdkMcpServer, type CanUseTool, type PermissionResult, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import { appendEvent, getRun, saveRun, type Report, type Run } from './store.ts';
+import { appendEvent, getRun, saveRun, type Report, type Run, type Tokens, type Usage } from './store.ts';
 import { ask } from './questions.ts';
 import { checkCommand } from './policy.ts';
 import { clip, notify, runUrl } from './ntfy.ts';
+import { meta, recordLimit } from './meta.ts';
 
 const exec = promisify(execFile);
 const APP = new URL('.', import.meta.url).pathname;
 const WORK = process.env.WORK_DIR ?? '/work';
 const REPO = process.env.GITHUB_REPO ?? '';
 const BRANCH = process.env.GITHUB_BRANCH ?? 'main';
-const MODEL = process.env.CLAUDE_MODEL ?? 'claude-sonnet-5-5';
 const MAX_TURNS = Number(process.env.CLAUDE_MAX_TURNS ?? 80);
 const PUBLISHER = process.env.PUBLISHER_URL ?? 'http://127.0.0.1:8081';
 const KEEP_WORKDIRS = 10;
@@ -34,6 +37,44 @@ function update(run: Run, patch: Partial<Run>): Run {
   return run;
 }
 
+// ── messages to a live session ──────────────────────────────────────────────
+class Inbox {
+  private queue: string[] = [];
+  private waiter?: (t: string | null) => void;
+  closed = false;
+  push(text: string): boolean {
+    if (this.closed) return false;
+    if (this.waiter) {
+      const w = this.waiter;
+      this.waiter = undefined;
+      w(text);
+    } else this.queue.push(text);
+    return true;
+  }
+  next(): Promise<string | null> {
+    if (this.queue.length) return Promise.resolve(this.queue.shift()!);
+    if (this.closed) return Promise.resolve(null);
+    return new Promise((r) => (this.waiter = r));
+  }
+  get empty(): boolean {
+    return this.queue.length === 0;
+  }
+  close(): void {
+    this.closed = true;
+    this.waiter?.(null);
+    this.waiter = undefined;
+  }
+}
+const inboxes = new Map<string, Inbox>();
+
+export function sendMessage(runId: string, text: string): boolean {
+  const inbox = inboxes.get(runId);
+  if (!inbox?.push(text)) return false;
+  appendEvent(runId, { type: 'user', text });
+  return true;
+}
+
+// ── setup ───────────────────────────────────────────────────────────────────
 async function prepareWorkdir(run: Run): Promise<string> {
   const prev = run.continueFrom ? getRun(run.continueFrom) : undefined;
   // A continued session must keep its working directory: the transcript is stored per path
@@ -86,10 +127,25 @@ function textOf(content: unknown): string {
 
 const trim = (s: string) => (s.length > MAX_OUTPUT ? `${s.slice(0, MAX_OUTPUT)}\n… (${s.length - MAX_OUTPUT} more characters)` : s);
 
+function sumUsage(perMessage: Map<string, Tokens & { model: string }>): Usage {
+  const total: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, byModel: {} };
+  for (const u of perMessage.values()) {
+    const m = (total.byModel[u.model] ??= { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 });
+    for (const k of ['input', 'output', 'cacheRead', 'cacheWrite'] as const) {
+      total[k] += u[k];
+      m[k] += u[k];
+    }
+  }
+  return total;
+}
+
+// ── run ─────────────────────────────────────────────────────────────────────
 export async function execute(run: Run, abort: AbortController): Promise<void> {
-  update(run, { status: 'running', startedAt: new Date().toISOString() });
+  update(run, { status: 'running', startedAt: new Date().toISOString(), model: run.model || meta.defaultModel });
   appendEvent(run.id, { type: 'status', text: run.continueFrom ? `Continuing run ${run.continueFrom}` : `Started (${run.trigger})` });
   let report: Report | undefined;
+  const inbox = new Inbox();
+  inboxes.set(run.id, inbox);
   try {
     const repo = await prepareWorkdir(run);
     const prev = run.continueFrom ? getRun(run.continueFrom) : undefined;
@@ -138,7 +194,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
         ),
         tool(
           'submit_report',
-          'Finish the run with a report. Call exactly once, as the last step.',
+          'Finish the run with a report. Call it as the last step (again after follow-up messages, if they change the outcome).',
           {
             status: z.enum(['healthy', 'findings', 'fixed']).describe('"fixed" if you edited files, "findings" for problems you did not fix, "healthy" if nothing is wrong'),
             title: z.string().describe('Conventional commit subject, e.g. fix(grafana): raise memory limit to stop OOMKills'),
@@ -147,17 +203,33 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
           async (r) => {
             report = r;
             appendEvent(run.id, { type: 'report', report: r });
+            update(run, { report: r });
             return { content: [{ type: 'text', text: 'Report recorded.' }] };
           },
         ),
       ],
     });
 
+    // Streamed input: the first prompt, then whatever the user sends while the session is live
+    const first = await buildPrompt(run);
+    appendEvent(run.id, { type: 'user', text: run.kind === 'health' ? 'Scheduled health review' : first, auto: run.kind === 'health' ? first : undefined });
+    const outstanding = new Set<string>();
+    const input = async function* (): AsyncGenerator<SDKUserMessage> {
+      let text: string | null = first;
+      while (text !== null) {
+        const uuid = randomUUID();
+        outstanding.add(uuid);
+        yield { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null, uuid } as SDKUserMessage;
+        text = await inbox.next();
+      }
+    };
+
     const q = query({
-      prompt: await buildPrompt(run),
+      prompt: input(),
       options: {
         cwd: repo,
-        model: MODEL,
+        model: run.model,
+        effort: (run.effort || undefined) as any,
         maxTurns: MAX_TURNS,
         resume: prev?.sessionId,
         permissionMode: 'default',
@@ -174,15 +246,38 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
       },
     });
 
+    const perMessage = new Map<string, Tokens & { model: string }>();
+    let lastUsageSave = 0;
     for await (const msg of q) {
       const m = msg as any;
-      if (m.type === 'system' && m.subtype === 'init') update(run, { sessionId: m.session_id });
-      else if (m.type === 'assistant') {
+      if (m.type === 'system' && m.subtype === 'init') {
+        update(run, { sessionId: m.session_id, model: m.model ?? run.model });
+        if (m.claude_code_version) meta.claudeCodeVersion = m.claude_code_version;
+      } else if (m.type === 'rate_limit_event') {
+        recordLimit(m.rate_limit_info);
+      } else if (m.type === 'assistant') {
         const sub = m.parent_tool_use_id ? true : undefined;
+        const u = m.message?.usage;
+        if (u && m.message?.id) {
+          perMessage.set(m.message.id, {
+            model: m.message.model ?? run.model ?? '',
+            input: u.input_tokens ?? 0,
+            output: u.output_tokens ?? 0,
+            cacheRead: u.cache_read_input_tokens ?? 0,
+            cacheWrite: u.cache_creation_input_tokens ?? 0,
+          });
+          if (Date.now() - lastUsageSave > 3000) {
+            lastUsageSave = Date.now();
+            update(run, { usage: sumUsage(perMessage) });
+          }
+        }
         for (const b of m.message.content ?? []) {
           if (b.type === 'text' && b.text.trim()) appendEvent(run.id, { type: 'text', text: b.text, sub });
           else if (b.type === 'thinking' && b.thinking?.trim()) appendEvent(run.id, { type: 'thinking', text: b.thinking, sub });
-          else if (b.type === 'tool_use') appendEvent(run.id, { type: 'tool_use', id: b.id, name: b.name, input: b.input, sub });
+          else if (b.type === 'tool_use') {
+            appendEvent(run.id, { type: 'tool_use', id: b.id, name: b.name, input: b.input, sub });
+            if (b.name === 'TodoWrite' && Array.isArray(b.input?.todos) && !sub) update(run, { todos: b.input.todos });
+          }
         }
       } else if (m.type === 'user' && Array.isArray(m.message?.content)) {
         for (const b of m.message.content) {
@@ -191,17 +286,34 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
           }
         }
       } else if (m.type === 'result') {
-        update(run, { costUsd: m.total_cost_usd });
-        appendEvent(run.id, { type: 'result', subtype: m.subtype, turns: m.num_turns, costUsd: m.total_cost_usd, durationMs: m.duration_ms });
+        // The SDK's cost is a running total for the session; a continued run only owns the difference
+        const session = Number(m.total_cost_usd ?? 0);
+        const base = prev?.sessionCostUsd ?? 0;
+        const context = await q.getContextUsage({ detail: 'summary' }).then(
+          (c) => ({ percentage: c.percentage, totalTokens: c.totalTokens, maxTokens: c.maxTokens }),
+          () => run.context,
+        );
+        update(run, {
+          sessionCostUsd: session,
+          costUsd: session >= base ? session - base : session,
+          usage: sumUsage(perMessage),
+          context,
+          turns: (run.turns ?? 0) + (m.num_turns ?? 0),
+        });
+        appendEvent(run.id, { type: 'result', subtype: m.subtype, turns: m.num_turns, costUsd: run.costUsd, durationMs: m.duration_ms });
         if (m.subtype !== 'success') throw new Error(`Claude stopped: ${m.subtype}`);
+        for (const u of m.user_message_uuids ?? [...outstanding]) outstanding.delete(u);
+        // Idle with nothing queued: end the input so the session finishes
+        if (outstanding.size === 0 && inbox.empty) inbox.close();
       }
     }
 
+    inbox.close();
     if (abort.signal.aborted) throw new Error('stopped');
     if (!report) throw new Error('Claude finished without submitting a report');
-    update(run, { report });
     await finish(run, repo, report);
   } catch (e) {
+    inbox.close();
     const stopped = abort.signal.aborted;
     const error = stopped ? 'stopped from the web UI' : String((e as Error)?.message ?? e);
     appendEvent(run.id, { type: 'status', text: `Run ${stopped ? 'stopped' : 'failed'}: ${error}` });
@@ -209,6 +321,8 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
     if (!stopped) {
       await notify({ title: '🚨 Claude Agent run failed', message: error, tags: ['rotating_light', 'robot'], priority: 4, click: runUrl(run.id) });
     }
+  } finally {
+    inboxes.delete(run.id);
   }
 }
 

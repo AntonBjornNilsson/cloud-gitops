@@ -1,7 +1,7 @@
 // Yes/no questions: sent to ntfy with one-time action tokens, answerable from the phone or the UI.
 // A run waits on the promise; no answer before the timeout counts as "no".
 import { randomBytes } from 'node:crypto';
-import { appendEvent } from './store.ts';
+import { appendEvent, bus } from './store.ts';
 import { clear, notify, runUrl, BASE_URL } from './ntfy.ts';
 
 export type Answer = 'yes' | 'no';
@@ -9,7 +9,9 @@ type Pending = {
   id: string;
   token: string;
   runId: string;
+  kind: string;
   title: string;
+  createdAt: string;
   resolve: (a: Answer) => void;
   timer: NodeJS.Timeout;
 };
@@ -20,6 +22,8 @@ const pending = new Map<string, Pending>();
 const answered = new Map<string, { answer: Answer; by: string }>();
 
 export const pendingFor = (runId: string) => [...pending.values()].filter((p) => p.runId === runId);
+export const listPending = () =>
+  [...pending.values()].map(({ id, runId, kind, title, createdAt }) => ({ id, runId, kind, title, createdAt }));
 
 export function ask(runId: string, kind: 'command' | 'question' | 'apply', title: string, detail: string): Promise<Answer> {
   const id = randomBytes(6).toString('hex');
@@ -27,7 +31,8 @@ export function ask(runId: string, kind: 'command' | 'question' | 'apply', title
   appendEvent(runId, { type: 'question', qid: id, kind, title, detail });
   return new Promise<Answer>((resolve) => {
     const timer = setTimeout(() => settle(id, 'no', 'timeout'), TIMEOUT_MS);
-    pending.set(id, { id, token, runId, title, resolve, timer });
+    pending.set(id, { id, token, runId, kind, title, createdAt: new Date().toISOString(), resolve, timer });
+    bus.emit('state');
     const answerUrl = (a: Answer) => `${BASE_URL}/answer/${token}/${a}`;
     void notify({
       title: `❓ ${title}`.slice(0, 120),
@@ -54,6 +59,7 @@ function settle(id: string, answer: Answer, by: string): boolean {
   answered.set(p.token, { answer, by });
   if (answered.size > 500) answered.delete(answered.keys().next().value!);
   void clear(`q-${id}`);
+  bus.emit('state');
   p.resolve(answer);
   return true;
 }

@@ -23,6 +23,12 @@ configMapGenerator:
       - app/store.ts
       - app/ntfy.ts
       - app/cron.ts
-      - app/ui.ts
+      - app/meta.ts
+      - app/updater.ts
       - app/rules.md
       - app/health.md
+      - app/index.html
+      - app/app.js
+      - app/app.css
+      - app/favicon.svg
+      - app/manifest.webmanifest

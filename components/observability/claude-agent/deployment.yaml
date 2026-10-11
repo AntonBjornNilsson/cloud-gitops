@@ -4,7 +4,8 @@
 #              No GitHub credentials.
 #   publisher: holds the GitHub App key; on an approved apply it opens a PR and merges it once
 #              `validate` passes. Listens on localhost only and never runs Claude.
-# Code lives in the claude-agent-app ConfigMap (app/), so changes roll out without an image build.
+# Code and web UI live in the claude-agent-app ConfigMap (app/), so changes roll out without an image build.
+# A new image is picked up by the service itself: it restarts this Deployment once idle (app/updater.ts).
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -81,6 +82,12 @@ spec:
             # Unanswered questions count as "no" after this
             - name: QUESTION_TIMEOUT_MINUTES
               value: "240"
+            # Restart onto a newly published :latest image once idle (checks GHCR every 15 min)
+            - name: AUTO_UPDATE
+              value: "true"
+            # Lets Node's fetch trust the API server (the updater patches this Deployment)
+            - name: NODE_EXTRA_CA_CERTS
+              value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             - name: NTFY_SERVER
               value: http://ntfy.ntfy.svc.cluster.local
             - name: NTFY_TOPIC

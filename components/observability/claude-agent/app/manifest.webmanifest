@@ -1,0 +1,10 @@
+{
+  "name": "Claude Agent",
+  "short_name": "Agent",
+  "description": "Claude running in the cluster: health reviews, tasks and approvals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f1e1b",
+  "theme_color": "#1f1e1b",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

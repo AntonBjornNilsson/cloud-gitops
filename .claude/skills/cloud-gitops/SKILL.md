@@ -166,10 +166,12 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   Trivy drilldowns (`trivy_*.jsonnet`, shared `trivy.libsonnet`) read trivy-operator's per-finding info metrics and use MetricsQL.
 - Ollama (`services/ai/ollama/`): don't add `models.pull` to its HelmRelease values (makes Flux reconciliation slow).
 - `components/observability/claude-agent/` (namespace `claude-agent`, Flux Kustomization `system-claude-agent`): always-on
-  Agent SDK service (TypeScript in `app/`, shipped as a ConfigMap and run by Node's type stripping; image in `image/`
-  built by `.github/workflows/claude-agent-image.yaml`, `:latest` + `Always`, so a new image needs a pod restart).
+  Agent SDK service (TypeScript and the web UI in `app/`, shipped as a ConfigMap and run by Node's type stripping; image
+  in `image/` built by `.github/workflows/claude-agent-image.yaml`; `app/updater.ts` restarts the Deployment onto a new
+  `:latest` digest once the service is idle).
   - Runs one session at a time: scheduled health reviews (`SCHEDULES`, UTC cron) and tasks started from the web UI
-    at `claude-agent.${domain}` (Authelia), which shows reasoning, commands, outputs and diffs live and can continue a session.
+    at `claude-agent.${domain}` (Authelia): live transcript with reasoning, messages into a running session, continue a
+    session, model/effort per run, token usage and claude.ai plan limits (`/usage`).
   - `app/policy.ts` decides which Bash commands run directly (read-only kubectl/flux/git/text tools); every other
     command, and the final "apply this diff", is a yes/no question on ntfy topic `claude-agent` (buttons POST to the
     Authelia-free `/answer/<token>/` path; no answer in 4h = no). Rules for Claude: `app/rules.md`, `app/health.md`.
