@@ -83,6 +83,32 @@ spec:
             - name: tun
               mountPath: /dev/net/tun
       containers:
+        # Solves Cloudflare challenges for indexers (Prowlarr indexer proxy at http://localhost:8191/).
+        # Same pod on purpose: the clearance cookies only work from the IP that solved the
+        # challenge, so FlareSolverr must leave through the same VPN as Prowlarr.
+        - name: flaresolverr
+          image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
+          env:
+            - name: TZ
+              value: "Europe/Stockholm"
+            - name: LOG_LEVEL
+              value: info
+          ports:
+            - name: flaresolverr
+              containerPort: 8191
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: flaresolverr
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            # Each solve runs a headless Chromium
+            limits:
+              memory: 1Gi
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest
           env:
