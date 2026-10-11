@@ -6,7 +6,6 @@ FROM node:26-bookworm-slim
 ARG CLAUDE_CODE_VERSION=2.1.289
 ARG KUBECTL_VERSION=v1.37.1
 ARG FLUX_VERSION=2.9.6
-# Version lookups for the updates run (scripts/check-updates.sh)
 ARG HELM_VERSION=4.3.0
 ARG CRANE_VERSION=0.22.1
 ARG YQ_VERSION=4.54.1
