@@ -14,7 +14,8 @@ const BRANCH = process.env.GITHUB_BRANCH ?? 'main';
 const APP_DIR = process.env.GITHUB_APP_DIR ?? '/etc/github-app';
 const CHECK = process.env.REQUIRED_CHECK ?? 'validate';
 const CHECK_TIMEOUT_MS = 20 * 60_000;
-const FORBIDDEN = /^(cluster\/flux-system\/|\.github\/|\.claude\/|components\/storage\/longhorn\/config\/restore\/|components\/observability\/claude-agent\/)/;
+// The agent may change its own component; like everything else it only lands after a yes on the diff
+const FORBIDDEN = /^(cluster\/flux-system\/|\.github\/|\.claude\/|components\/storage\/longhorn\/config\/restore\/)/;
 
 type Job = { state: 'running' | 'merged' | 'failed'; message: string; prUrl?: string };
 const jobs = new Map<string, Job>();

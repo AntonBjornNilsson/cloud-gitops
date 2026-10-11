@@ -160,8 +160,10 @@ createServer(async (req, res) => {
       const cors = answerCors(req);
       if (req.method === 'OPTIONS') return send(res, 204, 'text/plain', '', cors);
       if (post && (m = path.match(/^\/answer\/([\w-]+)\/(yes|no)$/))) {
-        const ok = answerByToken(m[1], m[2] as Answer);
-        return send(res, ok ? 200 : 404, 'text/plain', ok ? `Answered ${m[2]}.\n` : 'Unknown or already answered.\n', cors);
+        const r = answerByToken(m[1], m[2] as Answer);
+        if (r.status === 'answered') return send(res, 200, 'text/plain', `Answered ${m[2]}.\n`, cors);
+        if (r.status === 'already') return send(res, 409, 'text/plain', `Already answered: ${r.answer} (via ${r.by}).\n`, cors);
+        return send(res, 410, 'text/plain', 'This question expired or the service restarted.\n', cors);
       }
     }
 

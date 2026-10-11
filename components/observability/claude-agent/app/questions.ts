@@ -2,7 +2,7 @@
 // A run waits on the promise; no answer before the timeout counts as "no".
 import { randomBytes } from 'node:crypto';
 import { appendEvent } from './store.ts';
-import { notify, runUrl, BASE_URL } from './ntfy.ts';
+import { clear, notify, runUrl, BASE_URL } from './ntfy.ts';
 
 export type Answer = 'yes' | 'no';
 type Pending = {
@@ -16,6 +16,8 @@ type Pending = {
 
 const TIMEOUT_MS = Number(process.env.QUESTION_TIMEOUT_MINUTES ?? 240) * 60_000;
 const pending = new Map<string, Pending>();
+// Recently answered tokens, so a late tap on a stale notification gets a clear reply
+const answered = new Map<string, { answer: Answer; by: string }>();
 
 export const pendingFor = (runId: string) => [...pending.values()].filter((p) => p.runId === runId);
 
@@ -32,6 +34,7 @@ export function ask(runId: string, kind: 'command' | 'question' | 'apply', title
       message: detail,
       tags: ['question', 'robot'],
       priority: 4,
+      sequence_id: `q-${id}`,
       click: runUrl(runId),
       actions: [
         { action: 'http', label: '✅ Yes', url: answerUrl('yes'), method: 'POST', clear: true },
@@ -48,13 +51,20 @@ function settle(id: string, answer: Answer, by: string): boolean {
   pending.delete(id);
   clearTimeout(p.timer);
   appendEvent(p.runId, { type: 'answer', qid: id, answer, by });
+  answered.set(p.token, { answer, by });
+  if (answered.size > 500) answered.delete(answered.keys().next().value!);
+  void clear(`q-${id}`);
   p.resolve(answer);
   return true;
 }
 
-export function answerByToken(token: string, answer: Answer): boolean {
+export type TokenResult = { status: 'answered' } | { status: 'already'; answer: Answer; by: string } | { status: 'unknown' };
+
+export function answerByToken(token: string, answer: Answer): TokenResult {
   const p = [...pending.values()].find((q) => q.token === token);
-  return p ? settle(p.id, answer, 'ntfy') : false;
+  if (p && settle(p.id, answer, 'ntfy')) return { status: 'answered' };
+  const prev = answered.get(token);
+  return prev ? { status: 'already', ...prev } : { status: 'unknown' };
 }
 
 export const answerById = (id: string, answer: Answer) => settle(id, answer, 'web');

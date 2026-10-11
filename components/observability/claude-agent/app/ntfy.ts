@@ -15,6 +15,8 @@ export type Notification = {
   priority?: 1 | 2 | 3 | 4 | 5;
   actions?: NtfyAction[];
   click?: string;
+  // Lets a later clear() dismiss this notification on every device
+  sequence_id?: string;
 };
 
 export const runUrl = (id: string) => `${BASE_URL}/runs/${id}`;
@@ -35,5 +37,19 @@ export async function notify(n: Notification): Promise<void> {
     console.log(`[ntfy] '${n.title}' -> ${res.status}`);
   } catch (e) {
     console.error(`[ntfy] '${n.title}' failed: ${e}`);
+  }
+}
+
+// Mark a notification read and dismiss it everywhere (e.g. a question answered from the web UI)
+export async function clear(sequenceId: string): Promise<void> {
+  try {
+    const res = await fetch(`${SERVER}/${TOPIC}/${sequenceId}/clear`, {
+      method: 'PUT',
+      headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {},
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) console.error(`[ntfy] clear ${sequenceId} -> ${res.status}`);
+  } catch (e) {
+    console.error(`[ntfy] clear ${sequenceId} failed: ${e}`);
   }
 }

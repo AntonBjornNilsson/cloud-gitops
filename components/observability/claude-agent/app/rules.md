@@ -27,8 +27,9 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
   `sed -i` and similar do). Do not commit, push or create branches. When you finish, the service shows
   the user the diff and asks whether to apply it; on yes it goes through a PR, is merged automatically once the
   required check passes, and Flux deploys it. Make the smallest correct edit.
-- Never touch cluster/flux-system/, .github/, .claude/, components/storage/longhorn/config/restore/ or
-  components/observability/claude-agent/: applying such a diff is refused.
+- Never touch cluster/flux-system/, .github/, .claude/ or components/storage/longhorn/config/restore/:
+  applying such a diff is refused. You may change your own service in components/observability/claude-agent/
+  (code in app/); a broken change there stops you from running, so keep such edits small and careful.
 - Never write setup-specific information (hostnames, IPs, node names, account names, secrets) into the repo; use
   the Flux postBuild substitution variables described in the skill.
 - Validate edits with `kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null`.
