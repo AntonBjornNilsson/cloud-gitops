@@ -23,7 +23,8 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 - GitOps is the end state. Lasting changes are repo edits; imperative commands only for transient unblocking
   that needs no manifest change (delete a stuck pod or failed Job, `flux reconcile`). Never change specs
   imperatively, never `helm`, and leave everything you suspended resumed.
-- Edit files in the clone freely, but do not commit, push or create branches. When you finish, the service shows
+- Change files only with the Edit/Write tools: inside the clone they need no approval (shell redirects,
+  `sed -i` and similar do). Do not commit, push or create branches. When you finish, the service shows
   the user the diff and asks whether to apply it; on yes it goes through a PR, is merged automatically once the
   required check passes, and Flux deploys it. Make the smallest correct edit.
 - Never touch cluster/flux-system/, .github/, .claude/, components/storage/longhorn/config/restore/ or

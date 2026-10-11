@@ -80,10 +80,23 @@ setInterval(() => {
 }, 15_000);
 
 // ── HTTP ────────────────────────────────────────────────────────────────────
-const send = (res: ServerResponse, code: number, type: string, body: string) => {
-  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store' });
+const send = (res: ServerResponse, code: number, type: string, body: string, headers: Record<string, string> = {}) => {
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': 'no-store', ...headers });
   res.end(body);
 };
+
+// The ntfy web app runs action buttons as a cross-origin fetch, so /answer/ allows that origin only
+const NTFY_ORIGIN = process.env.NTFY_WEB_URL ? new URL(process.env.NTFY_WEB_URL).origin : '';
+function answerCors(req: IncomingMessage): Record<string, string> {
+  if (!NTFY_ORIGIN || req.headers.origin !== NTFY_ORIGIN) return {};
+  return {
+    'Access-Control-Allow-Origin': NTFY_ORIGIN,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '600',
+    Vary: 'Origin',
+  };
+}
 const json = (res: ServerResponse, code: number, body: unknown) => send(res, code, 'application/json', JSON.stringify(body));
 
 async function readJson(req: IncomingMessage): Promise<any> {
@@ -143,9 +156,13 @@ createServer(async (req, res) => {
     if (get && path === '/healthz') return json(res, 200, { status: 'ok', running: current?.run.id ?? null, queued: queue.length });
 
     // ntfy action buttons (the only path the Ingress exposes without Authelia)
-    if (post && (m = path.match(/^\/answer\/([\w-]+)\/(yes|no)$/))) {
-      const ok = answerByToken(m[1], m[2] as Answer);
-      return send(res, ok ? 200 : 404, 'text/plain', ok ? `Answered ${m[2]}.\n` : 'Unknown or already answered.\n');
+    if (path.startsWith('/answer/')) {
+      const cors = answerCors(req);
+      if (req.method === 'OPTIONS') return send(res, 204, 'text/plain', '', cors);
+      if (post && (m = path.match(/^\/answer\/([\w-]+)\/(yes|no)$/))) {
+        const ok = answerByToken(m[1], m[2] as Answer);
+        return send(res, ok ? 200 : 404, 'text/plain', ok ? `Answered ${m[2]}.\n` : 'Unknown or already answered.\n', cors);
+      }
     }
 
     if (get && path === '/') return send(res, 200, 'text/html; charset=utf-8', indexPage(SCHEDULES));

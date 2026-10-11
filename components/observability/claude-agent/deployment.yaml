@@ -85,6 +85,9 @@ spec:
               value: http://ntfy.ntfy.svc.cluster.local
             - name: NTFY_TOPIC
               value: claude-agent
+            # Origin allowed to POST answers (the ntfy web app runs buttons as browser fetches)
+            - name: NTFY_WEB_URL
+              value: "https://ntfy.${domain}"
             - name: NTFY_TOKEN
               valueFrom:
                 secretKeyRef:
