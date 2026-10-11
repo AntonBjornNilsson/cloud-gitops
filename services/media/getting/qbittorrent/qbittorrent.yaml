@@ -239,6 +239,11 @@ metadata:
     gethomepage.dev/pod-selector: "app=qbittorrent"
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - qbit.${domain}
+        - qbittorrent.${domain}
+      secretName: qbittorrent-tls
   rules:
     - host: qbit.${domain}
       http:
@@ -279,7 +284,7 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
-    # Download client API calls from Radarr, Sonarr, Prowlarr
+    # Download client API calls from Radarr, Sonarr, Prowlarr, Dispatcharr
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: radarr
@@ -287,6 +292,8 @@ spec:
             io.kubernetes.pod.namespace: sonarr
         - matchLabels:
             io.kubernetes.pod.namespace: prowlarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: dispatcharr
       toPorts:
         - ports:
             - port: "8080"

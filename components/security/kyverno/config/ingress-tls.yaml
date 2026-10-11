@@ -33,9 +33,7 @@ spec:
       patchStrategicMerge:
         spec:
           +(tls):
-          - hosts:
-            # Dynamically extract all hosts from the ingress rules
-            - "{{ request.object.spec.rules[0].host }}"
+          - hosts: "{{ request.object.spec.rules[].host }}"
             secretName: "{{ request.object.metadata.name }}-tls"
 
   - name: add-ingress-class
