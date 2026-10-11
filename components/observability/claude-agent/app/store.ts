@@ -33,6 +33,8 @@ export type Run = {
   costUsd?: number;
   sessionCostUsd?: number;
   usage?: Usage;
+  // The SDK's running per-model totals for the session (a continued run subtracts its parent's)
+  sessionUsage?: Usage;
   context?: { percentage: number; totalTokens: number; maxTokens: number };
   todos?: Todo[];
   turns?: number;

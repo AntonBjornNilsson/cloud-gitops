@@ -139,6 +139,30 @@ function sumUsage(perMessage: Map<string, Tokens & { model: string }>): Usage {
   return total;
 }
 
+function fromModelUsage(mu: Record<string, any> | undefined): Usage | undefined {
+  if (!mu || !Object.keys(mu).length) return undefined;
+  const total: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, byModel: {} };
+  for (const [model, u] of Object.entries(mu)) {
+    const t = { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0, cacheRead: u.cacheReadInputTokens ?? 0, cacheWrite: u.cacheCreationInputTokens ?? 0 };
+    total.byModel[model] = t;
+    for (const k of ['input', 'output', 'cacheRead', 'cacheWrite'] as const) total[k] += t[k];
+  }
+  return total;
+}
+
+// A resumed session's totals include its parent's; only subtract when that is clearly the case
+function subtractUsage(session: Usage, parent: Usage | undefined): Usage {
+  const keys = ['input', 'output', 'cacheRead', 'cacheWrite'] as const;
+  if (!parent || keys.some((k) => session[k] < parent[k])) return session;
+  const out: Usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, byModel: {} };
+  for (const k of keys) out[k] = session[k] - parent[k];
+  for (const [model, t] of Object.entries(session.byModel)) {
+    const p = parent.byModel[model];
+    out.byModel[model] = p ? { input: t.input - p.input, output: t.output - p.output, cacheRead: t.cacheRead - p.cacheRead, cacheWrite: t.cacheWrite - p.cacheWrite } : t;
+  }
+  return out;
+}
+
 // ── run ─────────────────────────────────────────────────────────────────────
 export async function execute(run: Run, abort: AbortController): Promise<void> {
   update(run, { status: 'running', startedAt: new Date().toISOString(), model: run.model || meta.defaultModel });
@@ -286,9 +310,10 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
           }
         }
       } else if (m.type === 'result') {
-        // The SDK's cost is a running total for the session; a continued run only owns the difference
+        // The SDK's cost and modelUsage are running totals for the session; a continued run only owns the difference
         const session = Number(m.total_cost_usd ?? 0);
         const base = prev?.sessionCostUsd ?? 0;
+        const sessionUsage = fromModelUsage(m.modelUsage);
         const context = await q.getContextUsage({ detail: 'summary' }).then(
           (c) => ({ percentage: c.percentage, totalTokens: c.totalTokens, maxTokens: c.maxTokens }),
           () => run.context,
@@ -296,7 +321,8 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
         update(run, {
           sessionCostUsd: session,
           costUsd: session >= base ? session - base : session,
-          usage: sumUsage(perMessage),
+          sessionUsage,
+          usage: sessionUsage ? subtractUsage(sessionUsage, prev?.sessionUsage) : sumUsage(perMessage),
           context,
           turns: (run.turns ?? 0) + (m.num_turns ?? 0),
         });

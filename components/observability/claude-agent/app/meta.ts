@@ -3,7 +3,7 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { bus, DATA } from './store.ts';
 
 export type Model = { value: string; displayName: string; description?: string; efforts: string[] };
@@ -19,8 +19,9 @@ export const meta = {
 };
 
 try {
-  const require = createRequire(import.meta.url);
-  meta.sdkVersion = require('@anthropic-ai/claude-agent-sdk/package.json').version;
+  // package.json isn't in the SDK's exports map; find it next to the resolved entry point
+  const entry = createRequire(import.meta.url).resolve('@anthropic-ai/claude-agent-sdk');
+  meta.sdkVersion = JSON.parse(readFileSync(join(dirname(entry), 'package.json'), 'utf8')).version;
 } catch {
   // version is cosmetic
 }
