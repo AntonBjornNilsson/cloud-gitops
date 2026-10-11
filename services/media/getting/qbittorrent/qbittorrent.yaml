@@ -113,9 +113,8 @@ spec:
               value: "8080"
             - name: IP6TABLES
               value: "off"
-            # Keep cluster DNS: gluetun's own forwarder is dead whenever the tunnel is down
-            - name: DNS_KEEP_NAMESERVER
-              value: "on"
+            # DNS stays on gluetun's own resolver (no DNS_KEEP_NAMESERVER): tracker lookups must not
+            # leak outside the tunnel, and nothing in this pod needs cluster names.
           # Healthy only while the tunnel is up. No liveness probe: gluetun reconnects by itself.
           startupProbe:
             exec:
