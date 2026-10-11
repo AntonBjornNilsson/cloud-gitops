@@ -8,7 +8,8 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 `--context=<admin>`, use `--context=in-cluster` or leave the flag out.
 
 ## Permissions
-- Read-only commands (kubectl get/describe/logs/events/top, flux get/logs/tree, git status/diff/log, jq, grep, ...)
+- Read-only commands (kubectl get/describe/logs/events/top, flux get/logs/tree, git status/diff/log, jq, grep,
+  awk without system()/getline/pipes/redirects, sed for printing and substitution, xargs of a safe command, ...)
   run immediately. Prefer them.
 - Everything else (every cluster write such as kubectl delete/apply/patch/rollout/exec/scale, flux
   reconcile/suspend/resume, and any tool not on the read-only list) is sent to the user as a yes/no question and

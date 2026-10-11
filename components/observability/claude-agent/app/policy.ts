@@ -4,7 +4,10 @@ export type Verdict = { ok: true } | { ok: false; reason: string };
 
 const TEXT_TOOLS = new Set([
   'jq', 'grep', 'egrep', 'fgrep', 'head', 'tail', 'sort', 'uniq', 'wc', 'cut', 'tr', 'cat', 'ls', 'echo',
-  'printf', 'date', 'column', 'diff', 'base64', 'true', 'test', 'nl', 'tac', 'cd', 'pwd', 'sleep',
+  'printf', 'date', 'column', 'diff', 'base64', 'true', 'false', 'test', '[', 'nl', 'tac', 'cd', 'pwd', 'sleep',
+  'comm', 'paste', 'fold', 'fmt', 'expand', 'unexpand', 'rev', 'seq', 'od', 'cmp', 'basename', 'dirname',
+  'realpath', 'readlink', 'stat', 'du', 'df', 'md5sum', 'sha1sum', 'sha256sum', 'wc', 'id', 'whoami',
+  'uname', 'hostname', 'nproc', 'free', 'uptime', 'ps', 'which', 'type', 'zcat',
 ]);
 const KUBECTL_READ = new Set([
   'get', 'describe', 'logs', 'top', 'explain', 'api-resources', 'api-versions', 'version', 'cluster-info',
@@ -14,8 +17,14 @@ const KUBECTL_SUB_READ: Record<string, Set<string>> = {
   auth: new Set(['can-i', 'whoami']),
   config: new Set(['view', 'get-contexts', 'current-context', 'get-clusters']),
 };
-const FLUX_READ = new Set(['get', 'logs', 'tree', 'stats', 'events', 'check', 'version', 'diff', 'export', 'trace', 'debug']);
-const GIT_READ = new Set(['status', 'diff', 'log', 'show', 'ls-files', 'grep', 'blame', 'rev-parse', 'show-ref', 'restore', 'checkout']);
+const FLUX_READ = new Set(['get', 'logs', 'tree', 'stats', 'events', 'check', 'version', 'diff', 'export', 'trace', 'debug', 'build']);
+const GIT_READ = new Set([
+  'status', 'diff', 'log', 'show', 'ls-files', 'ls-tree', 'grep', 'blame', 'rev-parse', 'show-ref', 'restore', 'checkout',
+  'cat-file', 'describe', 'shortlog', 'reflog', 'merge-base', 'name-rev', 'rev-list', 'whatchanged',
+]);
+// /proc/<pid>/environ holds the pod's tokens; only a few harmless /proc files may be read
+const SAFE_PROC = /^\/proc\/(cpuinfo|meminfo|loadavg|uptime|version|mounts|self\/(status|limits|cgroup))$/;
+export const sensitivePath = (p: string) => /^\/proc(\/|$)/.test(p) && !SAFE_PROC.test(p);
 const FIND_WRITES = new Set(['-exec', '-execdir', '-ok', '-okdir', '-delete', '-fprint', '-fprint0', '-fprintf', '-fls']);
 // kubectl global flags that take a separate value, so the verb is found after them
 const KUBECTL_VALUE_FLAGS = new Set([
@@ -146,11 +155,82 @@ function readsSecretContents(args: string[]): boolean {
   return false;
 }
 
+// awk is read-only unless its program runs commands, reads other input, writes files or reads the environment
+function checkAwk(args: string[]): Verdict {
+  let program: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '-f' || a.startsWith('--file') || /^-[^-]*f/.test(a) && !/^-F/.test(a)) return deny('awk with a script file');
+    if (a === '-F' || a === '-v') {
+      i++;
+      continue;
+    }
+    if (a.startsWith('-')) continue;
+    program = a;
+    break;
+  }
+  if (program === undefined) return { ok: true };
+  if (/system\s*\(|getline|ENVIRON|\||\b(print|printf)\b[^;}]*>|close\s*\(|fflush/.test(program)) {
+    return deny('awk program runs commands, reads input or writes output');
+  }
+  return { ok: true };
+}
+
+// sed is read-only for printing and substitution; no in-place edits, script files or w/e/r commands
+function checkSed(args: string[]): Verdict {
+  const scripts: string[] = [];
+  let sawScript = false;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '-i' || a.startsWith('-i') || a.startsWith('--in-place') || a === '-f' || a.startsWith('--file') || a === '-s') {
+      return deny('sed editing in place or reading a script file');
+    }
+    if (a === '-e' || a === '--expression') {
+      scripts.push(args[++i] ?? '');
+      sawScript = true;
+      continue;
+    }
+    if (/^-[nErzu]+$/.test(a) || a === '--quiet' || a === '--silent' || a === '--regexp-extended') continue;
+    if (a.startsWith('-')) return deny(`sed ${a}`);
+    if (!sawScript) {
+      scripts.push(a);
+      sawScript = true;
+    }
+  }
+  const simple = /^(\d+|\$|\/[^/]*\/)?(,(\d+|\$|\/[^/]*\/))?!?[pdq=]$/;
+  for (const script of scripts) {
+    for (const cmd of script.split(/[;\n]/).map((c) => c.trim()).filter(Boolean)) {
+      if (simple.test(cmd)) continue;
+      const sub = cmd.match(/^(\d+|\$|\/[^/]*\/)?(,(\d+|\$|\/[^/]*\/))?s(.)(.*)\4(.*)\4([^\s]*)$/);
+      if (sub && !/[we]/.test(sub[7]) && !sub[5].includes(sub[4]) && !sub[6].includes(sub[4])) continue;
+      return deny(`sed command "${cmd.slice(0, 40)}" is not a print or substitution`);
+    }
+  }
+  return { ok: true };
+}
+
+// xargs runs another command; it is as safe as that command
+const XARGS_VALUE_FLAGS = new Set(['-n', '-I', '-P', '-L', '-d', '-s', '-E', '-a', '--max-args', '--replace', '--max-procs', '--delimiter']);
+function checkXargs(args: string[]): Verdict {
+  let i = 0;
+  for (; i < args.length; i++) {
+    if (XARGS_VALUE_FLAGS.has(args[i])) i++;
+    else if (!args[i].startsWith('-')) break;
+  }
+  const rest = args.slice(i);
+  return rest.length ? checkSimple(rest) : { ok: true };
+}
+
 function checkSimple(words: string[]): Verdict {
   const [cmd, ...args] = words;
   if (/^\w+=/.test(cmd)) return deny('sets environment variables');
+  const paths = [cmd, ...args].flatMap((a) => [a, a.replace(/^[^=]*=/, '')]);
+  if (paths.some(sensitivePath)) return deny('reads /proc (process environments hold tokens)');
   const name = cmd.split('/').pop()!;
   if (TEXT_TOOLS.has(name)) return { ok: true };
+  if (name === 'awk' || name === 'gawk' || name === 'mawk') return checkAwk(args);
+  if (name === 'sed') return checkSed(args);
+  if (name === 'xargs') return checkXargs(args);
   if (name === 'find') return args.some((a) => FIND_WRITES.has(a)) ? deny('find with an action') : { ok: true };
   if (name === 'kubectl') {
     const { verb, rest } = kubectlVerb(args);

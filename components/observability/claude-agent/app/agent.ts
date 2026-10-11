@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { appendEvent, getRun, saveRun, type Report, type Run, type Tokens, type Usage } from './store.ts';
 import { ask, cancelRun } from './questions.ts';
-import { checkCommand } from './policy.ts';
+import { checkCommand, sensitivePath } from './policy.ts';
 import { clip, notify, runUrl } from './ntfy.ts';
 import { meta, readLimits } from './meta.ts';
 import { check, recordEvent, STOP_AT } from './limits.ts';
@@ -198,8 +198,13 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
     const canUseTool: CanUseTool = async (name, input, opts): Promise<PermissionResult> => {
       if (!guard()) return { behavior: 'deny', message: 'Stopped to stay under the plan limit.', interrupt: true };
       const allow: PermissionResult = { behavior: 'allow', updatedInput: input };
-      if (opts.mcpServer?.source === 'sdk' || SAFE_TOOLS.has(name)) return allow;
       let reason = `${name} is not pre-approved`;
+      const target = String(input.file_path ?? input.path ?? '');
+      if (opts.mcpServer?.source === 'sdk') return allow;
+      if (SAFE_TOOLS.has(name)) {
+        if (!target || !sensitivePath(resolve(repo, target))) return allow;
+        reason = 'reads /proc (process environments hold tokens)';
+      }
       if (EDIT_TOOLS.has(name)) {
         const p = String(input.file_path ?? input.notebook_path ?? '');
         const rel = relative(repo, resolve(repo, p));
