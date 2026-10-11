@@ -75,11 +75,11 @@ spec:
               value: "X-Forwarded-For"
             # Log in through Authelia; the master password still decrypts the
             # vault. Existing accounts link on first SSO login by email, new
-            # ones still need an invite. Password login stays as a fallback.
+            # ones still need an invite. SSO_ONLY: no email + master password login.
             - name: SSO_ENABLED
               value: "true"
             - name: SSO_ONLY
-              value: "false"
+              value: "true"
             # Must equal the issuer in Authelia's discovery document
             - name: SSO_AUTHORITY
               value: "https://auth.${domain}"
