@@ -78,10 +78,15 @@ spec:
       # reports are built on top of them.
       infraAssessmentScannerEnabled: false
       clusterComplianceEnabled: false
-      # Per-CVE metrics would explode cardinality; per-severity counts are
-      # enough for alerting and the dashboard.
+      # Per-severity counts drive the alerts; the per-finding info metrics
+      # feed the Grafana drilldown dashboards (CVE, failed check, secret
+      # rule). With ignoreUnfixed + MEDIUM+ this is ~12k series.
       metricsFindingsEnabled: true
-      metricsVulnIdEnabled: false
+      metricsVulnIdEnabled: true
+      metricsExposedSecretInfo: true
+      metricsConfigAuditInfo: true
+      metricsRbacAssessmentInfo: true
+      metricsImageInfo: true
     trivy:
       mode: ClientServer
       # Only report what an image update can fix, from MEDIUM up. Keeps the
