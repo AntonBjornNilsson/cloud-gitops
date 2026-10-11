@@ -36,6 +36,52 @@ spec:
       labels:
         app: prowlarr
     spec:
+      # Indexer traffic goes out through the VPN. gluetun is a native sidecar, so Prowlarr only
+      # starts once the tunnel is up; its kill switch blocks egress until then.
+      initContainers:
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.41.3
+          restartPolicy: Always
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: "private internet access"
+            - name: VPN_TYPE
+              value: "openvpn"
+            - name: OPENVPN_USER
+              value: "${pia_user}"
+            - name: OPENVPN_PASSWORD
+              value: "${pia_password}"
+            - name: SERVER_REGIONS
+              value: "${pia_region}"
+            # Cluster traffic (Radarr, Sonarr, qBittorrent, DNS) bypasses the tunnel
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+            - name: FIREWALL_INPUT_PORTS
+              value: "9696"
+            - name: IP6TABLES
+              value: "off"
+            # Keep cluster DNS: gluetun's own forwarder is dead whenever the tunnel is down
+            - name: DNS_KEEP_NAMESERVER
+              value: "on"
+          # Healthy only while the tunnel is up. No liveness probe: gluetun reconnects by itself.
+          startupProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 5
+            failureThreshold: 120
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
       containers:
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest
@@ -87,6 +133,9 @@ spec:
         - name: config
           persistentVolumeClaim:
             claimName: prowlarr-config
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
 ---
 apiVersion: v1
 kind: Service
