@@ -1,4 +1,4 @@
-# Daily cluster review. Two containers sharing /work:
+# Twice-daily cluster review. Two containers sharing /work:
 #   investigate (init): Claude with cluster-admin kubectl, edits a clone of the repo. No GitHub credentials.
 #   publish:            guards and validates the diff, pushes a claude/* branch and opens the PR as
 #                       the GitHub App, then registers it with holmes-remediation for the ntfy buttons.
@@ -8,7 +8,7 @@ metadata:
   name: claude-agent
   namespace: holmesgpt
 spec:
-  schedule: "30 6 * * *"
+  schedule: "30 6,18 * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

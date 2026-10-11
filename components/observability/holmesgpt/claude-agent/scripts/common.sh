@@ -6,8 +6,8 @@ WORK=/work/repo
 OUT=/work/out
 REPORT=$OUT/report.json
 
-# Hand the result to holmes-remediation; without a PR number it sends a plain ntfy alert,
-# or an all-clear when STATUS=healthy
+# Hand the result to holmes-remediation. With STATUS set (run ended without a PR) it sends an
+# all-clear listing problems that need a human; otherwise, without a PR number, a plain ntfy alert
 register() { # title summary [pr_number pr_url]
   local n="" u=""
   if [ $# -ge 4 ]; then n=$3; u=$4; fi

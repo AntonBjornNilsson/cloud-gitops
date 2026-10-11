@@ -169,7 +169,8 @@ data:
         _post_ntfy({
             "topic":   NTFY_TOPIC,
             "title":   title,
-            "message": message[:2000],
+            "message": message[:4000],
+            "markdown": True,
             "tags":    tags or ["white_check_mark"]
         })
 
@@ -293,11 +294,19 @@ data:
                 title       = data.get("title") or "Cluster finding"
                 description = data.get("summary") or ""
                 pr_number   = data.get("pr_number")
-                if data.get("status") == "healthy":
-                    send_ntfy_followup(f"✅ Claude Agent: {title[:80]}",
-                        description or "Cluster was looked into and everything was good.",
+                status      = data.get("status")
+                # Run finished without a PR: all-clear, listing anything that needs a human
+                if status == "healthy":
+                    send_ntfy_followup("✅ Claude Agent: all clear",
+                        "Looked into the cluster and everything was good, no PR needed.\n\n" + description,
                         tags=["white_check_mark", "robot"])
                     self._json(200, {"status": "notified_healthy"}); return
+                if status in ("findings", "fixed"):
+                    send_ntfy_followup("✅ Claude Agent: all clear, with notable problems",
+                        "Looked into the cluster. Nothing the agent can fix with a PR; "
+                        f"these need manual action:\n\n**{title}**\n\n{description}",
+                        tags=["white_check_mark", "warning", "robot"])
+                    self._json(200, {"status": "notified_findings"}); return
                 if not pr_number:
                     send_ntfy_failure(title, description or "No details available.")
                     self._json(200, {"status": "notified_no_pr"}); return
@@ -395,7 +404,7 @@ spec:
       labels:
         app: holmes-remediation
       annotations:
-        holmes-remediation/script-revision: "7"
+        holmes-remediation/script-revision: "8"
     spec:
       serviceAccountName: holmes-remediation
       containers:
