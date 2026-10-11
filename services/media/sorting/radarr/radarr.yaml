@@ -230,6 +230,14 @@ spec:
         - ports:
             - port: "6767"
               protocol: TCP
+    # Library refresh on import (Jellyfin connection)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP
     # External metadata APIs (TMDB, Radarr API)
     - toEntities:
         - world
