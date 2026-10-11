@@ -10,6 +10,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: prowlarr-config
   namespace: prowlarr
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
   accessModes:
     - ReadWriteOnce
@@ -23,6 +25,9 @@ metadata:
   name: prowlarr
   namespace: prowlarr
 spec:
+  # Single SQLite database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: prowlarr
@@ -41,9 +46,40 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Stockholm"
+            # Authelia guards the UI; without this Prowlarr forces its own login on first start.
+            # The API still requires the API key (Radarr/Sonarr connect in-cluster, not via Traefik).
+            - name: PROWLARR__AUTH__METHOD
+              value: External
+            - name: PROWLARR__AUTH__REQUIRED
+              value: Enabled
           ports:
             - name: http
               containerPort: 9696
+          startupProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -70,6 +106,14 @@ kind: Ingress
 metadata:
   name: prowlarr
   namespace: prowlarr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Prowlarr"
+    gethomepage.dev/description: "Indexer Manager"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "prowlarr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=prowlarr"
 spec:
   ingressClassName: traefik
   rules:
@@ -108,6 +152,14 @@ spec:
             io.kubernetes.pod.namespace: radarr
         - matchLabels:
             io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP
+    # Dispatcharr's arr integration
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: dispatcharr
       toPorts:
         - ports:
             - port: "9696"

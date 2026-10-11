@@ -11,7 +11,7 @@ resources:
   # Media
   # Getting
   # - media/getting/qbittorrent
-  # - media/getting/prowlarr
+  - media/getting/prowlarr
   # - media/getting/jellyseerr
   - media/getting/dispatcharr
 
