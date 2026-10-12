@@ -18,7 +18,7 @@ resources:
   # Sorting
   - media/sorting/radarr
   - media/sorting/sonarr
-  # - media/sorting/bazarr
+  - media/sorting/bazarr
 
   # Playing
   - media/playing/jellyfin
