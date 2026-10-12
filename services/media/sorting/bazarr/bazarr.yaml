@@ -55,18 +55,21 @@ spec:
             - name: http
               containerPort: 6767
           startupProbe:
-            tcpSocket:
+            httpGet:
+              path: /api/system/ping
               port: http
             periodSeconds: 10
             failureThreshold: 30
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /api/system/ping
               port: http
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 5
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /api/system/ping
               port: http
             periodSeconds: 10
             timeoutSeconds: 5
