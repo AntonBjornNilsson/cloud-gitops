@@ -21,7 +21,8 @@ spec:
   storageClassName: longhorn
   resources:
     requests:
-      storage: 5Gi
+      # Jellyfin refuses to start with under 2GiB free in /config/data
+      storage: 10Gi
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
