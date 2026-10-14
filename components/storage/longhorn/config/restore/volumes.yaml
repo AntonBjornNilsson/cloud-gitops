@@ -286,57 +286,6 @@ spec:
     namespace: grafana
     name: grafana-pvc
 ---
-# PVC: jellyfin/jellyfin-config
-# Volume: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
-# Backup: backup-4bfb7ba6a09b4a66 (2026-10-11T02:01:43Z)
-apiVersion: longhorn.io/v1beta2
-kind: Volume
-metadata:
-  name: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
-  namespace: longhorn-system
-  annotations:
-    kustomize.toolkit.fluxcd.io/prune: disabled
-    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
-  labels:
-    longhornvolume: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
-    recurring-job-group.longhorn.io/backup: enabled
-spec:
-  accessMode: rwx
-  fromBackup: "${s3_bucket_longhorn}?backup=backup-4bfb7ba6a09b4a66&volume=pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168"
-  frontend: blockdev
-  numberOfReplicas: 3
-  size: "5368709120"
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
-  annotations:
-    kustomize.toolkit.fluxcd.io/prune: disabled
-    kustomize.toolkit.fluxcd.io/ssa: IfNotPresent
-    pv.kubernetes.io/bound-by-controller: "yes"
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: longhorn
-  volumeMode: Filesystem
-  csi:
-    driver: driver.longhorn.io
-    fsType: ext4
-    volumeHandle: pvc-9402a6ba-eb87-4a10-9e46-36b5e78ce168
-    volumeAttributes:
-      migratable: "true"
-      numberOfReplicas: "3"
-      share: "true"
-  claimRef:
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    namespace: jellyfin
-    name: jellyfin-config
----
 # PVC: jellyfin/jellyfin-config-local
 # Volume: pvc-c4fc3225-d3eb-43e8-be16-a26014023a44
 # Backup: backup-688d9b22bc114db0 (2026-10-14T02:02:08Z)
