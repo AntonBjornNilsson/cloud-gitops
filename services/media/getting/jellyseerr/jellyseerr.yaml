@@ -196,6 +196,14 @@ spec:
         - ports:
             - port: "8096"
               protocol: TCP
+    # Push notifications to ntfy (topic seerr)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ntfy
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
     # Metadata and TMDB API access
     - toEntities:
         - world
