@@ -106,9 +106,10 @@ spec:
             requests:
               cpu: 50m
               memory: 256Mi
-            # Each solve runs a headless Chromium
+            # Each solve runs its own headless Chromium; requests stuck on an unsolvable
+            # challenge pile up until they time out, so leave room for several at once
             limits:
-              memory: 1Gi
+              memory: 2Gi
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest
           env:
