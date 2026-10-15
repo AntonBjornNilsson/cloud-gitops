@@ -32,6 +32,7 @@ resources:
   - management/homepage
   # - management/github-runners
   - management/ntfy
+  # - management/unifi  # needs unifi_lb_ip, unifi_mongo_password
 
   # Security
   - security/vaultwarden
