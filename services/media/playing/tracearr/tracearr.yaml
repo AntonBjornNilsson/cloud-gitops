@@ -160,6 +160,9 @@ spec:
       labels:
         app: tracearr-redis
     spec:
+      securityContext:
+        # redis group in the image; its entrypoint does not chown /data
+        fsGroup: 1000
       containers:
         - name: redis
           image: redis:8-alpine
