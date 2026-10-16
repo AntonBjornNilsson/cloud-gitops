@@ -297,7 +297,7 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
-    # Download client API calls from Radarr, Sonarr, Prowlarr, Dispatcharr
+    # Download client API calls from Radarr, Sonarr, Prowlarr, Dispatcharr, Cleanuparr
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: radarr
@@ -307,6 +307,8 @@ spec:
             io.kubernetes.pod.namespace: prowlarr
         - matchLabels:
             io.kubernetes.pod.namespace: dispatcharr
+        - matchLabels:
+            io.kubernetes.pod.namespace: cleanuparr
       toPorts:
         - ports:
             - port: "8080"

@@ -42,6 +42,8 @@ stringData:
       - "alertmanager:claude-agent:wo"
       # Seerr request/issue notifications (token set in Seerr's ntfy agent settings)
       - "alertmanager:seerr:wo"
+      # Cleanuparr strike/removal notifications (same token)
+      - "alertmanager:cleanuparr:wo"
     auth-tokens:
       - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"
 ---
@@ -82,7 +84,7 @@ spec:
         app: ntfy
       annotations:
         # Bump to restart ntfy after changing server.yml
-        config-version: "4"
+        config-version: "5"
     spec:
       containers:
         - name: ntfy

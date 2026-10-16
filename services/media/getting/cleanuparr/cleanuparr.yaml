@@ -1,0 +1,215 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cleanuparr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cleanuparr-config
+  namespace: cleanuparr
+  labels:
+    backup.longhorn.io/enabled: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cleanuparr
+  namespace: cleanuparr
+spec:
+  # Single SQLite database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cleanuparr
+  template:
+    metadata:
+      labels:
+        app: cleanuparr
+    spec:
+      # Same node and media mount as qBittorrent, so the unlinked-download cleaner sees the
+      # paths qBittorrent reports
+      nodeSelector:
+        kubernetes.io/hostname: ${media_node}
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          effect: "NoSchedule"
+      containers:
+        - name: cleanuparr
+          image: ghcr.io/cleanuparr/cleanuparr:2.10.10
+          env:
+            - name: PORT
+              value: "11011"
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Stockholm"
+          ports:
+            - name: http
+              containerPort: 11011
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: cleanuparr-config
+        - name: data
+          hostPath:
+            path: /mnt/hdd/Shared
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cleanuparr
+  namespace: cleanuparr
+spec:
+  selector:
+    app: cleanuparr
+  ports:
+    - name: http
+      port: 11011
+      targetPort: 11011
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cleanuparr
+  namespace: cleanuparr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Cleanuparr"
+    gethomepage.dev/description: "Download Queue Cleanup"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "cleanuparr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=cleanuparr"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: cleanuparr.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cleanuparr
+                port:
+                  number: 11011
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cleanuparr
+  namespace: cleanuparr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: cleanuparr
+  ingress:
+    # Web UI access from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "11011"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Queue inspection, removal and blocklisting on Radarr and Sonarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: radarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "8989"
+              protocol: TCP
+    # Torrent inspection and file blocking on qBittorrent
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: qbittorrent
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Push notifications to ntfy (topic cleanuparr)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: ntfy
+      toPorts:
+        - ports:
+            - port: "80"
+              protocol: TCP
+    # Malware blocklists (GitHub) and update checks
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
