@@ -154,12 +154,15 @@ spec:
   endpointSelector: {}
   ingress:
     # Web and streaming ingress from Traefik, Jellyseerr, and local LAN;
-    # library refresh notifications from Radarr and Sonarr
+    # library refresh notifications from Radarr and Sonarr;
+    # session polling from Tracearr
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
         - matchLabels:
             io.kubernetes.pod.namespace: jellyseerr
+        - matchLabels:
+            io.kubernetes.pod.namespace: tracearr
         - matchLabels:
             io.kubernetes.pod.namespace: radarr
         - matchLabels:

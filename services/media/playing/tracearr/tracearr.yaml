@@ -1,0 +1,383 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tracearr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-db
+  namespace: tracearr
+  labels:
+    backup.longhorn.io/enabled: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Poster cache and Tracearr's own database dumps
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-data
+  namespace: tracearr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Job queues; upstream runs Redis with AOF persistence
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-redis
+  namespace: tracearr
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: tracearr
+  namespace: tracearr
+type: Opaque
+stringData:
+  db-password: "${tracearr_db_password}"
+  # Rotating jwt-secret logs everyone out, unpairs mobile devices and makes
+  # stored notification secrets unreadable
+  jwt-secret: "${tracearr_jwt_secret}"
+  cookie-secret: "${tracearr_cookie_secret}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracearr-db
+  namespace: tracearr
+spec:
+  # Single postgres data directory on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tracearr-db
+  template:
+    metadata:
+      labels:
+        app: tracearr-db
+    spec:
+      securityContext:
+        # postgres user in the timescaledb-ha image
+        fsGroup: 1000
+      containers:
+        - name: db
+          # Pinned like upstream: a PostgreSQL major bump needs a dump/restore
+          image: timescale/timescaledb-ha:pg18.4-ts2.29.1
+          args:
+            - postgres
+            - -c
+            - timescaledb.license=timescale
+            - -c
+            - timescaledb.max_tuples_decompressed_per_dml_transaction=100000
+            - -c
+            - max_locks_per_transaction=4096
+            - -c
+            - timescaledb.telemetry_level=off
+            - -c
+            - max_connections=150
+          env:
+            - name: POSTGRES_DB
+              value: tracearr
+            - name: POSTGRES_USER
+              value: tracearr
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tracearr
+                  key: db-password
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "tracearr", "-d", "tracearr"]
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            # PGDATA is <mount>/data, which keeps lost+found out of the data directory
+            - name: db-data
+              mountPath: /home/postgres/pgdata
+            - name: shm
+              mountPath: /dev/shm
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: tracearr-db
+        # Upstream runs with shm_size 512mb; the container default (64Mi) breaks large imports
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracearr-db
+  namespace: tracearr
+spec:
+  selector:
+    app: tracearr-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracearr-redis
+  namespace: tracearr
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tracearr-redis
+  template:
+    metadata:
+      labels:
+        app: tracearr-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:8-alpine
+          args: ["redis-server", "--appendonly", "yes"]
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: tracearr-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracearr-redis
+  namespace: tracearr
+spec:
+  selector:
+    app: tracearr-redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tracearr
+  namespace: tracearr
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: tracearr
+  template:
+    metadata:
+      labels:
+        app: tracearr
+    spec:
+      securityContext:
+        # The image runs as UID 1001 and ignores PUID/PGID
+        fsGroup: 1001
+      initContainers:
+        # The volume hides the image's /data; Tracearr needs both directories to exist
+        - name: mkdirs
+          image: ghcr.io/connorgallopo/tracearr:latest
+          command: ["mkdir", "-p", "/data/backup", "/data/tracearr/image-cache"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      containers:
+        - name: tracearr
+          image: ghcr.io/connorgallopo/tracearr:latest
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOST
+              value: "0.0.0.0"
+            - name: TZ
+              value: "Europe/Stockholm"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tracearr
+                  key: db-password
+            - name: DATABASE_URL
+              value: postgres://tracearr:$(DB_PASSWORD)@tracearr-db:5432/tracearr
+            - name: REDIS_URL
+              value: redis://tracearr-redis:6379
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tracearr
+                  key: jwt-secret
+            - name: COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tracearr
+                  key: cookie-secret
+            # Traefik is the single proxy hop (X-Forwarded-Proto/Host for secure cookies)
+            - name: TRUST_PROXY
+              value: "true"
+            - name: LOG_LEVEL
+              value: info
+          ports:
+            - name: http
+              containerPort: 3000
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 384Mi
+            limits:
+              memory: 1536Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: tracearr-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tracearr
+  namespace: tracearr
+spec:
+  selector:
+    app: tracearr
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tracearr
+  namespace: tracearr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Tracearr"
+    gethomepage.dev/description: "Playback Tracking"
+    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/icon: "tracearr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=tracearr"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: tracearr.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tracearr
+                port:
+                  number: 3000
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: tracearr
+  namespace: tracearr
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web UI access from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Tracearr to its database and Redis
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Session polling and library sync on Jellyfin
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP
+    # Plex sign-in, notification destinations
+    - toEntities:
+        - world
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
