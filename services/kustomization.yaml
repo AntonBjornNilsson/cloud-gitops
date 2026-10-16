@@ -22,7 +22,7 @@ resources:
 
   # Playing
   - media/playing/jellyfin
-  # - media/playing/tracearr  # needs tracearr_db_password, tracearr_jwt_secret, tracearr_cookie_secret
+  - media/playing/tracearr
   # - media/playing/stalkarr  # needs ghcr_owner, ghcr_pull_auth, stalkarr_secret, stalkarr_devices
 
   # Home Automation
