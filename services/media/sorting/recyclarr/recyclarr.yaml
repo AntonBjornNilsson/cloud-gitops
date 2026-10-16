@@ -1,0 +1,160 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: recyclarr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: recyclarr-api-keys
+  namespace: recyclarr
+stringData:
+  SONARR_API_KEY: "${sonarr_api_key}"
+  RADARR_API_KEY: "${radarr_api_key}"
+---
+# TRaSH Guides 1080p profiles. Recyclarr owns these profiles and their custom formats:
+# edit scores here, not in the Sonarr/Radarr UI (the next sync overwrites UI changes).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: recyclarr-config
+  namespace: recyclarr
+data:
+  recyclarr.yml: |
+    # yaml-language-server: $schema=https://schemas.recyclarr.dev/v8/config-schema.json
+    sonarr:
+      sonarr:
+        base_url: http://sonarr.sonarr.svc.cluster.local:8989
+        api_key: !env_var SONARR_API_KEY
+        delete_old_custom_formats: true
+
+        quality_definition:
+          type: series
+
+        quality_profiles:
+          - trash_id: 72dae194fc92bf828f32cde7744e51a1  # WEB-1080p
+            reset_unmatched_scores:
+              enabled: true
+
+        custom_format_groups:
+          add:
+            # Block x265 for HD releases (mostly re-encodes; x265 only pays off for 4K/HDR)
+            - trash_id: 158188097a58d7687dee647e04af0da3  # [Optional] Golden Rule HD
+            - trash_id: 85fae4a2294965b75710ef2989c850eb  # [Streaming Services] HD/UHD boost
+            - trash_id: 59c3af66780d08332fdc64e68297098f  # [Unwanted] Unwanted Formats
+            - trash_id: d920fd959d220306888f40b6f38e1578  # [Optional] Season Packs
+
+    radarr:
+      radarr:
+        base_url: http://radarr.radarr.svc.cluster.local:7878
+        api_key: !env_var RADARR_API_KEY
+        delete_old_custom_formats: true
+
+        quality_definition:
+          type: movie
+
+        quality_profiles:
+          - trash_id: d1d67249d3890e49bc12e275d989a7e9  # HD Bluray + WEB
+            reset_unmatched_scores:
+              enabled: true
+
+        custom_format_groups:
+          add:
+            - trash_id: f8bf8eab4617f12dfdbd16303d8da245  # [Optional] Golden Rule HD
+            - trash_id: a3ac6af01d78e4f21fcb75f601ac96df  # [Unwanted] Unwanted Formats
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: recyclarr
+  namespace: recyclarr
+spec:
+  schedule: "0 4 * * *"
+  timeZone: "Europe/Stockholm"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: recyclarr
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: recyclarr
+              image: ghcr.io/recyclarr/recyclarr:8.8.0
+              # Any argument makes the entrypoint run the CLI once instead of its own cron
+              args: ["sync"]
+              env:
+                - name: TZ
+                  value: "Europe/Stockholm"
+              envFrom:
+                - secretRef:
+                    name: recyclarr-api-keys
+              resources:
+                requests:
+                  cpu: 20m
+                  memory: 128Mi
+                limits:
+                  memory: 512Mi
+              volumeMounts:
+                # Writable: Recyclarr clones the TRaSH guides repo and keeps a cache here
+                - name: config
+                  mountPath: /config
+                - name: recyclarr-config
+                  mountPath: /config/recyclarr.yml
+                  subPath: recyclarr.yml
+          volumes:
+            - name: config
+              emptyDir: {}
+            - name: recyclarr-config
+              configMap:
+                name: recyclarr-config
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: recyclarr
+  namespace: recyclarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: recyclarr
+  ingress: []
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Profile and custom format sync
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "8989"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: radarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # TRaSH guides and config templates (git clone from GitHub)
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

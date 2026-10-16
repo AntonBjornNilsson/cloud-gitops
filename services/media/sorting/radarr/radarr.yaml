@@ -196,6 +196,14 @@ spec:
         - ports:
             - port: "7878"
               protocol: TCP
+    # Profile and custom format sync from Recyclarr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: recyclarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
     # Health checks and probes
     - fromEntities:
         - host

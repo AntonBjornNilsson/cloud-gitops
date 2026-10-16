@@ -20,6 +20,7 @@ resources:
   - media/sorting/radarr
   - media/sorting/sonarr
   - media/sorting/bazarr
+  # - media/sorting/recyclarr  # needs sonarr_api_key, radarr_api_key
 
   # Playing
   - media/playing/jellyfin
