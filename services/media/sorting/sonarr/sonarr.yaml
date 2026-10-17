@@ -120,10 +120,13 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Sonarr"
     gethomepage.dev/description: "TV Management"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Library"
     gethomepage.dev/icon: "sonarr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=sonarr"
+    gethomepage.dev/widget.type: "sonarr"
+    gethomepage.dev/widget.url: "http://sonarr.sonarr.svc.cluster.local:8989"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_SONARR_API_KEY}}"
 spec:
   ingressClassName: traefik
   rules:
@@ -200,6 +203,14 @@ spec:
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: recyclarr
+      toPorts:
+        - ports:
+            - port: "8989"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "8989"

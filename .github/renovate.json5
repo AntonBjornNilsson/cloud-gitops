@@ -34,6 +34,17 @@
   kubernetes: {
     managerFilePatterns: ["/(^|/)(components|services)/.+\\.ya?ml$/"],
   },
+  // HelmRelease values that pin an image as `repository:` + `tag:` lines
+  customManagers: [
+    {
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)(components|services)/.+\\.ya?ml$/"],
+      matchStrings: [
+        "repository: (?<depName>[a-z0-9.-]+\\.[a-z]+/[^\\s]+)\\n\\s+tag: \"?(?<currentValue>[^\\s\"]+)\"?",
+      ],
+      datasourceTemplate: "docker",
+    },
+  ],
   packageRules: [
     // `:latest` images can't get version bumps; pin them to a digest
     // (`image:latest@sha256:...`) so they only change through a PR and

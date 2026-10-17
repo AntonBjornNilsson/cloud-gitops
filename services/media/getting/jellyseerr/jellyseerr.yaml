@@ -107,7 +107,7 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Seerr"
     gethomepage.dev/description: "Media Requests"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Media"
     gethomepage.dev/icon: "jellyseerr.png"
     gethomepage.dev/href: "https://requests.${domain}"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default

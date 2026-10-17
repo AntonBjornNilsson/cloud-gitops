@@ -120,10 +120,13 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Radarr"
     gethomepage.dev/description: "Movie Management"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Library"
     gethomepage.dev/icon: "radarr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=radarr"
+    gethomepage.dev/widget.type: "radarr"
+    gethomepage.dev/widget.url: "http://radarr.radarr.svc.cluster.local:7878"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_RADARR_API_KEY}}"
 spec:
   ingressClassName: traefik
   rules:
@@ -200,6 +203,14 @@ spec:
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: recyclarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "7878"

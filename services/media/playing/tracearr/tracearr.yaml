@@ -318,7 +318,7 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Tracearr"
     gethomepage.dev/description: "Playback Tracking"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Media"
     gethomepage.dev/icon: "tracearr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=tracearr"

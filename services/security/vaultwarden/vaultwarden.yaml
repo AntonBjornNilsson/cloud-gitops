@@ -153,7 +153,7 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Vaultwarden"
     gethomepage.dev/description: "Password Manager"
-    gethomepage.dev/group: "Infrastructure & Management"
+    gethomepage.dev/group: "Infrastructure"
     gethomepage.dev/icon: "vaultwarden.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=vaultwarden"

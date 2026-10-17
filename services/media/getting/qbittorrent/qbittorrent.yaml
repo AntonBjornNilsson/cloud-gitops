@@ -246,10 +246,13 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "qBittorrent"
     gethomepage.dev/description: "Download Client"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Downloads"
     gethomepage.dev/icon: "qbittorrent.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=qbittorrent"
+    # No credentials: the pod CIDR is in the WebUI auth whitelist
+    gethomepage.dev/widget.type: "qbittorrent"
+    gethomepage.dev/widget.url: "http://qbittorrent.qbittorrent.svc.cluster.local:8080"
 spec:
   ingressClassName: traefik
   tls:
@@ -297,7 +300,8 @@ spec:
         - ports:
             - port: "8080"
               protocol: TCP
-    # Download client API calls from Radarr, Sonarr, Prowlarr, Dispatcharr, Cleanuparr
+    # Download client API calls from Radarr, Sonarr, Prowlarr, Dispatcharr, Cleanuparr;
+    # dashboard widget from Homepage
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: radarr
@@ -309,6 +313,8 @@ spec:
             io.kubernetes.pod.namespace: dispatcharr
         - matchLabels:
             io.kubernetes.pod.namespace: cleanuparr
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "8080"

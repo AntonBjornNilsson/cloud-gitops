@@ -284,7 +284,7 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "UniFi"
     gethomepage.dev/description: "Network controller"
-    gethomepage.dev/group: "Infrastructure & Management"
+    gethomepage.dev/group: "Infrastructure"
     gethomepage.dev/icon: "unifi.png"
     gethomepage.dev/pod-selector: "app=unifi"
 spec:

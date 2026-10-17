@@ -114,7 +114,7 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Bazarr"
     gethomepage.dev/description: "Subtitles"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Library"
     gethomepage.dev/icon: "bazarr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=bazarr"

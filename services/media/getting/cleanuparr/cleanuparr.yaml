@@ -118,7 +118,7 @@ metadata:
     gethomepage.dev/enabled: "true"
     gethomepage.dev/name: "Cleanuparr"
     gethomepage.dev/description: "Download Queue Cleanup"
-    gethomepage.dev/group: "Media & Entertainment"
+    gethomepage.dev/group: "Downloads"
     gethomepage.dev/icon: "cleanuparr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=cleanuparr"

@@ -61,7 +61,7 @@ spec:
         gethomepage.dev/enabled: "true"
         gethomepage.dev/name: "Grafana"
         gethomepage.dev/description: "Monitoring & Metrics"
-        gethomepage.dev/group: "Infrastructure & Management"
+        gethomepage.dev/group: "Observability"
         gethomepage.dev/icon: "grafana.png"
         # Homepage looks for app.kubernetes.io/name=<ingress> by default
         gethomepage.dev/pod-selector: "app=grafana"

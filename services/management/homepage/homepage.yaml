@@ -41,6 +41,11 @@ spec:
       name: RetryOnFailure
       retryInterval: 3m
   values:
+    # The chart's appVersion lags far behind; v2 adds built-in auth (the
+    # HOMEPAGE_AUTH_*/OIDC env below) and the Jellyfin 10.12 widget API
+    image:
+      repository: ghcr.io/gethomepage/homepage
+      tag: v2.5.0
     enableRbac: true
     serviceAccount:
       create: true
@@ -65,6 +70,14 @@ spec:
         value: "Authelia"
       - name: HOMEPAGE_OIDC_AUTO_LOGIN
         value: "true"
+      # API keys for service widgets; Ingress annotations reference them as
+      # {{HOMEPAGE_VAR_*}} so the keys never land in Ingress metadata
+      - name: HOMEPAGE_VAR_SONARR_API_KEY
+        value: "${sonarr_api_key}"
+      - name: HOMEPAGE_VAR_RADARR_API_KEY
+        value: "${radarr_api_key}"
+      - name: HOMEPAGE_VAR_JELLYFIN_API_KEY
+        value: "${jellyfin_api_key}"
     ingress:
       main:
         enabled: true
@@ -78,16 +91,128 @@ spec:
                 pathType: Prefix
     config:
       settings:
-        title: Homelab Dashboard
+        title: Homelab
+        description: Homelab dashboard
+        favicon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/homepage.png
         theme: dark
         color: slate
-        headerStyle: boxed
-        cardBlur: sm
+        background:
+          image: https://images.unsplash.com/photo-1502790671504-542ad42d5189?auto=format&fit=crop&w=2560&q=80
+          blur: sm
+          saturate: 50
+          brightness: 50
+          opacity: 50
+        headerStyle: clean
+        cardStyle: hairline
+        blockStyle: refined
+        font: plexData
+        statusStyle: dot
+        iconStyle: theme
+        useEqualHeights: true
+        hideVersion: true
+        target: _blank
+        quicklaunch:
+          searchDescriptions: true
+          showSearchSuggestions: true
+          provider: duckduckgo
+        providers:
+          longhorn:
+            url: http://longhorn-frontend.longhorn-system.svc.cluster.local
+        # Group order and shape; groups come from gethomepage.dev/group
+        # Ingress annotations, plus services/bookmarks below
+        layout:
+          - Media:
+              style: row
+              columns: 4
+              icon: mdi-play-circle-outline
+          - Library:
+              style: row
+              columns: 3
+              icon: mdi-bookshelf
+          - Downloads:
+              style: row
+              columns: 3
+              icon: mdi-download-circle-outline
+          - AI:
+              style: row
+              columns: 2
+              icon: mdi-robot-outline
+          - Observability:
+              style: row
+              columns: 4
+              icon: mdi-chart-timeline-variant
+          - Infrastructure:
+              style: row
+              columns: 4
+              icon: mdi-server-network
+          - Demo:
+              icon: mdi-flask-outline
+              initiallyCollapsed: true
+          - Everyday:
+              style: row
+              columns: 4
+              icon: mdi-earth
+          - Streaming:
+              style: row
+              columns: 4
+              icon: mdi-television-play
+      widgets:
+        - greeting:
+            text_size: xl
+            text: Homelab
+        - datetime:
+            text_size: l
+            format:
+              dateStyle: long
+              timeStyle: short
+              hourCycle: h23
+        - kubernetes:
+            cluster:
+              show: true
+              cpu: true
+              memory: true
+              showLabel: true
+              label: cluster
+            nodes:
+              show: true
+              cpu: true
+              memory: true
+              showLabel: true
+        - longhorn:
+            expanded: true
+            total: true
+            labels: true
+            nodes: false
+        - search:
+            provider: duckduckgo
+            target: _blank
+            showSearchSuggestions: true
       kubernetes:
         mode: cluster
-      services: []
+      # Merged with the auto-discovered Observability group
+      services:
+        - Observability:
+            - Cluster Health:
+                icon: victoriametrics.png
+                description: Alerts, pods and Flux
+                href: https://grafana.${domain}
+                widget:
+                  type: prometheusmetric
+                  url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+                  refreshInterval: 30000
+                  metrics:
+                    - label: Alerts
+                      query: count(ALERTS{alertstate="firing",severity=~"warning|critical"}) or vector(0)
+                    - label: Flux not ready
+                      query: count(gotk_resource_info{ready="False"}) or vector(0)
+                    - label: Pods
+                      query: sum(kube_pod_status_phase{phase="Running"})
+                    - label: Probes up
+                      query: round(100 * avg(probe_success))
+                      format:
+                        type: percent
       bookmarks:
-        - Developer:
+        - Everyday:
             - GitHub:
                 - icon: github.png
                   href: https://github.com
