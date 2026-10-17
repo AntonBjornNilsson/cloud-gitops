@@ -72,9 +72,9 @@ spec:
                 sed -i "/^\[$SECTION\]/a $(echo "$1" | sed 's/\\/\\\\/g')=$2" "$CONF.tmp"
                 mv "$CONF.tmp" "$CONF"
               }
-              # Stop seeding after 1 day or a 3.0 ratio, whichever comes first. Imports are
+              # Stop seeding after 1 day or a 1.0 ratio, whichever comes first. Imports are
               # hardlinks, so removing the content only drops the copy in downloading/.
-              set_pref 'Session\GlobalMaxRatio' 3 BitTorrent
+              set_pref 'Session\GlobalMaxRatio' 1 BitTorrent
               set_pref 'Session\GlobalMaxSeedingMinutes' 1440 BitTorrent
               set_pref 'Session\ShareLimitAction' RemoveWithContent BitTorrent
               # Authelia is the only login: requests from the pod network (Traefik, Radarr, Sonarr,
