@@ -146,10 +146,12 @@ spec:
     matchLabels:
       app: jellyseerr
   ingress:
-    # Web UI access from Traefik
+    # Web UI access from Traefik; Jellyfin Enhanced proxies requests and discovery
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyfin
       toPorts:
         - ports:
             - port: "5055"
