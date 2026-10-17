@@ -11,6 +11,22 @@ metadata:
     gethomepage.dev/description: "Distributed Block Storage"
     gethomepage.dev/group: "Infrastructure"
     gethomepage.dev/icon: "longhorn.png"
+    # Homepage has no Longhorn service widget; query Longhorn's metrics in
+    # VictoriaMetrics instead. Robustness is a state set (1 on the current state);
+    # detached volumes report "unknown", so only degraded/faulted count
+    gethomepage.dev/widget.type: "prometheusmetric"
+    gethomepage.dev/widget.url: "http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428"
+    gethomepage.dev/widget.metrics.0.label: "Volumes"
+    gethomepage.dev/widget.metrics.0.query: "count(count(longhorn_volume_robustness) by (volume))"
+    gethomepage.dev/widget.metrics.1.label: "Unhealthy"
+    gethomepage.dev/widget.metrics.1.query: "count(longhorn_volume_robustness{state=~\"degraded|faulted\"} == 1) or vector(0)"
+    gethomepage.dev/widget.metrics.2.label: "Data"
+    gethomepage.dev/widget.metrics.2.query: "sum(longhorn_volume_actual_size_bytes)"
+    gethomepage.dev/widget.metrics.2.format.type: "bytes"
+    # Least recent "last backup" across backup-enabled volumes (ms for the date format)
+    gethomepage.dev/widget.metrics.3.label: "All backed up"
+    gethomepage.dev/widget.metrics.3.query: "min(longhorn_volume_last_backup_at > 0) * 1000"
+    gethomepage.dev/widget.metrics.3.format.type: "relativeDate"
 
 spec:
   ingressClassName: traefik
