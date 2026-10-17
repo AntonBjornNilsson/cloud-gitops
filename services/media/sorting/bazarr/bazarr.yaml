@@ -118,6 +118,9 @@ metadata:
     gethomepage.dev/icon: "bazarr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=bazarr"
+    gethomepage.dev/widget.type: "bazarr"
+    gethomepage.dev/widget.url: "http://bazarr.bazarr.svc.cluster.local:6767"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_BAZARR_API_KEY}}"
 spec:
   ingressClassName: traefik
   rules:
@@ -156,6 +159,14 @@ spec:
             io.kubernetes.pod.namespace: radarr
         - matchLabels:
             io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "6767"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "6767"

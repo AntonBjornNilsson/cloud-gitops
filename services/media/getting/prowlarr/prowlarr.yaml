@@ -190,6 +190,9 @@ metadata:
     gethomepage.dev/icon: "prowlarr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=prowlarr"
+    gethomepage.dev/widget.type: "prowlarr"
+    gethomepage.dev/widget.url: "http://prowlarr.prowlarr.svc.cluster.local:9696"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_PROWLARR_API_KEY}}"
 spec:
   ingressClassName: traefik
   rules:
@@ -236,6 +239,14 @@ spec:
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: dispatcharr
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "9696"

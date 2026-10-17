@@ -78,6 +78,12 @@ spec:
         value: "${radarr_api_key}"
       - name: HOMEPAGE_VAR_JELLYFIN_API_KEY
         value: "${jellyfin_api_key}"
+      - name: HOMEPAGE_VAR_PROWLARR_API_KEY
+        value: "${prowlarr_api_key}"
+      - name: HOMEPAGE_VAR_BAZARR_API_KEY
+        value: "${bazarr_api_key}"
+      - name: HOMEPAGE_VAR_SEERR_API_KEY
+        value: "${seerr_api_key}"
     ingress:
       main:
         enabled: true

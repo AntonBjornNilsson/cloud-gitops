@@ -112,6 +112,9 @@ metadata:
     gethomepage.dev/href: "https://requests.${domain}"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=jellyseerr"
+    gethomepage.dev/widget.type: "seerr"
+    gethomepage.dev/widget.url: "http://jellyseerr.jellyseerr.svc.cluster.local:5055"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_SEERR_API_KEY}}"
 spec:
   ingressClassName: traefik
   rules:
@@ -152,6 +155,14 @@ spec:
             io.kubernetes.pod.namespace: traefik
         - matchLabels:
             io.kubernetes.pod.namespace: jellyfin
+      toPorts:
+        - ports:
+            - port: "5055"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "5055"
