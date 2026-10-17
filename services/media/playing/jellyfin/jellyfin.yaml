@@ -203,6 +203,14 @@ spec:
         - ports:
             - port: "9191"
               protocol: TCP
+    # Jellyfin Enhanced: requests and discovery proxied to Seerr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyseerr
+      toPorts:
+        - ports:
+            - port: "5055"
+              protocol: TCP
     # Metadata, plugin repositories, cover art
     - toEntities:
         - world
