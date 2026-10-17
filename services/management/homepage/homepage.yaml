@@ -84,6 +84,8 @@ spec:
         value: "${bazarr_api_key}"
       - name: HOMEPAGE_VAR_SEERR_API_KEY
         value: "${seerr_api_key}"
+      - name: HOMEPAGE_VAR_TRACEARR_API_KEY
+        value: "${tracearr_api_key}"
     ingress:
       main:
         enabled: true

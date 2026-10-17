@@ -322,6 +322,10 @@ metadata:
     gethomepage.dev/icon: "tracearr.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=tracearr"
+    gethomepage.dev/widget.type: "tracearr"
+    gethomepage.dev/widget.url: "http://tracearr.tracearr.svc.cluster.local:3000"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_TRACEARR_API_KEY}}"
+    gethomepage.dev/widget.view: "both"
 spec:
   ingressClassName: traefik
   rules:
@@ -348,6 +352,14 @@ spec:
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
       toPorts:
         - ports:
             - port: "3000"
