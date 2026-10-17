@@ -65,6 +65,14 @@ spec:
         gethomepage.dev/icon: "grafana.png"
         # Homepage looks for app.kubernetes.io/name=<ingress> by default
         gethomepage.dev/pod-selector: "app=grafana"
+        # admin/stats needs a Grafana server admin (service accounts can't be);
+        # alerts live in Alertmanager (Cluster Health card), so stats only
+        gethomepage.dev/widget.type: "grafana"
+        gethomepage.dev/widget.version: "2"
+        gethomepage.dev/widget.url: "http://grafana-service.grafana.svc.cluster.local:3000"
+        gethomepage.dev/widget.username: "{{HOMEPAGE_VAR_GRAFANA_USER}}"
+        gethomepage.dev/widget.password: "{{HOMEPAGE_VAR_GRAFANA_PASSWORD}}"
+        gethomepage.dev/widget.fields: '["dashboards", "datasources"]'
     spec:
       ingressClassName: traefik
       rules:

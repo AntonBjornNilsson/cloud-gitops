@@ -26,6 +26,14 @@ spec:
               protocol: TCP
             - port: "9090"
               protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
     # Intra-namespace traffic (operator talking to grafana, etc.)
     - fromEndpoints:
         - {}

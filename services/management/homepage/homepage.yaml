@@ -86,6 +86,10 @@ spec:
         value: "${seerr_api_key}"
       - name: HOMEPAGE_VAR_TRACEARR_API_KEY
         value: "${tracearr_api_key}"
+      - name: HOMEPAGE_VAR_GRAFANA_USER
+        value: "${grafana_admin_user}"
+      - name: HOMEPAGE_VAR_GRAFANA_PASSWORD
+        value: "${grafana_admin_password}"
     ingress:
       main:
         enabled: true
