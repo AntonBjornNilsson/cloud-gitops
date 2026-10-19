@@ -27,6 +27,11 @@ stringData:
     attachment-total-size-limit: "5G"
     attachment-file-size-limit: "25M"
     behind-proxy: true
+    # Defaults (burst 60, +1 per 5s) are shared by everything on the alertmanager
+    # token; the bridge posts one message per alert, so a big alert group plus
+    # Alertmanager retries keeps the bucket empty and every notify fails with 429.
+    visitor-request-limit-burst: 300
+    visitor-request-limit-replenish: "1s"
     upstream-base-url: "https://ntfy.sh"
     # Prometheus metrics on a separate port (not reachable via the Ingress)
     metrics-listen-http: ":9090"
@@ -84,7 +89,7 @@ spec:
         app: ntfy
       annotations:
         # Bump to restart ntfy after changing server.yml
-        config-version: "5"
+        config-version: "6"
     spec:
       containers:
         - name: ntfy
