@@ -97,6 +97,17 @@ spec:
           annotations:
             summary: "Round-trip time to {{ $labels.instance }} is {{ $value | humanizeDuration }}"
 
+    - name: vpn
+      rules:
+        - alert: VPNTunnelDown
+          expr: kube_pod_init_container_status_ready{container="gluetun"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "VPN tunnel down in {{ $labels.namespace }}"
+            description: "The gluetun sidecar has failed its health check for 5 minutes, so the kill switch keeps {{ $labels.namespace }} offline. Check `kubectl -n {{ $labels.namespace }} logs {{ $labels.pod }} -c gluetun`; a whole region failing to handshake means switching the PIA region."
+
     - name: traefik
       rules:
         - alert: TraefikDown

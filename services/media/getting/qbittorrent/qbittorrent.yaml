@@ -134,6 +134,13 @@ spec:
               command: ["/gluetun-entrypoint", "healthcheck"]
             periodSeconds: 5
             failureThreshold: 120
+          # Kill switch at the Service level: while the tunnel is down the pod is NotReady, so
+          # Traefik and the other apps stop routing to it instead of it looking healthy.
+          readinessProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 10
+            failureThreshold: 3
           resources:
             requests:
               cpu: 20m

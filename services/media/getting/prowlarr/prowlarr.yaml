@@ -64,15 +64,21 @@ spec:
               value: "9696"
             - name: IP6TABLES
               value: "off"
-            # Keep cluster DNS: gluetun's own forwarder is dead whenever the tunnel is down
-            - name: DNS_KEEP_NAMESERVER
-              value: "on"
+            # DNS stays on gluetun's own resolver (no DNS_KEEP_NAMESERVER): indexer lookups must not
+            # leak outside the tunnel. It still answers cluster names via the cluster nameserver.
           # Healthy only while the tunnel is up. No liveness probe: gluetun reconnects by itself.
           startupProbe:
             exec:
               command: ["/gluetun-entrypoint", "healthcheck"]
             periodSeconds: 5
             failureThreshold: 120
+          # Kill switch at the Service level: while the tunnel is down the pod is NotReady, so
+          # Traefik and the other apps stop routing to it instead of it looking healthy.
+          readinessProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 10
+            failureThreshold: 3
           resources:
             requests:
               cpu: 10m

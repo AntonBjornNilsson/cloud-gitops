@@ -208,11 +208,9 @@ spec:
               value: "9191"
             - name: IP6TABLES
               value: "off"
-            # Gluetun otherwise rewrites the pod-shared resolv.conf to its own
-            # forwarder, which is dead whenever the tunnel is down, so web/celery
-            # cannot resolve dispatcharr-db/redis. Keep cluster DNS instead.
-            - name: DNS_KEEP_NAMESERVER
-              value: "on"
+            # DNS stays on gluetun's own resolver (no DNS_KEEP_NAMESERVER): stream lookups must not
+            # leak outside the tunnel. It also answers dispatcharr-db/redis via the cluster
+            # nameserver, but only while the tunnel is up; the pod is NotReady then anyway.
           ports:
             - name: http
               containerPort: 9191
@@ -223,6 +221,13 @@ spec:
               command: ["/gluetun-entrypoint", "healthcheck"]
             periodSeconds: 5
             failureThreshold: 120
+          # Kill switch at the Service level: while the tunnel is down the pod is NotReady, so
+          # Traefik and the other apps stop routing to it instead of it looking healthy.
+          readinessProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 10
+            failureThreshold: 3
           volumeMounts:
             - name: tun
               mountPath: /dev/net/tun
