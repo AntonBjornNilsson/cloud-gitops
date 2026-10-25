@@ -7,7 +7,7 @@ A CronJob (every 30 min) runs `app/reconcile.py`, which pushes `app/policy.py`:
 
 | Phase / setting | What |
 |---|---|
-| Custom rules (`http_request_firewall_custom`) | flux-webhook only accepts GitHub POSTs to `/hook` (ranges from GitHub's `/meta`, refreshed every run); login hosts (auth, stream) EU/EEA only, Authelia's machine OIDC endpoints exempt; scanner paths; TRACE/TRACK/CONNECT |
+| Custom rules (`http_request_firewall_custom`) | flux-webhook only accepts GitHub POSTs to `/hook` (ranges from GitHub's `/meta`, refreshed every run); login hosts (auth, stream) EU/EEA only, Authelia's machine OIDC endpoints exempt; scanner paths and TRACE/TRACK/CONNECT; verified bots (nothing should be indexed); leaked passwords |
 | Rate limiting (`http_ratelimit`) | Authelia login, TOTP, token and password-reset endpoints: 10 requests / 10 s per IP |
 | Zone settings | Always HTTPS, HTTPS rewrites, TLS >= 1.2, TLS 1.3, security level medium, browser integrity check, HSTS (180 days, no subdomains, no preload) |
 
@@ -21,7 +21,7 @@ Left alone on purpose:
 - **SSL mode**: tunnel traffic does not use it, other origins in the zones might.
 - **Free managed ruleset**: Cloudflare deploys and updates it automatically.
 
-Free plan limits: 5 custom rules (4 used), 1 rate limiting rule (period and mitigation fixed at 10 s).
+Free plan limits: 5 custom rules (all used), 1 rate limiting rule (period and mitigation fixed at 10 s).
 
 ## Changing rules
 

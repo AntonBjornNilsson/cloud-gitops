@@ -5,7 +5,7 @@ Each phase below replaces the zone's whole entrypoint ruleset for that phase:
 rules added in the dashboard are removed on the next run. Hosts that are not
 in a zone simply never match, so one rule set serves both zones.
 
-Free plan limits: 5 custom rules, 1 rate limiting rule (10 s period and
+Free plan limits: 5 custom rules (all used), 1 rate limiting rule (10 s period and
 mitigation, counted per IP and data center). DDoS protection (L3/4 and HTTP)
 is always on and left at Cloudflare's defaults.
 """
@@ -58,19 +58,29 @@ def custom_rules(github_hooks):
             "action": "block",
         },
         {
-            "description": "Scanner paths (nothing here serves PHP, dotfiles or WordPress)",
+            # Nothing here serves PHP, dotfiles or WordPress
+            "description": "Scanner paths and unused HTTP methods",
             "expression": (
                 '(http.request.uri.path contains "/.env"'
                 ' or http.request.uri.path contains "/.git"'
                 ' or starts_with(http.request.uri.path, "/wp-")'
                 ' or http.request.uri.path contains "phpmyadmin"'
-                ' or ends_with(http.request.uri.path, ".php"))'
+                ' or ends_with(http.request.uri.path, ".php")'
+                ' or http.request.method in {"TRACE" "TRACK" "CONNECT"})'
             ),
             "action": "block",
         },
         {
-            "description": "Unused HTTP methods",
-            "expression": 'http.request.method in {"TRACE" "TRACK" "CONNECT"}',
+            # Verified crawlers and monitors: nothing here should be indexed.
+            # GitHub's webhook deliveries and Tailscale are not on that list.
+            "description": "Known bots",
+            "expression": "cf.client.bot",
+            "action": "block",
+        },
+        {
+            # Leaked credentials detection (free): a password from a known breach
+            "description": "Leaked passwords",
+            "expression": "cf.waf.credential_check.password_leaked",
             "action": "block",
         },
     ]
