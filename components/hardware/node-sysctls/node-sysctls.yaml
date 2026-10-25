@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: node-sysctls
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
+# Raises node-wide kernel limits that the distro defaults set too low for a
+# Kubernetes node. fs.inotify.max_user_instances (default 128) is counted per
+# UID across all containers, so every root container on a node shares it;
+# when it runs out, apps that watch files (Authelia's users file, kubelet,
+# controllers) fail with "too many open files".
+# Runs on every node (all taints tolerated) and re-applies the values
+# periodically, so new nodes and reboots pick them up without host config.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-sysctls
+  namespace: node-sysctls
+spec:
+  selector:
+    matchLabels:
+      app: node-sysctls
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+  template:
+    metadata:
+      labels:
+        app: node-sysctls
+    spec:
+      priorityClassName: system-node-critical
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 1
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: sysctl
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              # Bare $vars only: Flux postBuild substitution rewrites the braced form
+              for kv in $SYSCTLS; do sysctl -w "$kv"; done
+              while sleep 300; do
+                for kv in $SYSCTLS; do sysctl -w "$kv" > /dev/null; done
+              done
+          env:
+            - name: SYSCTLS
+              value: >-
+                fs.inotify.max_user_instances=8192
+                fs.inotify.max_user_watches=524288
+          securityContext:
+            # Needed for a writable /proc/sys outside the pod's namespaces
+            privileged: true
+          resources:
+            requests:
+              cpu: 1m
+              memory: 4Mi
+            limits:
+              memory: 16Mi

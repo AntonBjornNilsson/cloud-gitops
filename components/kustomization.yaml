@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   # Hardware
   - hardware/amd-gpu/system-amd-drivers.yaml
+  - hardware/node-sysctls/system-node-sysctls.yaml
 
   # Networking
   # Temporarily disabled; namespace and PVC are kept (prune disabled)

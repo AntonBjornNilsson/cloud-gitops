@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: node-sysctls
+  namespace: node-sysctls
+spec:
+  # No network needed: default-deny both directions
+  endpointSelector: {}
+  ingress:
+    - {}
+  egress:
+    - {}
