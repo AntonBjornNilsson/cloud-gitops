@@ -92,7 +92,11 @@ Write a minimal Ingress with `host: <app>.${domain}`. Kyverno then mutates it to
 Ingresses are LAN-only by default: Traefik's default entrypoint is `websecure` (the LoadBalancer IP; LAN DNS resolves
 `*.${domain}` there). Nothing else is published; see "Exposing a service to the internet" below.
 Opt out of Authelia with label `enable-oauth: "false"` (e.g. apps doing their own OIDC). Apps using Authelia OIDC
-(grafana, headlamp, homepage, open-webui) need a client entry + hashed secret in authelia config and secrets repo.
+(grafana, headlamp, homepage, open-webui, jellyfin) need a client entry + hashed secret in authelia config and secrets repo.
+Authelia is **deny by default**: a new forward-auth app also needs an `access_control.rules` entry in
+`components/security/authelia/authelia.yaml` (`subject: "group:<app>"`; `group:admin` already covers every host),
+and a new OIDC client an `authorization_policies` entry. Groups are documented at the top of the users file
+(`authelia/authelia-users.yaml` in the secrets repo); add the new group there too.
 Auth chain details: `components/networking/traefik/README.md`.
 
 ## Exposing a service to the internet

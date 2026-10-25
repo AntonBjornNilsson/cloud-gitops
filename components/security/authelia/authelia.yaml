@@ -231,6 +231,11 @@ spec:
               rules:
                 - policy: one_factor
                   subject: ["group:admin", "group:vaultwarden"]
+            jellyfin:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:jellyfin"]
             tailscale:
               default_policy: deny
               rules:
@@ -387,6 +392,31 @@ spec:
               access_token_signed_response_alg: none
               userinfo_signed_response_alg: none
               token_endpoint_auth_method: client_secret_basic
+
+            # Jellyfin SSO plugin (configured in Jellyfin's plugin settings, provider name "authelia")
+            - client_id: jellyfin
+              client_name: Jellyfin
+              client_secret:
+                value: "${authelia_jellyfin_client_secret_hash}"
+              public: false
+              authorization_policy: jellyfin
+              consent_mode: implicit
+              require_pkce: true
+              pkce_challenge_method: S256
+              redirect_uris:
+                - "https://stream.${domain}/sso/OID/redirect/authelia"
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+              grant_types:
+                - authorization_code
+              response_types:
+                - code
+              access_token_signed_response_alg: none
+              userinfo_signed_response_alg: none
+              token_endpoint_auth_method: client_secret_post
 
             - client_id: k8s-cluster
               client_name: Kubernetes Cluster

@@ -219,6 +219,18 @@ spec:
             - port: "5055"
               protocol: TCP
     # Metadata, plugin repositories, cover art
+    # SSO plugin: Authelia token/userinfo calls; auth.<domain> resolves to the
+    # Traefik LoadBalancer IP, which Cilium translates to the Traefik pod
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+            app.kubernetes.io/name: traefik
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+            - port: "8443"
+              protocol: TCP
     - toEntities:
         - world
 
