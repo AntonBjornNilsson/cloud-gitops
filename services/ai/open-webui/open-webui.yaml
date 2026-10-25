@@ -51,6 +51,16 @@ spec:
         providerUrl: ${open_webui_provider_url}
         providerName: ${open_webui_provider_name}
         scopes: ${open_webui_scopes}
+    # Roles from Authelia groups: open-webui -> user, admin -> admin; anyone else is refused
+    extraEnvVars:
+      - name: ENABLE_OAUTH_ROLE_MANAGEMENT
+        value: "true"
+      - name: OAUTH_ROLES_CLAIM
+        value: groups
+      - name: OAUTH_ALLOWED_ROLES
+        value: open-webui,admin
+      - name: OAUTH_ADMIN_ROLES
+        value: admin
     replicaCount: 1
     persistence:
       labels:

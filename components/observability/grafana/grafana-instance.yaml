@@ -54,7 +54,9 @@ spec:
       auth_url: "${victoriametrics_auth_url}"
       token_url: "${victoriametrics_token_url}"
       api_url: "${victoriametrics_api_url}"
-      role_attribute_path: "contains(groups, 'admin') && 'Admin' || 'Viewer'"
+      # admin -> Admin, grafana-edit -> Editor, grafana-read -> Viewer; anyone else is refused
+      role_attribute_path: "contains(groups, 'admin') && 'Admin' || contains(groups, 'grafana-edit') && 'Editor' || contains(groups, 'grafana-read') && 'Viewer'"
+      role_attribute_strict: "true"
   ingress:
     metadata:
       annotations:

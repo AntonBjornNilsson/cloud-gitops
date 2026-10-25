@@ -1,4 +1,4 @@
-# Read-only access for oidc:view, without Secrets. RBAC cannot subtract, so this
+# Read-only access for oidc:kubernetes-read, without Secrets. RBAC cannot subtract, so this
 # aggregates the built-in "view" role (no Secrets; Flux, cert-manager, Kyverno and
 # VictoriaMetrics add their CRDs to it) plus oidc-read-only-cluster below.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -102,8 +102,8 @@ spec:
   matchConditions:
     - name: oidc-reader
       expression: >-
-        (request.userInfo.username == 'oidc-user' || request.userInfo.groups.exists(g, g == 'oidc:view'))
-        && !request.userInfo.groups.exists(g, g == 'oidc:admin')
+        (request.userInfo.username == 'oidc-user' || request.userInfo.groups.exists(g, g == 'oidc:kubernetes-read'))
+        && !request.userInfo.groups.exists(g, g in ['oidc:admin', 'oidc:kubernetes-edit'])
   variables:
     - name: newAnnotations
       expression: "object.metadata.?annotations.orValue({})"
@@ -111,19 +111,19 @@ spec:
       expression: "oldObject.metadata.?annotations.orValue({})"
   validations:
     - expression: "request.?subResource.orValue('') == ''"
-      message: "oidc:view may not write Flux subresources"
+      message: "oidc:kubernetes-read may not write Flux subresources"
     - expression: "object.spec == oldObject.spec"
-      message: "oidc:view may only request reconciliation; spec changes are not allowed"
+      message: "oidc:kubernetes-read may only request reconciliation; spec changes are not allowed"
     - expression: >-
         object.metadata.?labels.orValue({}) == oldObject.metadata.?labels.orValue({})
         && object.metadata.?finalizers.orValue([]) == oldObject.metadata.?finalizers.orValue([])
         && object.metadata.?ownerReferences.orValue([]) == oldObject.metadata.?ownerReferences.orValue([])
-      message: "oidc:view may only request reconciliation; metadata changes are not allowed"
+      message: "oidc:kubernetes-read may only request reconciliation; metadata changes are not allowed"
     - expression: >-
         variables.newAnnotations.all(k, k.startsWith('reconcile.fluxcd.io/')
           || (k in variables.oldAnnotations && variables.oldAnnotations[k] == variables.newAnnotations[k]))
         && variables.oldAnnotations.all(k, k.startsWith('reconcile.fluxcd.io/') || k in variables.newAnnotations)
-      message: "oidc:view may only change reconcile.fluxcd.io/* annotations"
+      message: "oidc:kubernetes-read may only change reconcile.fluxcd.io/* annotations"
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -145,6 +145,11 @@ subjects:
   - kind: Group
     name: oidc:admin
     apiGroup: rbac.authorization.k8s.io
+  # No narrower edit role: kustomize-controller applies as cluster-admin, so write
+  # access to Flux objects (in any namespace) is cluster-admin anyway
+  - kind: Group
+    name: oidc:kubernetes-edit
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
   name: cluster-admin
@@ -159,7 +164,7 @@ subjects:
     name: oidc-user
     apiGroup: rbac.authorization.k8s.io
   - kind: Group
-    name: oidc:view
+    name: oidc:kubernetes-read
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
