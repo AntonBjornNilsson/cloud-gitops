@@ -16,6 +16,22 @@ spec:
     - email:
         addresses: ["${cloudflare_admin_account}"]
 ---
+# Non-admin users; flux-substitutions holds the addresses as a JSON array
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessPolicy
+metadata:
+  name: allow-users
+  namespace: cfgate-system
+spec:
+  cloudflareRef:
+    name: cloudflare-api-token
+    accountId: "${cloudflare_account_id}"
+  name: allow-users
+  decision: allow
+  include:
+    - email:
+        addresses: ${cloudflare_access_allowed_emails}
+---
 # GitHub cannot log in: the receiver authenticates deliveries with its HMAC secret
 apiVersion: cfgate.io/v1alpha1
 kind: CloudflareAccessPolicy
@@ -47,6 +63,7 @@ spec:
     autoRedirectToIdentity: true
   policyRefs:
     - name: allow-admin
+    - name: allow-users
 ---
 apiVersion: cfgate.io/v1alpha1
 kind: CloudflareAccessApplication
@@ -64,6 +81,7 @@ spec:
     autoRedirectToIdentity: true
   policyRefs:
     - name: allow-admin
+    - name: allow-users
 ---
 apiVersion: cfgate.io/v1alpha1
 kind: CloudflareAccessApplication
