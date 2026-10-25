@@ -171,16 +171,16 @@ spec:
       session:
         name: authelia_session
         same_site: "lax"
-        expiration: "1 month"
-        inactivity: "1 month"
-        remember_me: "1 month"
+        inactivity: '1h'
+        expiration: '8h'
+        remember_me: '1d'
         encryption_key:
           value: "${authelia_session_secret}"
         cookies:
           - domain: "${domain}"
             subdomain: "auth"
           - domain: "${auth_domain}"
-            subdomain: "auth"
+            subdomain: "auth"     
       storage:
         encryption_key:
           value: "${authelia_storage_encryption_key}"
