@@ -239,7 +239,7 @@ spec:
         # for the migrations of its own version (exits after 300s). With :latest each container
         # re-pulled on its own restart, so a new release left celery waiting on web forever.
         - name: web
-          image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          image: ghcr.io/dispatcharr/dispatcharr:0.32.0
           # dispatcharr-exporter plugin (installed and configured in the Dispatcharr UI,
           # settings live in the DB): auto-start, port 9192, scraped by VMPodScrape dispatcharr.
           ports:
@@ -280,7 +280,7 @@ spec:
               mountPath: /app/media
               subPath: media
         - name: celery
-          image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          image: ghcr.io/dispatcharr/dispatcharr:0.32.0
           command:
             - /app/docker/entrypoint.celery.sh
           env:
