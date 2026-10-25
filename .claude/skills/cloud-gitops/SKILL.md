@@ -95,8 +95,9 @@ Opt out of Authelia with label `enable-oauth: "false"` (e.g. apps doing their ow
 (grafana, headlamp, homepage, open-webui, jellyfin) need a client entry + hashed secret in authelia config and secrets repo.
 Authelia is **deny by default**: a new forward-auth app also needs an `access_control.rules` entry in
 `components/security/authelia/authelia.yaml` (`subject: "group:<app>"`; `group:admin` already covers every host),
-and a new OIDC client an `authorization_policies` entry. Groups are documented at the top of the users file
-(`authelia/authelia-users.yaml` in the secrets repo); add the new group there too.
+and a new OIDC client an `authorization_policies` entry. Users and their groups are managed with
+`manage_users.py` in the secrets repo, which reads the available groups from those rules (nothing to list by hand).
+Only one user may be in `group:admin`; OIDC cluster-admin is bound by username (`cluster/cluster-oidc-admin.yaml`).
 Auth chain details: `components/networking/traefik/README.md`.
 
 ## Exposing a service to the internet
