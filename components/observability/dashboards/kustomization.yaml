@@ -9,4 +9,8 @@ resources:
   - generated/trivy-cve.yaml
   - generated/trivy-config-audit.yaml
   - generated/dispatcharr.yaml
+  - generated/media-downloads.yaml
+  - generated/media-library.yaml
+  - generated/media-playback.yaml
+  - generated/services-overview.yaml
   - upstream.yaml

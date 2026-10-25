@@ -7,6 +7,7 @@
 // "Include EPG Source Metrics" enabled in the plugin settings; they stay empty
 // otherwise.
 local grafonnet = import 'grafonnet-v11.0.0/main.libsonnet';
+local media = import 'media.libsonnet';
 
 local dashboard = grafonnet.dashboard;
 local row = grafonnet.panel.row;
@@ -190,6 +191,7 @@ dashboard.new('Dispatcharr')
 + dashboard.time.withTo('now')
 + dashboard.withRefresh('30s')
 + dashboard.graphTooltip.withSharedCrosshair()
++ dashboard.withLinks(media.mediaLinks)
 + dashboard.withPanels([
   // --- Overview ---------------------------------------------------------------
   row.new('Overview') + pos(0, 0, 24, 1),

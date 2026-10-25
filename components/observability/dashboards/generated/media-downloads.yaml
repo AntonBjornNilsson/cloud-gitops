@@ -1,0 +1,3065 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: media-downloads
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Media"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Seerr requests, Prowlarr indexers, qBittorrent downloads and Cleanuparr.",
+       "graphTooltip": 1,
+       "links": [
+          {
+             "asDropdown": true,
+             "includeVars": false,
+             "keepTime": true,
+             "tags": [
+                "media"
+             ],
+             "title": "Media dashboards",
+             "type": "dashboards"
+          },
+          {
+             "icon": "dashboard",
+             "keepTime": true,
+             "title": "Services overview",
+             "type": "link",
+             "url": "/d/services-overview"
+          }
+       ],
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Overview",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "Bps"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_global_download_speed_bytes)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Download",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "blue",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "Bps"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 3,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_global_upload_speed_bytes)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Upload",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 6,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_global_torrents)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Torrents",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 9,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_torrent_states{name=~\"downloading|forcedDL|metaDL|stalledDL|queuedDL|checkingDL\"}) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Downloading",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 2,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "orange",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 12,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(qbittorrent_global_ratio)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Global ratio",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "connected = incoming peers reach the VPN-forwarded port; firewalled = port forwarding is broken; disconnected = no tunnel.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "connected"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "green",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "firewalled"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "orange",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "disconnected"
+                      },
+                      "properties": [
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "red",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 15,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "textMode": "name"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (connection_status) (qbittorrent_transfer_connection_status) == 1",
+                   "legendFormat": "{{connection_status}}"
+                }
+             ],
+             "title": "Connection",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 100000000000
+                         },
+                         {
+                            "color": "green",
+                            "value": 500000000000
+                         }
+                      ]
+                   },
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 18,
+                "y": 1
+             },
+             "id": 8,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(qbittorrent_global_free_space_on_disk_bytes)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Free disk",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Enabled Prowlarr indexers minus the ones Prowlarr has disabled after failures.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 21,
+                "y": 1
+             },
+             "id": 9,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(prowlarr_indexer_enabled_total) - (count(prowlarr_indexer_unavailable == 1) or vector(0))",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Indexers up",
+             "type": "stat"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 10,
+             "title": "qBittorrent",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "unit": "Bps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 6
+             },
+             "id": 11,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_global_download_speed_bytes)",
+                   "legendFormat": "download"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "-sum(qbittorrent_global_upload_speed_bytes)",
+                   "legendFormat": "upload"
+                }
+             ],
+             "title": "Transfer speed",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+             },
+             "id": 12,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (name) (qbittorrent_torrent_states) > 0",
+                   "legendFormat": "{{name}}"
+                }
+             ],
+             "title": "Torrents by state",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "ETA is time to completion while downloading, or to the seeding limit (1 day / ratio 1.0) while seeding.",
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Progress"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "percentunit"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 160
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "mode": "lcd",
+                               "type": "gauge",
+                               "valueDisplayMode": "text"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "blue",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "green",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Size"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "bytes"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Down"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "Bps"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Up"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "Bps"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Ratio"
+                      },
+                      "properties": [
+                         {
+                            "id": "decimals",
+                            "value": 2
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "orange",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "green",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Seeds"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Peers"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "ETA"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "s"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Added"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "dateTimeFromNow"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 110
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 24,
+                "x": 0,
+                "y": 14
+             },
+             "id": 13,
+             "options": {
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Added"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_progress)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_size_bytes)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_download_speed_bytes)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_upload_speed_bytes)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "D"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_ratio)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "E"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_seeders)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "F"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_leechers)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "G"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_eta) < 8640000",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "H"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (qbittorrent_torrent_added_on) * 1000",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "I"
+                }
+             ],
+             "title": "Torrents",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "name",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Time 4": true,
+                         "Time 5": true,
+                         "Time 6": true,
+                         "Time 7": true,
+                         "Time 8": true,
+                         "Time 9": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "url": true
+                      },
+                      "indexByName": { },
+                      "renameByName": {
+                         "Value #A": "Progress",
+                         "Value #B": "Size",
+                         "Value #C": "Down",
+                         "Value #D": "Up",
+                         "Value #E": "Ratio",
+                         "Value #F": "Seeds",
+                         "Value #G": "Peers",
+                         "Value #H": "ETA",
+                         "Value #I": "Added",
+                         "name": "Name"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "drawStyle": "bars",
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 23
+             },
+             "id": 14,
+             "interval": "1d",
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(qbittorrent_global_alltime_downloaded_bytes[1d]))",
+                   "legendFormat": "downloaded"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(qbittorrent_global_alltime_uploaded_bytes[1d]))",
+                   "legendFormat": "uploaded"
+                }
+             ],
+             "title": "Transferred per day",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 23
+             },
+             "id": 15,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_global_total_peer_connections)",
+                   "legendFormat": "peer connections"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(qbittorrent_global_dht_nodes)",
+                   "legendFormat": "DHT nodes"
+                }
+             ],
+             "title": "Peers and DHT",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 23
+             },
+             "id": 16,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(qbittorrent_global_alltime_downloaded_bytes)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "All-time downloaded",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 23
+             },
+             "id": 17,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(qbittorrent_global_alltime_uploaded_bytes)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "All-time uploaded",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 27
+             },
+             "id": 18,
+             "options": {
+                "colorMode": "none",
+                "graphMode": "none",
+                "textMode": "name"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (version) (qbittorrent_app_version)",
+                   "legendFormat": "{{version}}"
+                }
+             ],
+             "title": "Version",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "text": "off"
+                            },
+                            "1": {
+                               "text": "on"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 27
+             },
+             "id": 19,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(qbittorrent_app_alt_rate_limits_enabled)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Alt. speed limits",
+             "type": "stat"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 31
+             },
+             "id": 20,
+             "title": "Prowlarr",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 32
+             },
+             "id": 21,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (indexer) (rate(prowlarr_indexer_queries_total[$__rate_interval])) * 3600",
+                   "legendFormat": "{{indexer}}"
+                }
+             ],
+             "title": "Searches per hour by indexer",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 32
+             },
+             "id": 22,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (indexer) (rate(prowlarr_indexer_rss_queries_total[$__rate_interval])) * 3600",
+                   "legendFormat": "{{indexer}}"
+                }
+             ],
+             "title": "RSS syncs per hour by indexer",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 32
+             },
+             "id": 23,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (indexer) (rate(prowlarr_indexer_failed_queries_total[$__rate_interval]) + rate(prowlarr_indexer_failed_rss_queries_total[$__rate_interval]) + rate(prowlarr_indexer_failed_grabs_total[$__rate_interval])) * 3600 > 0",
+                   "legendFormat": "{{indexer}}"
+                }
+             ],
+             "title": "Failures per hour",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Counters since Prowlarr started keeping stats (exportarr backfills them). Disabled = Prowlarr paused the indexer after repeated failures.",
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Status"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 110
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-background"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "0": {
+                                        "color": "green",
+                                        "index": 0,
+                                        "text": "OK"
+                                     },
+                                     "1": {
+                                        "color": "red",
+                                        "index": 1,
+                                        "text": "Disabled"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Avg response"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "ms"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 110
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "green",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "orange",
+                                     "value": 2000
+                                  },
+                                  {
+                                     "color": "red",
+                                     "value": 5000
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 14,
+                "x": 0,
+                "y": 40
+             },
+             "id": 24,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_unavailable) or (max by (indexer) (prowlarr_indexer_queries_total) * 0)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_average_response_time_ms)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_queries_total)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_rss_queries_total)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "D"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_grabs_total)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "E"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_failed_queries_total + prowlarr_indexer_failed_rss_queries_total)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "F"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (indexer) (prowlarr_indexer_failed_grabs_total)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "G"
+                }
+             ],
+             "title": "Indexers",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "indexer",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Time 4": true,
+                         "Time 5": true,
+                         "Time 6": true,
+                         "Time 7": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "url": true
+                      },
+                      "indexByName": { },
+                      "renameByName": {
+                         "Value #A": "Status",
+                         "Value #B": "Avg response",
+                         "Value #C": "Searches",
+                         "Value #D": "RSS",
+                         "Value #E": "Grabs",
+                         "Value #F": "Failed queries",
+                         "Value #G": "Failed grabs",
+                         "indexer": "Indexer"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "min": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 10,
+                "x": 14,
+                "y": 40
+             },
+             "id": 25,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sort_desc(max by (indexer) (prowlarr_indexer_grabs_total))",
+                   "legendFormat": "{{indexer}}"
+                }
+             ],
+             "title": "Grabs by indexer",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Same as System > Status in each app. Empty = healthy.",
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "App"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 100
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Level"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "error": {
+                                        "color": "red",
+                                        "index": 1
+                                     },
+                                     "notice": {
+                                        "color": "blue",
+                                        "index": 2
+                                     },
+                                     "warning": {
+                                        "color": "orange",
+                                        "index": 0
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Check"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 280
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 5,
+                "w": 24,
+                "x": 0,
+                "y": 48
+             },
+             "id": 26,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "{__name__=~\"(prowlarr)_system_health_issues\"} > 0",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                }
+             ],
+             "title": "Health checks (prowlarr)",
+             "transformations": [
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Value": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "url": true,
+                         "wikiurl": true
+                      },
+                      "renameByName": {
+                         "app": "App",
+                         "message": "Message",
+                         "source": "Check",
+                         "type": "Level"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 53
+             },
+             "id": 27,
+             "title": "Pods and traffic",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Blackbox probe through Traefik (Ingress qbittorrent). Sparkline: response time.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "no probe",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 54
+             },
+             "id": 28,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(probe_success{probe_group=\"ingress\", namespace=\"qbittorrent\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "qBittorrent",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         },
+                         {
+                            "color": "red",
+                            "value": 5
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 57
+             },
+             "id": 29,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"qbittorrent\"}[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Restarts (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 3,
+                "y": 54
+             },
+             "id": 30,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(traefik_service_requests_total{exported_service=~\"qbittorrent-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "Requests/s (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 10,
+                "y": 54
+             },
+             "id": 31,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"qbittorrent\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 17,
+                "y": 54
+             },
+             "id": 32,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"qbittorrent\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Blackbox probe through Traefik (Ingress prowlarr). Sparkline: response time.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "no probe",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 60
+             },
+             "id": 33,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(probe_success{probe_group=\"ingress\", namespace=\"prowlarr\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Prowlarr",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         },
+                         {
+                            "color": "red",
+                            "value": 5
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 63
+             },
+             "id": 34,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"prowlarr\"}[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Restarts (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 3,
+                "y": 60
+             },
+             "id": 35,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(traefik_service_requests_total{exported_service=~\"prowlarr-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "Requests/s (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 10,
+                "y": 60
+             },
+             "id": 36,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"prowlarr\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 17,
+                "y": 60
+             },
+             "id": 37,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"prowlarr\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Blackbox probe through Traefik (Ingress jellyseerr). Sparkline: response time.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "no probe",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 66
+             },
+             "id": 38,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(probe_success{probe_group=\"ingress\", namespace=\"jellyseerr\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Seerr",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         },
+                         {
+                            "color": "red",
+                            "value": 5
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 69
+             },
+             "id": 39,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"jellyseerr\"}[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Restarts (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 3,
+                "y": 66
+             },
+             "id": 40,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(traefik_service_requests_total{exported_service=~\"jellyseerr-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "Requests/s (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 10,
+                "y": 66
+             },
+             "id": 41,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"jellyseerr\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 17,
+                "y": 66
+             },
+             "id": 42,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"jellyseerr\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Blackbox probe through Traefik (Ingress cleanuparr). Sparkline: response time.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "no probe",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 72
+             },
+             "id": 43,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(probe_success{probe_group=\"ingress\", namespace=\"cleanuparr\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Cleanuparr",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         },
+                         {
+                            "color": "red",
+                            "value": 5
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 75
+             },
+             "id": 44,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"cleanuparr\"}[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Restarts (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 3,
+                "y": 72
+             },
+             "id": 45,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(traefik_service_requests_total{exported_service=~\"cleanuparr-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "Requests/s (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 10,
+                "y": 72
+             },
+             "id": 46,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"cleanuparr\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 17,
+                "y": 72
+             },
+             "id": 47,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"cleanuparr\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 78
+             },
+             "id": 48,
+             "options": {
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "victoriametrics-logs-datasource",
+                      "uid": "VictoriaLogs"
+                   },
+                   "editorMode": "code",
+                   "expr": "kubernetes.pod_namespace:~\"^(qbittorrent|prowlarr|jellyseerr|cleanuparr)$\" (error OR warn OR warning OR exception OR fail OR failed OR traceback) -\"level=info\" | sort by (_time desc) | limit 300",
+                   "queryType": "range",
+                   "refId": "A"
+                }
+             ],
+             "title": "Errors and warnings",
+             "type": "logs"
+          }
+       ],
+       "refresh": "1m",
+       "schemaVersion": 39,
+       "tags": [
+          "media",
+          "downloads",
+          "qbittorrent",
+          "prowlarr"
+       ],
+       "time": {
+          "from": "now-24h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Media · Downloads",
+       "uid": "media-downloads"
+    }

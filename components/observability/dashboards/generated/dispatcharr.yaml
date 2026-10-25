@@ -18,6 +18,25 @@ spec:
     {
        "description": "Dispatcharr IPTV proxy: active streams and their health, provider connections and expiry, clients, and the pod.",
        "graphTooltip": 1,
+       "links": [
+          {
+             "asDropdown": true,
+             "includeVars": false,
+             "keepTime": true,
+             "tags": [
+                "media"
+             ],
+             "title": "Media dashboards",
+             "type": "dashboards"
+          },
+          {
+             "icon": "dashboard",
+             "keepTime": true,
+             "title": "Services overview",
+             "type": "link",
+             "url": "/d/services-overview"
+          }
+       ],
        "panels": [
           {
              "collapsed": false,

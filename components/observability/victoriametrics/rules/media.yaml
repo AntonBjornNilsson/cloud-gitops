@@ -48,3 +48,44 @@ spec:
           annotations:
             summary: "Provider {{ $labels.account_name }} has no free connections"
             description: "Profile {{ $labels.profile_name }} uses all of its {{ $value }} connections; new channels on this provider cannot start."
+    - name: media-exporters
+      rules:
+        - alert: MediaExporterDown
+          expr: up{job="victoriametrics/media-exporters"} == 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.app }} exporter is down"
+            description: "The {{ $labels.app }}-exporter Deployment in namespace {{ $labels.namespace }} has not answered scrapes for 15 minutes; its dashboard panels are stale."
+        - alert: ArrHealthError
+          expr: '{__name__=~"(sonarr|radarr|prowlarr|bazarr)_system_health_issues", type="error"} > 0'
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.app }} health check failing: {{ $labels.source }}"
+            description: "{{ $labels.message }}"
+        - alert: ProwlarrIndexerDisabled
+          expr: prowlarr_indexer_unavailable == 1
+          for: 12h
+          labels:
+            severity: info
+          annotations:
+            summary: "Prowlarr indexer {{ $labels.indexer }} is disabled after failures"
+            description: "Prowlarr stopped using {{ $labels.indexer }} because it kept failing. Test it in Prowlarr (Indexers) or replace it."
+        - alert: QBittorrentNotConnected
+          expr: max by (connection_status) (qbittorrent_transfer_connection_status{connection_status!="connected"}) == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "qBittorrent is {{ $labels.connection_status }}"
+            description: "firewalled = peers cannot reach the VPN-forwarded port (check the port-forward-sync container); disconnected = no network through the tunnel (check gluetun)."
+        - alert: JellyfinScheduledTaskFailed
+          expr: jellyfin_tasks_last_run_status{status="Failed"} == 1
+          labels:
+            severity: info
+          annotations:
+            summary: "Jellyfin task \"{{ $labels.task_name }}\" failed"
+            description: "The last run of the scheduled task {{ $labels.task_name }} ({{ $labels.category }}) failed. See Dashboard > Scheduled Tasks in Jellyfin."

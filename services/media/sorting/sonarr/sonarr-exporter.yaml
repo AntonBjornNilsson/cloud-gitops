@@ -32,6 +32,9 @@ spec:
           args:
             - sonarr
           env:
+            # INFO logs every API request
+            - name: LOG_LEVEL
+              value: warn
             - name: PORT
               value: "9707"
             - name: URL

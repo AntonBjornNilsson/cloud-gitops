@@ -170,6 +170,10 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   - Alerts -> Alertmanager -> `alertmanager-ntfy` bridge (`/hook`) -> ntfy topic `homelab-alerts`. Severity sets priority
     (critical=urgent, warning=high, info=low). Every rule needs a `severity` label and `summary`/`description` annotations.
   - New app with metrics: add a VMPodScrape in `scrapes/` and allow ingress from the `victoriametrics` namespace on its metrics port.
+  - Media exporters (exportarr, qbittorrent-exporter, jellyfin-exporter) run as `<app>-exporter` Deployments in the app's
+    namespace with label `homelab/media-exporter: "true"` and a port named `metrics`; `scrapes/media-exporters.yaml` picks them up
+    (adds `app=<namespace>`). Dashboards: `media_*.jsonnet` + `dispatcharr.jsonnet` (shared helpers in `media.libsonnet`), and
+    `services_overview.jsonnet`, which reads the service list from `services/kustomization.yaml`: regenerate after enabling/disabling a service.
 - Dashboards: Jsonnet in `components/observability/dashboards/src/`, then run `components/observability/dashboards/generate.sh`
   (needs `jsonnet` + `jb install` for `vendor/`) and commit the regenerated `generated/*.yaml`. Never edit `generated/` by hand.
   Generated dashboards carry `kustomize.toolkit.fluxcd.io/substitute: disabled`, so `${...}` (data links) is safe in Jsonnet;

@@ -1,0 +1,2401 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: media-playback
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Media"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Jellyfin: who is watching what, transcodes, libraries, users, scheduled tasks and storage; Tracearr.",
+       "graphTooltip": 1,
+       "links": [
+          {
+             "asDropdown": true,
+             "includeVars": false,
+             "keepTime": true,
+             "tags": [
+                "media"
+             ],
+             "title": "Media dashboards",
+             "type": "dashboards"
+          },
+          {
+             "icon": "dashboard",
+             "keepTime": true,
+             "title": "Services overview",
+             "type": "link",
+             "url": "/d/services-overview"
+          }
+       ],
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Overview",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "down"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "none",
+                "graphMode": "none",
+                "text": {
+                   "titleSize": 12,
+                   "valueSize": 16
+                },
+                "textMode": "name"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (version) (jellyfin_system_info)",
+                   "legendFormat": "v{{version}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (version) (jellyfin_exporter_build_info)",
+                   "legendFormat": "exporter {{version}}"
+                }
+             ],
+             "title": "Jellyfin",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "exporter down",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 3,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_up)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Server",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 6,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count(jellyfin_now_playing_state) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Watching now",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Sessions re-encoding video or audio (remuxes are not counted).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 9,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_transcoding_active)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Transcoding",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 12,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_media_count{type=\"Movie\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Movies",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 15,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_media_count{type=\"Series\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Series",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 18,
+                "y": 1
+             },
+             "id": 8,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_media_count{type=\"Episode\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Episodes",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "text": "no"
+                            },
+                            "1": {
+                               "text": "yes"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 21,
+                "y": 1
+             },
+             "id": 9,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_system_pending_restart)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Pending restart",
+             "type": "stat"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 10,
+             "title": "Now playing",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "State"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "0": {
+                                        "color": "orange",
+                                        "index": 0,
+                                        "text": "paused"
+                                     },
+                                     "1": {
+                                        "color": "green",
+                                        "index": 1,
+                                        "text": "playing"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Method"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 110
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "directplay": {
+                                        "color": "green",
+                                        "index": 0,
+                                        "text": "direct play"
+                                     },
+                                     "directstream": {
+                                        "color": "blue",
+                                        "index": 1,
+                                        "text": "direct stream"
+                                     },
+                                     "transcode": {
+                                        "color": "orange",
+                                        "index": 2,
+                                        "text": "transcode"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Progress"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "percentunit"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 180
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "mode": "lcd",
+                               "type": "gauge",
+                               "valueDisplayMode": "text"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "blue",
+                                     "value": null
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Remaining"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "s"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 100
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Season"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Ep"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 60
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 24,
+                "x": 0,
+                "y": 6
+             },
+             "id": 11,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id, username, device, type, title, series_title, series_season, series_episode, method) (jellyfin_now_playing_state)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_now_playing_progress) / 100",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_now_playing_remaining)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                }
+             ],
+             "title": "Sessions",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "session_id",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "session_id": true,
+                         "url": true,
+                         "user_id": true
+                      },
+                      "indexByName": {
+                         "Value #A": 8,
+                         "Value #B": 9,
+                         "Value #C": 10,
+                         "device": 6,
+                         "method": 7,
+                         "series_episode": 3,
+                         "series_season": 2,
+                         "series_title": 1,
+                         "title": 4,
+                         "type": 5,
+                         "username": 0
+                      },
+                      "renameByName": {
+                         "Value #A": "State",
+                         "Value #B": "Progress",
+                         "Value #C": "Remaining",
+                         "device": "Device",
+                         "method": "Method",
+                         "series_episode": "Ep",
+                         "series_season": "Season",
+                         "series_title": "Series",
+                         "title": "Title",
+                         "type": "Type",
+                         "username": "User"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Only sessions that actually re-encode. \"copy\" = that track is passed through.",
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Bitrate"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "bps"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "FPS"
+                      },
+                      "properties": [
+                         {
+                            "id": "decimals",
+                            "value": 0
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 60
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Height"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "none"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Done"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "percentunit"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 120
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "mode": "lcd",
+                               "type": "gauge",
+                               "valueDisplayMode": "text"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "blue",
+                                     "value": null
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Video"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 80
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "0": {
+                                        "color": "orange",
+                                        "index": 0,
+                                        "text": "encode"
+                                     },
+                                     "1": {
+                                        "color": "green",
+                                        "index": 1,
+                                        "text": "copy"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Audio"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 80
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "0": {
+                                        "color": "orange",
+                                        "index": 0,
+                                        "text": "encode"
+                                     },
+                                     "1": {
+                                        "color": "green",
+                                        "index": 1,
+                                        "text": "copy"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 16,
+                "x": 0,
+                "y": 13
+             },
+             "id": 12,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id, username, title, series_title, container, video_codec, audio_codec, hardware_acceleration) (jellyfin_transcoding_session_info)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_transcoding_session_height_pixels)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_transcoding_session_bitrate_bits_per_second)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_transcoding_session_framerate)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "D"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_transcoding_session_video_direct)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "E"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_transcoding_session_audio_direct)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "F"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (session_id) (jellyfin_transcoding_session_completion_percentage) / 100",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "G"
+                }
+             ],
+             "title": "Transcodes",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "session_id",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Time 4": true,
+                         "Time 5": true,
+                         "Time 6": true,
+                         "Time 7": true,
+                         "Value #A": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "session_id": true,
+                         "url": true
+                      },
+                      "indexByName": { },
+                      "renameByName": {
+                         "Value #B": "Height",
+                         "Value #C": "Bitrate",
+                         "Value #D": "FPS",
+                         "Value #E": "Video",
+                         "Value #F": "Audio",
+                         "Value #G": "Done",
+                         "audio_codec": "Audio codec",
+                         "container": "Container",
+                         "hardware_acceleration": "HW accel",
+                         "series_title": "Series",
+                         "title": "Title",
+                         "username": "User",
+                         "video_codec": "Video codec"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Reasons Jellyfin gives for the active transcodes (codec, container, bitrate or subtitles not supported by the client).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "min": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 8,
+                "x": 16,
+                "y": 13
+             },
+             "id": 13,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sort_desc(count by (reason) (jellyfin_transcoding_session_reason))",
+                   "legendFormat": "{{reason}}"
+                }
+             ],
+             "title": "Why transcoding",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 20
+             },
+             "id": 14,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count by (method) (jellyfin_now_playing_state)",
+                   "legendFormat": "{{method}}"
+                }
+             ],
+             "title": "Sessions by play method",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 20
+             },
+             "id": 15,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_transcoding_active)",
+                   "legendFormat": "transcoding"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"jellyfin\", container=\"jellyfin\"}[$__rate_interval]))",
+                   "legendFormat": "Jellyfin CPU (cores)"
+                }
+             ],
+             "title": "Transcodes",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 28
+             },
+             "id": 16,
+             "title": "Libraries and users",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "min": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 8,
+                "x": 0,
+                "y": 29
+             },
+             "id": 17,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sort_desc(max by (type) (jellyfin_media_count) > 0)",
+                   "legendFormat": "{{type}}"
+                }
+             ],
+             "title": "Items by type",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 8,
+                "x": 8,
+                "y": 29
+             },
+             "id": 18,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (type) (jellyfin_media_count{type=~\"Movie|Series|Episode|MusicAlbum|Album\"})",
+                   "legendFormat": "{{type}}"
+                }
+             ],
+             "title": "Library growth",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Admin"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "0": {
+                                        "text": ""
+                                     },
+                                     "1": {
+                                        "text": "admin"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Last seen"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "dateTimeFromNow"
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Sessions"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 80
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 8,
+                "x": 16,
+                "y": 29
+             },
+             "id": 19,
+             "options": {
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Last seen"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (user_id, username, admin) (jellyfin_user_account)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (user_id) (label_value(jellyfin_user_account, \"last_access\")) * 1000",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count by (user_id) (jellyfin_user_active)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                }
+             ],
+             "title": "Users",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "user_id",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Value #A": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "url": true,
+                         "user_id": true
+                      },
+                      "indexByName": { },
+                      "renameByName": {
+                         "Value #B": "Last seen",
+                         "Value #C": "Sessions",
+                         "admin": "Admin",
+                         "username": "User"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 38
+             },
+             "id": 20,
+             "title": "Server",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Last result"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 110
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "Aborted": {
+                                        "color": "orange",
+                                        "index": 2
+                                     },
+                                     "Cancelled": {
+                                        "color": "text",
+                                        "index": 3
+                                     },
+                                     "Completed": {
+                                        "color": "green",
+                                        "index": 0
+                                     },
+                                     "Failed": {
+                                        "color": "red",
+                                        "index": 1
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "State"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 90
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "Cancelling": {
+                                        "color": "orange",
+                                        "index": 1
+                                     },
+                                     "Running": {
+                                        "color": "blue",
+                                        "index": 0
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Last run took"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "s"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 110
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 14,
+                "x": 0,
+                "y": 39
+             },
+             "id": 21,
+             "options": {
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Last result"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (task_name, category, status) (jellyfin_tasks_last_run_status)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (task_name) (jellyfin_tasks_last_run_seconds)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (task_name, state) (jellyfin_tasks_state)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                }
+             ],
+             "title": "Scheduled tasks",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "task_name",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Value #A": true,
+                         "Value #C": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "url": true
+                      },
+                      "indexByName": {
+                         "category": 1,
+                         "state": 2,
+                         "status": 3,
+                         "task_name": 0
+                      },
+                      "renameByName": {
+                         "Value #B": "Last run took",
+                         "category": "Category",
+                         "state": "State",
+                         "status": "Last result",
+                         "task_name": "Task"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Disk usage behind each Jellyfin location (all libraries share the media disk).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "max": 1,
+                   "min": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 0.84999999999999998
+                         },
+                         {
+                            "color": "red",
+                            "value": 0.94999999999999996
+                         }
+                      ]
+                   },
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 10,
+                "x": 14,
+                "y": 39
+             },
+             "id": 22,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (name) (jellyfin_storage_used_bytes{location!=\"library\"} / (jellyfin_storage_used_bytes{location!=\"library\"} + jellyfin_storage_free_bytes{location!=\"library\"}))",
+                   "legendFormat": "{{name}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(jellyfin_storage_used_bytes{location=\"library\"} / (jellyfin_storage_used_bytes{location=\"library\"} + jellyfin_storage_free_bytes{location=\"library\"}))",
+                   "legendFormat": "Media libraries"
+                }
+             ],
+             "title": "Storage used",
+             "type": "bargauge"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 49
+             },
+             "id": 23,
+             "title": "Pods and traffic",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Blackbox probe through Traefik (Ingress jellyfin). Sparkline: response time.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "no probe",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 50
+             },
+             "id": 24,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(probe_success{probe_group=\"ingress\", namespace=\"jellyfin\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Jellyfin",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         },
+                         {
+                            "color": "red",
+                            "value": 5
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 53
+             },
+             "id": 25,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"jellyfin\"}[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Restarts (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 3,
+                "y": 50
+             },
+             "id": 26,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(traefik_service_requests_total{exported_service=~\"jellyfin-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "Requests/s (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 10,
+                "y": 50
+             },
+             "id": 27,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"jellyfin\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 17,
+                "y": 50
+             },
+             "id": 28,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"jellyfin\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Blackbox probe through Traefik (Ingress tracearr). Sparkline: response time.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "mappings": [
+                      {
+                         "options": {
+                            "0": {
+                               "color": "red",
+                               "index": 0,
+                               "text": "DOWN"
+                            },
+                            "1": {
+                               "color": "green",
+                               "index": 1,
+                               "text": "UP"
+                            }
+                         },
+                         "type": "value"
+                      }
+                   ],
+                   "noValue": "no probe",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 56
+             },
+             "id": 29,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(probe_success{probe_group=\"ingress\", namespace=\"tracearr\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Tracearr",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 1
+                         },
+                         {
+                            "color": "red",
+                            "value": 5
+                         }
+                      ]
+                   }
+                }
+             },
+             "gridPos": {
+                "h": 3,
+                "w": 3,
+                "x": 0,
+                "y": 59
+             },
+             "id": 30,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"tracearr\"}[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Restarts (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 3,
+                "y": 56
+             },
+             "id": 31,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(traefik_service_requests_total{exported_service=~\"tracearr-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "Requests/s (Traefik)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 10,
+                "y": 56
+             },
+             "id": 32,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"tracearr\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 7,
+                "x": 17,
+                "y": 56
+             },
+             "id": 33,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "list",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"tracearr\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+             },
+             "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 62
+             },
+             "id": 34,
+             "options": {
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "victoriametrics-logs-datasource",
+                      "uid": "VictoriaLogs"
+                   },
+                   "editorMode": "code",
+                   "expr": "kubernetes.pod_namespace:~\"^(jellyfin|tracearr)$\" (error OR warn OR warning OR exception OR fail OR failed OR traceback) -\"level=info\" | sort by (_time desc) | limit 300",
+                   "queryType": "range",
+                   "refId": "A"
+                }
+             ],
+             "title": "Errors and warnings",
+             "type": "logs"
+          }
+       ],
+       "refresh": "1m",
+       "schemaVersion": 39,
+       "tags": [
+          "media",
+          "playback",
+          "jellyfin"
+       ],
+       "time": {
+          "from": "now-24h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Media · Playback",
+       "uid": "media-playback"
+    }
