@@ -109,8 +109,65 @@ spec:
           path: "/etc/authelia/users_database.yml"
           # Reload users when the authelia-users Secret changes
           watch: true
+      # Every app behind forward-auth needs a rule here: anything without one is denied.
+      # Groups are listed in the users file (secrets repo, authelia/authelia-users.yaml).
       access_control:
-        default_policy: "one_factor"
+        default_policy: "deny"
+        rules:
+          - domain: "*.${domain}"
+            subject: "group:admin"
+            policy: one_factor
+          - domain: "grafana.${domain}"
+            subject: ["group:grafana-read", "group:grafana-edit"]
+            policy: one_factor
+          - domain: ["bazarr.${domain}"]
+            subject: "group:bazarr"
+            policy: one_factor
+          - domain: ["claude-agent.${domain}"]
+            subject: "group:claude-agent"
+            policy: one_factor
+          - domain: ["cleanuparr.${domain}"]
+            subject: "group:cleanuparr"
+            policy: one_factor
+          - domain: ["dispatcharr.${domain}"]
+            subject: "group:dispatcharr"
+            policy: one_factor
+          - domain: ["hello.${domain}"]
+            subject: "group:hello"
+            policy: one_factor
+          - domain: ["homepage.${domain}"]
+            subject: "group:homepage"
+            policy: one_factor
+          - domain: ["hubble.${domain}"]
+            subject: "group:hubble"
+            policy: one_factor
+          - domain: ["requests.${domain}", "seerr.${domain}"]
+            subject: "group:jellyseerr"
+            policy: one_factor
+          - domain: ["longhorn.${domain}"]
+            subject: "group:longhorn"
+            policy: one_factor
+          - domain: ["ai.${domain}"]
+            subject: "group:open-webui"
+            policy: one_factor
+          - domain: ["prowlarr.${domain}"]
+            subject: "group:prowlarr"
+            policy: one_factor
+          - domain: ["qbit.${domain}", "qbittorrent.${domain}"]
+            subject: "group:qbittorrent"
+            policy: one_factor
+          - domain: ["radarr.${domain}"]
+            subject: "group:radarr"
+            policy: one_factor
+          - domain: ["sonarr.${domain}"]
+            subject: "group:sonarr"
+            policy: one_factor
+          - domain: ["tracearr.${domain}"]
+            subject: "group:tracearr"
+            policy: one_factor
+          - domain: ["unifi.${domain}"]
+            subject: "group:unifi"
+            policy: one_factor
       session:
         name: authelia_session
         same_site: "lax"
@@ -147,6 +204,38 @@ spec:
               use: sig
               key:
                 path: "/secrets/jwks/key.pem"
+          # Group gate per client; admin is allowed everywhere
+          authorization_policies:
+            grafana:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:grafana-read", "group:grafana-edit"]
+            kubernetes:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:kubernetes-read", "group:kubernetes-edit"]
+            open-webui:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:open-webui"]
+            homepage:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:homepage"]
+            vaultwarden:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:vaultwarden"]
+            tailscale:
+              default_policy: deny
+              rules:
+                - policy: one_factor
+                  subject: ["group:admin", "group:tailscale"]
           claims_policies:
             k8s:
               id_token:
@@ -160,7 +249,7 @@ spec:
               client_secret:
                 value: "${authelia_victoriametrics_client_secret_hash}"
               public: false
-              authorization_policy: one_factor
+              authorization_policy: grafana
               consent_mode: implicit
               redirect_uris:
                 - "https://grafana.${domain}/login/generic_oauth"
@@ -182,7 +271,7 @@ spec:
               client_secret:
                 value: "${authelia_headlamp_client_secret_hash}"
               public: false
-              authorization_policy: one_factor
+              authorization_policy: kubernetes
               consent_mode: implicit
               claims_policy: k8s
               audience:
@@ -208,7 +297,7 @@ spec:
               client_secret:
                 value: "${authelia_open_webui_client_secret_hash}"
               public: false
-              authorization_policy: one_factor
+              authorization_policy: open-webui
               consent_mode: implicit
               redirect_uris:
                 - "https://ai.${domain}/oauth/oidc/callback"
@@ -230,7 +319,7 @@ spec:
               client_secret:
                 value: "${authelia_homepage_client_secret_hash}"
               public: false
-              authorization_policy: one_factor
+              authorization_policy: homepage
               consent_mode: implicit
               redirect_uris:
                 - "https://homepage.${domain}/api/auth/callback/homepage-oidc"
@@ -255,7 +344,7 @@ spec:
               client_secret:
                 value: "${authelia_vaultwarden_client_secret_hash}"
               public: false
-              authorization_policy: one_factor
+              authorization_policy: vaultwarden
               consent_mode: implicit
               require_pkce: true
               pkce_challenge_method: S256
@@ -282,7 +371,7 @@ spec:
               client_secret:
                 value: "${authelia_tailscale_client_secret_hash}"
               public: false
-              authorization_policy: one_factor
+              authorization_policy: tailscale
               consent_mode: implicit
               require_pkce: false
               redirect_uris:
@@ -302,7 +391,7 @@ spec:
             - client_id: k8s-cluster
               client_name: Kubernetes Cluster
               public: true
-              authorization_policy: one_factor
+              authorization_policy: kubernetes
               consent_mode: implicit
               claims_policy: k8s
               redirect_uris:
