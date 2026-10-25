@@ -61,6 +61,9 @@ spec:
         value: open-webui,admin
       - name: OAUTH_ADMIN_ROLES
         value: admin
+      # Same as Grafana: link to existing accounts by email (single IdP, unique emails)
+      - name: OAUTH_MERGE_ACCOUNTS_BY_EMAIL
+        value: "true"
     replicaCount: 1
     persistence:
       labels:

@@ -44,6 +44,9 @@ spec:
       preinstall_auto_update: "false"
     auth:
       signout_redirect_url: "${victoriametrics_auth_redirect_url}"
+      # Link logins to existing accounts by email (Authelia is the only IdP and
+      # manage_users.py in the secrets repo refuses duplicate emails)
+      oauth_allow_insecure_email_lookup: "true"
     "auth.generic_oauth":
       name: "authelia"
       enabled: "true"
