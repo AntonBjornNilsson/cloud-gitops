@@ -232,8 +232,11 @@ spec:
             - name: tun
               mountPath: /dev/net/tun
       containers:
+        # web and celery must run the same tag: only web applies DB migrations, and celery waits
+        # for the migrations of its own version (exits after 300s). With :latest each container
+        # re-pulled on its own restart, so a new release left celery waiting on web forever.
         - name: web
-          image: ghcr.io/dispatcharr/dispatcharr:latest
+          image: ghcr.io/dispatcharr/dispatcharr:0.32.0
           env:
             - name: DISPATCHARR_ENV
               value: modular
@@ -269,7 +272,7 @@ spec:
               mountPath: /app/media
               subPath: media
         - name: celery
-          image: ghcr.io/dispatcharr/dispatcharr:latest
+          image: ghcr.io/dispatcharr/dispatcharr:0.32.0
           command:
             - /app/docker/entrypoint.celery.sh
           env:
