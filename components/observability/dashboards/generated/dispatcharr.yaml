@@ -1704,7 +1704,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "max by (client_id, channel_uuid, channel_number, type, ip_address, user_agent, username) (dispatcharr_client_info)",
+                   "expr": "max by (client_id, channel_uuid, channel_number, type, ip_address, user_agent, username) (dispatcharr_client_info) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
                    "format": "table",
                    "instant": true,
                    "refId": "A"
@@ -1763,19 +1763,21 @@ spec:
                          "client_id": true
                       },
                       "indexByName": {
-                         "Value #B": 5,
-                         "Value #C": 6,
-                         "Value #D": 7,
+                         "Value #B": 6,
+                         "Value #C": 7,
+                         "Value #D": 8,
+                         "channel_name": 1,
                          "channel_number": 0,
-                         "ip_address": 3,
-                         "type": 1,
-                         "user_agent": 4,
-                         "username": 2
+                         "ip_address": 4,
+                         "type": 2,
+                         "user_agent": 5,
+                         "username": 3
                       },
                       "renameByName": {
                          "Value #B": "Connected for",
                          "Value #C": "Rate",
                          "Value #D": "Sent",
+                         "channel_name": "Channel",
                          "channel_number": "Ch",
                          "ip_address": "IP",
                          "type": "Type",
@@ -1834,8 +1836,8 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "max by (client_id, channel_number) (dispatcharr_client_current_transfer_rate_bps) * on(client_id) group_left(ip_address) max by (client_id, ip_address) (dispatcharr_client_info)",
-                   "legendFormat": "{{ip_address}} ch {{channel_number}}"
+                   "expr": "max by (client_id, channel_uuid, channel_number) (dispatcharr_client_current_transfer_rate_bps) * on(client_id) group_left(ip_address, username) max by (client_id, ip_address, username) (dispatcharr_client_info) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
+                   "legendFormat": "{{username}} {{ip_address}}: {{channel_name}}"
                 }
              ],
              "title": "Transfer rate per client",

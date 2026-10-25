@@ -308,7 +308,7 @@ dashboard.new('Dispatcharr')
   row.new('Clients (needs "Include Client Statistics")') + pos(0, 60, 24, 1),
   table.new('Connected clients')
   + table.queryOptions.withTargets([
-    instant('max by (client_id, channel_uuid, channel_number, type, ip_address, user_agent, username) (dispatcharr_client_info)', 'A'),
+    instant('max by (client_id, channel_uuid, channel_number, type, ip_address, user_agent, username) (dispatcharr_client_info) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)', 'A'),
     instant('max by (client_id) (dispatcharr_client_connection_duration_seconds)', 'B'),
     instant('max by (client_id) (dispatcharr_client_current_transfer_rate_bps)', 'C'),
     instant('max by (client_id) (dispatcharr_client_bytes_sent)', 'D'),
@@ -319,8 +319,8 @@ dashboard.new('Dispatcharr')
       id: 'organize',
       options: {
         excludeByName: { Time: true, 'Time 1': true, 'Time 2': true, 'Time 3': true, 'Time 4': true, client_id: true, channel_uuid: true, 'Value #A': true },
-        indexByName: { channel_number: 0, type: 1, username: 2, ip_address: 3, user_agent: 4, 'Value #B': 5, 'Value #C': 6, 'Value #D': 7 },
-        renameByName: { channel_number: 'Ch', type: 'Type', username: 'User', ip_address: 'IP', user_agent: 'User agent', 'Value #B': 'Connected for', 'Value #C': 'Rate', 'Value #D': 'Sent' },
+        indexByName: { channel_number: 0, channel_name: 1, type: 2, username: 3, ip_address: 4, user_agent: 5, 'Value #B': 6, 'Value #C': 7, 'Value #D': 8 },
+        renameByName: { channel_number: 'Ch', channel_name: 'Channel', type: 'Type', username: 'User', ip_address: 'IP', user_agent: 'User agent', 'Value #B': 'Connected for', 'Value #C': 'Rate', 'Value #D': 'Sent' },
       },
     },
   ])
@@ -333,7 +333,7 @@ dashboard.new('Dispatcharr')
   ])
   + pos(0, 61, 24, 8),
   ts('Transfer rate per client', [
-    q('max by (client_id, channel_number) (dispatcharr_client_current_transfer_rate_bps) * on(client_id) group_left(ip_address) max by (client_id, ip_address) (dispatcharr_client_info)', '{{ip_address}} ch {{channel_number}}'),
+    q('max by (client_id, channel_uuid, channel_number) (dispatcharr_client_current_transfer_rate_bps) * on(client_id) group_left(ip_address, username) max by (client_id, ip_address, username) (dispatcharr_client_info) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)', '{{username}} {{ip_address}}: {{channel_name}}'),
   ], 0, 69, 24, 8, 'bps', true, 0),
 
   // --- Pod ----------------------------------------------------------------------
