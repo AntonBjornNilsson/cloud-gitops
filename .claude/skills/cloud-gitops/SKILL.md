@@ -29,6 +29,8 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
 3. **No plaintext secrets or private domains.** Use `${var}` placeholders; values come from the
    `flux-substitutions` Secret (in `cloud-gitops-secrets`) via `postBuild.substituteFrom`.
    Common vars: `${domain}`, `${auth_domain}`, `${admin_email}`, `${github_repo}`, `${oidc_issuer_host}`.
+   `${cloudflare_*}` vars live in the separate `cloudflare-substitutions` Secret (`cloudflare/` in
+   `cloud-gitops-secrets`); Kustomizations that need them list both Secrets in `substituteFrom`.
    New secrets must be added to `cloud-gitops-secrets` by the user — tell them which key to add.
    Never write hardcoded domain/credential fallbacks in scripts (`os.environ.get("X", "")`, not a real URL).
 4. **Every Namespace** gets `annotations: kustomize.toolkit.fluxcd.io/prune: disabled` (Kyverno also enforces it).
