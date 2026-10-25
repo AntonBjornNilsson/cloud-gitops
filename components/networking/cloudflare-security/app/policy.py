@@ -73,9 +73,10 @@ def custom_rules(github_hooks):
         },
         {
             # Verified crawlers and monitors: nothing here should be indexed.
-            # GitHub's webhook deliveries and Tailscale are not on that list.
-            "description": "Known bots",
-            "expression": "cf.client.bot",
+            # GitHub-Hookshot is a verified bot too; the webhook host is already
+            # limited to GitHub's ranges by the first rule.
+            "description": "Known bots (except the GitHub webhook)",
+            "expression": f'cf.client.bot and http.host ne "{WEBHOOK}"',
             "action": "block",
         },
         {
