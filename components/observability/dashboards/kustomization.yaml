@@ -8,4 +8,5 @@ resources:
   - generated/trivy-workload.yaml
   - generated/trivy-cve.yaml
   - generated/trivy-config-audit.yaml
+  - generated/dispatcharr.yaml
   - upstream.yaml

@@ -204,8 +204,9 @@ spec:
               value: "${pia_region}"
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+            # 9192: Prometheus exporter plugin (scraped by VictoriaMetrics)
             - name: FIREWALL_INPUT_PORTS
-              value: "9191"
+              value: "9191,9192"
             - name: IP6TABLES
               value: "off"
             # DNS stays on gluetun's own resolver (no DNS_KEEP_NAMESERVER): stream lookups must not
@@ -237,6 +238,11 @@ spec:
         # re-pulled on its own restart, so a new release left celery waiting on web forever.
         - name: web
           image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          # dispatcharr-exporter plugin (installed and configured in the Dispatcharr UI,
+          # settings live in the DB): auto-start, port 9192, scraped by VMPodScrape dispatcharr.
+          ports:
+            - name: metrics
+              containerPort: 9192
           env:
             - name: DISPATCHARR_ENV
               value: modular
@@ -400,6 +406,14 @@ spec:
       toPorts:
         - ports:
             - port: "9191"
+              protocol: TCP
+    # Metrics scraping (dispatcharr-exporter plugin)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9192"
               protocol: TCP
     # Intra-namespace traffic
     - fromEndpoints:

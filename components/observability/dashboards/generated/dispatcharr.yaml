@@ -1,0 +1,2097 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: dispatcharr
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Media"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "Dispatcharr IPTV proxy: active streams and their health, provider connections and expiry, clients, and the pod.",
+       "graphTooltip": 1,
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Overview",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Dispatcharr and exporter plugin versions",
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "exporter down"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "none",
+                "graphMode": "none",
+                "text": {
+                   "titleSize": 12,
+                   "valueSize": 16
+                },
+                "textMode": "name"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (version) (dispatcharr_info)",
+                   "legendFormat": "v{{version}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (version) (dispatcharr_exporter_info)",
+                   "legendFormat": "exporter {{version}}"
+                }
+             ],
+             "title": "Dispatcharr",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 3,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_active_streams{type!=\"\"}) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Active streams",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 6,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_stream_active_clients) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Viewers",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "text",
+                            "value": null
+                         },
+                         {
+                            "color": "blue",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "bps"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 9,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_stream_current_bitrate_bps) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Upstream bandwidth",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Connections in use per M3U profile, against the profile limit (0 = unlimited)",
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 12,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "none",
+                "graphMode": "none",
+                "textMode": "value_and_name"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_profile_connections)",
+                   "legendFormat": "used"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_profile_max_connections) > 0",
+                   "legendFormat": "limit"
+                }
+             ],
+             "title": "Provider connections",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "noValue": "n/a",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 14
+                         },
+                         {
+                            "color": "green",
+                            "value": 30
+                         }
+                      ]
+                   },
+                   "unit": "d"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 15,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "min(dispatcharr_profile_days_to_expiry >= 0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Provider expires in",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 18,
+                "y": 1
+             },
+             "id": 8,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_channels{status=\"total\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Channels",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 3,
+                "x": 21,
+                "y": 1
+             },
+             "id": 9,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_m3u_account_stream_count)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Provider streams",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "One row per stream Dispatcharr is pulling from a provider. Speed < 1x means the upstream delivers slower than realtime (viewers will buffer); Fallback > 0 means the primary stream failed.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "align": "auto"
+                   },
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Ch"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "State"
+                      },
+                      "properties": [
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "active": {
+                                        "color": "green",
+                                        "index": 0,
+                                        "text": "active"
+                                     },
+                                     "buffering": {
+                                        "color": "orange",
+                                        "index": 3,
+                                        "text": "buffering"
+                                     },
+                                     "error": {
+                                        "color": "red",
+                                        "index": 4,
+                                        "text": "error"
+                                     },
+                                     "paused": {
+                                        "color": "blue",
+                                        "index": 1,
+                                        "text": "paused"
+                                     },
+                                     "waiting_for_clients": {
+                                        "color": "yellow",
+                                        "index": 2,
+                                        "text": "waiting for clients"
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 150
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Viewers"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 80
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "text",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "green",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Bitrate"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "bps"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 100
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "FPS"
+                      },
+                      "properties": [
+                         {
+                            "id": "decimals",
+                            "value": 0
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 60
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Speed"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "x"
+                         },
+                         {
+                            "id": "decimals",
+                            "value": 2
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 80
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-background"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "red",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "orange",
+                                     "value": 0.90000000000000002
+                                  },
+                                  {
+                                     "color": "green",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Fallback"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 80
+                         },
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-background"
+                            }
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "mode": "thresholds"
+                            }
+                         },
+                         {
+                            "id": "thresholds",
+                            "value": {
+                               "mode": "absolute",
+                               "steps": [
+                                  {
+                                     "color": "transparent",
+                                     "value": null
+                                  },
+                                  {
+                                     "color": "orange",
+                                     "value": 1
+                                  }
+                               ]
+                            }
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Uptime"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "s"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 100
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 10,
+             "options": {
+                "footer": {
+                   "show": false
+                },
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Viewers"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid, channel_number, channel_name, channel_group, type, state, resolution, video_codec, provider, profile_name) (dispatcharr_stream_metadata)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid, current_title) (dispatcharr_stream_programming)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid) (dispatcharr_stream_active_clients)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid) (dispatcharr_stream_current_bitrate_bps)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "D"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid) (dispatcharr_stream_fps)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "E"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid) (dispatcharr_stream_buffering_speed)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "F"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid) (dispatcharr_stream_index)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "G"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (channel_uuid) (dispatcharr_stream_uptime_seconds)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "H"
+                }
+             ],
+             "title": "Now playing",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "channel_uuid",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Time 4": true,
+                         "Time 5": true,
+                         "Time 6": true,
+                         "Time 7": true,
+                         "Time 8": true,
+                         "Value #A": true,
+                         "Value #B": true,
+                         "channel_uuid": true
+                      },
+                      "indexByName": {
+                         "Value #C": 6,
+                         "Value #D": 7,
+                         "Value #E": 10,
+                         "Value #F": 11,
+                         "Value #G": 12,
+                         "Value #H": 13,
+                         "channel_group": 3,
+                         "channel_name": 1,
+                         "channel_number": 0,
+                         "current_title": 2,
+                         "profile_name": 15,
+                         "provider": 14,
+                         "resolution": 8,
+                         "state": 5,
+                         "type": 4,
+                         "video_codec": 9
+                      },
+                      "renameByName": {
+                         "Value #C": "Viewers",
+                         "Value #D": "Bitrate",
+                         "Value #E": "FPS",
+                         "Value #F": "Speed",
+                         "Value #G": "Fallback",
+                         "Value #H": "Uptime",
+                         "channel_group": "Group",
+                         "channel_name": "Channel",
+                         "channel_number": "Ch",
+                         "current_title": "Now showing",
+                         "profile_name": "Profile",
+                         "provider": "Provider",
+                         "resolution": "Resolution",
+                         "state": "State",
+                         "type": "Type",
+                         "video_codec": "Codec"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 14
+             },
+             "id": 11,
+             "title": "Streams",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 40,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 15
+             },
+             "id": 12,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (type) (dispatcharr_active_streams{type!=\"\"})",
+                   "legendFormat": "{{type}}"
+                }
+             ],
+             "title": "Active streams by type",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 40,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 16,
+                "x": 8,
+                "y": 15
+             },
+             "id": 13,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(max by (channel_uuid, channel_number) (dispatcharr_stream_active_clients)) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
+                   "legendFormat": "{{channel_number}} {{channel_name}}"
+                }
+             ],
+             "title": "Viewers per channel",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 23
+             },
+             "id": 14,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(max by (channel_uuid, channel_number) (dispatcharr_stream_current_bitrate_bps)) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
+                   "legendFormat": "{{channel_number}} {{channel_name}}"
+                }
+             ],
+             "title": "Bitrate per stream",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "How fast the upstream is read relative to realtime. Below 1x the stream falls behind and viewers buffer.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "palette-classic"
+                   },
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "thresholdsStyle": {
+                         "mode": "line+area"
+                      }
+                   },
+                   "min": 0,
+                   "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "transparent",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "x"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 23
+             },
+             "id": 15,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(max by (channel_uuid, channel_number) (dispatcharr_stream_buffering_speed)) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
+                   "legendFormat": "{{channel_number}} {{channel_name}}"
+                }
+             ],
+             "title": "Buffering speed (live, 1x = realtime)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 31
+             },
+             "id": 16,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(max by (channel_uuid, channel_number) (dispatcharr_stream_fps)) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
+                   "legendFormat": "{{channel_number}} {{channel_name}}"
+                }
+             ],
+             "title": "FPS per stream",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "drawStyle": "line",
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "lineInterpolation": "stepAfter",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 31
+             },
+             "id": 17,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(max by (channel_uuid, channel_number) (dispatcharr_stream_index)) * on(channel_uuid) group_left(channel_name) max by (channel_uuid, channel_name) (dispatcharr_stream_metadata)",
+                   "legendFormat": "{{channel_number}} {{channel_name}}"
+                }
+             ],
+             "title": "Fallback stream index (0 = primary)",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 39
+             },
+             "id": 18,
+             "title": "Providers",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byRegexp",
+                         "options": "^limit .*"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.lineStyle",
+                            "value": {
+                               "dash": [
+                                  10,
+                                  10
+                               ],
+                               "fill": "dash"
+                            }
+                         },
+                         {
+                            "id": "custom.fillOpacity",
+                            "value": 0
+                         },
+                         {
+                            "id": "color",
+                            "value": {
+                               "fixedColor": "red",
+                               "mode": "fixed"
+                            }
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 40
+             },
+             "id": 19,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (account_name, profile_name) (dispatcharr_profile_connections)",
+                   "legendFormat": "used {{account_name}} / {{profile_name}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (account_name, profile_name) (dispatcharr_profile_max_connections) > 0",
+                   "legendFormat": "limit {{account_name}} / {{profile_name}}"
+                }
+             ],
+             "title": "Provider connections",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "max": 365,
+                   "min": 0,
+                   "noValue": "no expiry reported",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "orange",
+                            "value": 14
+                         },
+                         {
+                            "color": "green",
+                            "value": 30
+                         }
+                      ]
+                   },
+                   "unit": "d"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 40
+             },
+             "id": 20,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (account_name, profile_name) (dispatcharr_profile_days_to_expiry >= 0)",
+                   "legendFormat": "{{account_name}} / {{profile_name}}"
+                }
+             ],
+             "title": "Days until provider expiry",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Last refresh"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.cellOptions",
+                            "value": {
+                               "type": "color-text"
+                            }
+                         },
+                         {
+                            "id": "mappings",
+                            "value": [
+                               {
+                                  "options": {
+                                     "disabled": {
+                                        "color": "text",
+                                        "index": 5
+                                     },
+                                     "error": {
+                                        "color": "red",
+                                        "index": 1
+                                     },
+                                     "fetching": {
+                                        "color": "blue",
+                                        "index": 2
+                                     },
+                                     "parsing": {
+                                        "color": "blue",
+                                        "index": 3
+                                     },
+                                     "pending_setup": {
+                                        "color": "orange",
+                                        "index": 4
+                                     },
+                                     "success": {
+                                        "color": "green",
+                                        "index": 0
+                                     }
+                                  },
+                                  "type": "value"
+                               }
+                            ]
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 12,
+                "x": 0,
+                "y": 48
+             },
+             "id": 21,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (account_name, account_type, status, is_active) (dispatcharr_m3u_account_stream_count)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                }
+             ],
+             "title": "M3U accounts",
+             "transformations": [
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true
+                      },
+                      "renameByName": {
+                         "Value": "Streams",
+                         "account_name": "Account",
+                         "account_type": "Type",
+                         "is_active": "Active",
+                         "status": "Last refresh"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 12,
+                "x": 12,
+                "y": 48
+             },
+             "id": 22,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_channels{status=\"total\"})",
+                   "legendFormat": "channels"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(dispatcharr_channel_groups)",
+                   "legendFormat": "channel groups"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (account_name) (dispatcharr_m3u_account_stream_count)",
+                   "legendFormat": "streams {{account_name}}"
+                }
+             ],
+             "title": "Library size",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Needs \"Include EPG Source Metrics\" in the exporter plugin settings.",
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                }
+             },
+             "gridPos": {
+                "h": 6,
+                "w": 24,
+                "x": 0,
+                "y": 54
+             },
+             "id": 23,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (source_name, source_type, status, is_active) (dispatcharr_epg_source_priority)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                }
+             ],
+             "title": "EPG sources",
+             "transformations": [
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true
+                      },
+                      "renameByName": {
+                         "Value": "Priority",
+                         "is_active": "Active",
+                         "source_name": "Source",
+                         "source_type": "Type",
+                         "status": "Status"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 60
+             },
+             "id": 24,
+             "title": "Clients (needs \"Include Client Statistics\")",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Ch"
+                      },
+                      "properties": [
+                         {
+                            "id": "custom.width",
+                            "value": 70
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Connected for"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "s"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 120
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Rate"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "bps"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 100
+                         }
+                      ]
+                   },
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Sent"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "bytes"
+                         },
+                         {
+                            "id": "custom.width",
+                            "value": 100
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 61
+             },
+             "id": 25,
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (client_id, channel_uuid, channel_number, type, ip_address, user_agent, username) (dispatcharr_client_info)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (client_id) (dispatcharr_client_connection_duration_seconds)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "B"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (client_id) (dispatcharr_client_current_transfer_rate_bps)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "C"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (client_id) (dispatcharr_client_bytes_sent)",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "D"
+                }
+             ],
+             "title": "Connected clients",
+             "transformations": [
+                {
+                   "id": "joinByField",
+                   "options": {
+                      "byField": "client_id",
+                      "mode": "outer"
+                   }
+                },
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "Time 1": true,
+                         "Time 2": true,
+                         "Time 3": true,
+                         "Time 4": true,
+                         "Value #A": true,
+                         "channel_uuid": true,
+                         "client_id": true
+                      },
+                      "indexByName": {
+                         "Value #B": 5,
+                         "Value #C": 6,
+                         "Value #D": 7,
+                         "channel_number": 0,
+                         "ip_address": 3,
+                         "type": 1,
+                         "user_agent": 4,
+                         "username": 2
+                      },
+                      "renameByName": {
+                         "Value #B": "Connected for",
+                         "Value #C": "Rate",
+                         "Value #D": "Sent",
+                         "channel_number": "Ch",
+                         "ip_address": "IP",
+                         "type": "Type",
+                         "user_agent": "User agent",
+                         "username": "User"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 40,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "bps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 69
+             },
+             "id": 26,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (client_id, channel_number) (dispatcharr_client_current_transfer_rate_bps) * on(client_id) group_left(ip_address) max by (client_id, ip_address) (dispatcharr_client_info)",
+                   "legendFormat": "{{ip_address}} ch {{channel_number}}"
+                }
+             ],
+             "title": "Transfer rate per client",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 77
+             },
+             "id": 27,
+             "title": "Pod",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 78
+             },
+             "id": 28,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (pod, container) (rate(container_cpu_usage_seconds_total{namespace=\"dispatcharr\", container!=\"\"}[$__rate_interval]))",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "CPU by container",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 78
+             },
+             "id": 29,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (pod, container) (container_memory_working_set_bytes{namespace=\"dispatcharr\", container!=\"\"})",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Memory by container",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "unit": "bps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 78
+             },
+             "id": 30,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (pod) (rate(container_network_receive_bytes_total{namespace=\"dispatcharr\", pod=~\"dispatcharr-web-.*\"}[$__rate_interval])) * 8",
+                   "legendFormat": "rx"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "-sum by (pod) (rate(container_network_transmit_bytes_total{namespace=\"dispatcharr\", pod=~\"dispatcharr-web-.*\"}[$__rate_interval])) * 8",
+                   "legendFormat": "tx"
+                }
+             ],
+             "title": "Network (web pod: VPN + clients)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "drawStyle": "bars",
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 86
+             },
+             "id": 31,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (container) (increase(kube_pod_container_status_restarts_total{namespace=\"dispatcharr\"}[$__rate_interval])) > 0",
+                   "legendFormat": "{{container}}"
+                }
+             ],
+             "title": "Container restarts",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "victoriametrics-logs-datasource",
+                "uid": "VictoriaLogs"
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 16,
+                "x": 8,
+                "y": 86
+             },
+             "id": 32,
+             "options": {
+                "showTime": true,
+                "sortOrder": "Descending",
+                "wrapLogMessage": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "victoriametrics-logs-datasource",
+                      "uid": "VictoriaLogs"
+                   },
+                   "editorMode": "code",
+                   "expr": "kubernetes.pod_namespace:=\"dispatcharr\" (error OR warning OR exception OR traceback) | sort by (_time desc) | limit 200",
+                   "queryType": "range",
+                   "refId": "A"
+                }
+             ],
+             "title": "Errors and warnings",
+             "type": "logs"
+          }
+       ],
+       "refresh": "30s",
+       "schemaVersion": 39,
+       "tags": [
+          "media",
+          "dispatcharr",
+          "iptv"
+       ],
+       "time": {
+          "from": "now-12h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Dispatcharr",
+       "uid": "dispatcharr"
+    }

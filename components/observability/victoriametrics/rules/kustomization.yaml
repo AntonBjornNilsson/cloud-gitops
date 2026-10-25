@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - hardware.yaml
   - kubernetes.yaml
+  - media.yaml
   - networking.yaml
   - observability.yaml
   - platform.yaml

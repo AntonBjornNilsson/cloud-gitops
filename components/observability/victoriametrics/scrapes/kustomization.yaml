@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - authelia.yaml
   - cert-manager.yaml
+  - dispatcharr.yaml
   - flux.yaml
   - grafana.yaml
   - metallb.yaml

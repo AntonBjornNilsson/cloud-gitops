@@ -1,0 +1,50 @@
+---
+# Media apps with their own exporters (Dispatcharr: dispatcharr-exporter plugin).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: media
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: dispatcharr
+      rules:
+        - alert: DispatcharrExporterDown
+          expr: absent_over_time(dispatcharr_info[15m])
+          labels:
+            severity: warning
+          annotations:
+            summary: "No Dispatcharr metrics for 15 minutes"
+            description: "The dispatcharr-exporter plugin is not serving on port 9192. Check that the plugin is enabled with Auto-start Server in the Dispatcharr UI, and that the dispatcharr-web pod is Ready."
+        - alert: DispatcharrProviderExpiring
+          expr: dispatcharr_profile_days_to_expiry >= 0 and dispatcharr_profile_days_to_expiry < 14
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "IPTV provider {{ $labels.account_name }} expires in {{ $value }} days"
+            description: "M3U profile {{ $labels.profile_name }} of account {{ $labels.account_name }} expires soon. Renew the subscription."
+        - alert: DispatcharrM3UAccountError
+          expr: dispatcharr_m3u_account_status{status="error"} > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} Dispatcharr M3U account(s) in error state"
+            description: "An M3U refresh failed and has not recovered for 30 minutes. Check the account in Dispatcharr (M3U & EPG Manager) and the celery container logs."
+        - alert: DispatcharrStreamOnFallback
+          expr: dispatcharr_stream_index{type="live"} > 0
+          for: 10m
+          labels:
+            severity: info
+          annotations:
+            summary: "Channel {{ $labels.channel_number }} is playing a fallback stream"
+            description: "The primary stream of channel {{ $labels.channel_number }} failed and Dispatcharr switched to backup stream #{{ $value }}."
+        - alert: DispatcharrProviderConnectionsExhausted
+          expr: dispatcharr_profile_max_connections > 0 and dispatcharr_profile_connections >= dispatcharr_profile_max_connections
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "Provider {{ $labels.account_name }} has no free connections"
+            description: "Profile {{ $labels.profile_name }} uses all of its {{ $value }} connections; new channels on this provider cannot start."

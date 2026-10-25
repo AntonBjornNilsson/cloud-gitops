@@ -1,0 +1,19 @@
+---
+# Dispatcharr (streams, clients, M3U providers, EPG). Served by the
+# dispatcharr-exporter plugin inside the web container on port 9192;
+# the plugin must have "Auto-start Server" enabled in the Dispatcharr UI.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: dispatcharr
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - dispatcharr
+  selector:
+    matchLabels:
+      app: dispatcharr-web
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 30s
