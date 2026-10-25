@@ -215,7 +215,7 @@ spec:
               default_policy: deny
               rules:
                 - policy: one_factor
-                  subject: ["group:admin", "group:kubernetes-read", "group:kubernetes-edit"]
+                  subject: ["group:admin", "group:kubernetes-read"]
             open-webui:
               default_policy: deny
               rules:

@@ -1,3 +1,5 @@
+# The only OIDC cluster-admin, bound by username rather than group so that no
+# Authelia group can grant it. Other users get at most oidc:kubernetes-read.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
