@@ -1,0 +1,102 @@
+---
+# Prometheus exporter for Radarr (movies, queue, health, disk space).
+# Own Deployment so exporter upgrades never restart the app; scraped by
+# VMPodScrape media-exporters.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: radarr-exporter
+  namespace: radarr
+type: Opaque
+stringData:
+  api-key: "${radarr_api_key}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radarr-exporter
+  namespace: radarr
+spec:
+  selector:
+    matchLabels:
+      app: radarr-exporter
+  template:
+    metadata:
+      labels:
+        app: radarr-exporter
+        homelab/media-exporter: "true"
+    spec:
+      containers:
+        - name: exporter
+          image: ghcr.io/onedr0p/exportarr:v2.3.0
+          args:
+            - radarr
+          env:
+            - name: PORT
+              value: "9708"
+            - name: URL
+              value: "http://radarr.radarr.svc.cluster.local:7878"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: radarr-exporter
+                  key: api-key
+            # Quality/episode breakdowns (one API call per series/movie per scrape)
+            - name: ENABLE_ADDITIONAL_METRICS
+              value: "true"
+          ports:
+            - name: metrics
+              containerPort: 9708
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: radarr-exporter
+  namespace: radarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: radarr-exporter
+  ingress:
+    # Metrics scraping
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9708"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Radarr API
+    - toEndpoints:
+        - matchLabels:
+            app: radarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP

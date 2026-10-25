@@ -6,6 +6,7 @@ resources:
   - dispatcharr.yaml
   - flux.yaml
   - grafana.yaml
+  - media-exporters.yaml
   - metallb.yaml
   - ntfy.yaml
   - smartctl-exporter.yaml

@@ -1,0 +1,84 @@
+---
+# Prometheus exporter for qBittorrent (torrents, speeds, ratio, trackers).
+# Own Deployment so exporter upgrades never restart the app; scraped by
+# VMPodScrape media-exporters.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qbittorrent-exporter
+  namespace: qbittorrent
+spec:
+  selector:
+    matchLabels:
+      app: qbittorrent-exporter
+  template:
+    metadata:
+      labels:
+        app: qbittorrent-exporter
+        homelab/media-exporter: "true"
+    spec:
+      containers:
+        - name: exporter
+          image: ghcr.io/martabal/qbittorrent-exporter:v2.0.3
+          env:
+            # No credentials: the pod CIDR is in qBittorrent's WebUI auth whitelist
+            - name: QBITTORRENT_BASE_URL
+              value: "http://qbittorrent.qbittorrent.svc.cluster.local:8080"
+            - name: EXPORTER_PORT
+              value: "8090"
+          ports:
+            - name: metrics
+              containerPort: 8090
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: qbittorrent-exporter
+  namespace: qbittorrent
+spec:
+  endpointSelector:
+    matchLabels:
+      app: qbittorrent-exporter
+  ingress:
+    # Metrics scraping
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "8090"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # qBittorrent API
+    - toEndpoints:
+        - matchLabels:
+            app: qbittorrent
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

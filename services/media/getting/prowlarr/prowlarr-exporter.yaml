@@ -1,0 +1,105 @@
+---
+# Prometheus exporter for Prowlarr (per-indexer queries, grabs and failures).
+# Own Deployment so exporter upgrades never restart the app; scraped by
+# VMPodScrape media-exporters.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prowlarr-exporter
+  namespace: prowlarr
+type: Opaque
+stringData:
+  api-key: "${prowlarr_api_key}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prowlarr-exporter
+  namespace: prowlarr
+spec:
+  selector:
+    matchLabels:
+      app: prowlarr-exporter
+  template:
+    metadata:
+      labels:
+        app: prowlarr-exporter
+        homelab/media-exporter: "true"
+    spec:
+      containers:
+        - name: exporter
+          image: ghcr.io/onedr0p/exportarr:v2.3.0
+          args:
+            - prowlarr
+          env:
+            - name: PORT
+              value: "9709"
+            - name: URL
+              value: "http://prowlarr.prowlarr.svc.cluster.local:9696"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prowlarr-exporter
+                  key: api-key
+            # Quality/episode breakdowns (one API call per series/movie per scrape)
+            - name: ENABLE_ADDITIONAL_METRICS
+              value: "true"
+            # Prowlarr's stats are counters since exporter start; backfill rebuilds them from history
+            - name: PROWLARR__BACKFILL
+              value: "true"
+          ports:
+            - name: metrics
+              containerPort: 9709
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: prowlarr-exporter
+  namespace: prowlarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: prowlarr-exporter
+  ingress:
+    # Metrics scraping
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9709"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Prowlarr API
+    - toEndpoints:
+        - matchLabels:
+            app: prowlarr
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP

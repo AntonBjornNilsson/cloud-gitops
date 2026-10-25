@@ -1,0 +1,24 @@
+---
+# Media stack exporters (exportarr for Sonarr/Radarr/Prowlarr/Bazarr,
+# qbittorrent-exporter, jellyfin-exporter). Each runs as <app>-exporter in the
+# app's namespace with label homelab/media-exporter and a "metrics" port.
+# 60s: exportarr fans out one API call per series/movie on every scrape.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: media-exporters
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      homelab/media-exporter: "true"
+  podMetricsEndpoints:
+    - port: metrics
+      interval: 60s
+      scrapeTimeout: 50s
+      relabelConfigs:
+        # app="sonarr" etc. instead of the pod name
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: app

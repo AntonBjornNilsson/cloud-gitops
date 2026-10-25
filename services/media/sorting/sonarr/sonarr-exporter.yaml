@@ -1,0 +1,102 @@
+---
+# Prometheus exporter for Sonarr (series, episodes, queue, health, disk space).
+# Own Deployment so exporter upgrades never restart the app; scraped by
+# VMPodScrape media-exporters.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sonarr-exporter
+  namespace: sonarr
+type: Opaque
+stringData:
+  api-key: "${sonarr_api_key}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarr-exporter
+  namespace: sonarr
+spec:
+  selector:
+    matchLabels:
+      app: sonarr-exporter
+  template:
+    metadata:
+      labels:
+        app: sonarr-exporter
+        homelab/media-exporter: "true"
+    spec:
+      containers:
+        - name: exporter
+          image: ghcr.io/onedr0p/exportarr:v2.3.0
+          args:
+            - sonarr
+          env:
+            - name: PORT
+              value: "9707"
+            - name: URL
+              value: "http://sonarr.sonarr.svc.cluster.local:8989"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sonarr-exporter
+                  key: api-key
+            # Quality/episode breakdowns (one API call per series/movie per scrape)
+            - name: ENABLE_ADDITIONAL_METRICS
+              value: "true"
+          ports:
+            - name: metrics
+              containerPort: 9707
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: sonarr-exporter
+  namespace: sonarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: sonarr-exporter
+  ingress:
+    # Metrics scraping
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9707"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Sonarr API
+    - toEndpoints:
+        - matchLabels:
+            app: sonarr
+      toPorts:
+        - ports:
+            - port: "8989"
+              protocol: TCP

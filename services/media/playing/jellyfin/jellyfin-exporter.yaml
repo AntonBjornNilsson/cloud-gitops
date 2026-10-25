@@ -1,0 +1,98 @@
+---
+# Prometheus exporter for Jellyfin (now playing, transcodes, libraries, users, tasks, storage).
+# Own Deployment so exporter upgrades never restart the app; scraped by
+# VMPodScrape media-exporters.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jellyfin-exporter
+  namespace: jellyfin
+type: Opaque
+stringData:
+  api-key: "${jellyfin_api_key}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jellyfin-exporter
+  namespace: jellyfin
+spec:
+  selector:
+    matchLabels:
+      app: jellyfin-exporter
+  template:
+    metadata:
+      labels:
+        app: jellyfin-exporter
+        homelab/media-exporter: "true"
+    spec:
+      containers:
+        - name: exporter
+          image: docker.io/rebelcore/jellyfin-exporter:v1.5.3
+          args:
+            - --collector.storage
+            - --collector.tasks
+            - --collector.transcoding
+          env:
+            - name: JELLYFIN_ADDRESS
+              value: "http://jellyfin.jellyfin.svc.cluster.local:8096"
+            - name: JELLYFIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: jellyfin-exporter
+                  key: api-key
+          ports:
+            - name: metrics
+              containerPort: 9594
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: jellyfin-exporter
+  namespace: jellyfin
+spec:
+  endpointSelector:
+    matchLabels:
+      app: jellyfin-exporter
+  ingress:
+    # Metrics scraping
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9594"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Jellyfin API
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP

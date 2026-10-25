@@ -1,0 +1,100 @@
+---
+# Prometheus exporter for Bazarr (subtitles, missing subtitles, providers).
+# Own Deployment so exporter upgrades never restart the app; scraped by
+# VMPodScrape media-exporters.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bazarr-exporter
+  namespace: bazarr
+type: Opaque
+stringData:
+  api-key: "${bazarr_api_key}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bazarr-exporter
+  namespace: bazarr
+spec:
+  selector:
+    matchLabels:
+      app: bazarr-exporter
+  template:
+    metadata:
+      labels:
+        app: bazarr-exporter
+        homelab/media-exporter: "true"
+    spec:
+      containers:
+        - name: exporter
+          image: ghcr.io/onedr0p/exportarr:v2.3.0
+          args:
+            - bazarr
+          env:
+            - name: PORT
+              value: "9710"
+            - name: URL
+              value: "http://bazarr.bazarr.svc.cluster.local:6767"
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: bazarr-exporter
+                  key: api-key
+            # No ENABLE_ADDITIONAL_METRICS: the per-episode subtitle walk takes Bazarr tens of seconds
+          ports:
+            - name: metrics
+              containerPort: 9710
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: bazarr-exporter
+  namespace: bazarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: bazarr-exporter
+  ingress:
+    # Metrics scraping
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9710"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Bazarr API
+    - toEndpoints:
+        - matchLabels:
+            app: bazarr
+      toPorts:
+        - ports:
+            - port: "6767"
+              protocol: TCP
