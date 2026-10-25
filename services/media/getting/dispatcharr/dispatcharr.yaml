@@ -200,8 +200,10 @@ spec:
               value: "${pia_user}"
             - name: OPENVPN_PASSWORD
               value: "${pia_password}"
+            # Own region, not the shared pia_region: the IPTV provider geo-blocks streams
+            # (HTTP 456 from ffmpeg) for exit IPs outside the country it allows.
             - name: SERVER_REGIONS
-              value: "${pia_region}"
+              value: "${dispatcharr_pia_region}"
             - name: FIREWALL_OUTBOUND_SUBNETS
               value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
             # 9192: Prometheus exporter plugin (scraped by VictoriaMetrics)
