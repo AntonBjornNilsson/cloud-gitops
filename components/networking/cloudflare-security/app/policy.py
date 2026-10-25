@@ -40,10 +40,11 @@ def custom_rules(github_hooks):
     """http_request_firewall_custom; github_hooks: GitHub webhook CIDRs."""
     return [
         {
-            "description": "flux-webhook: only GitHub POSTs to /hook",
+            # Receivers listen on /hook/<token>, one per GitRepository
+            "description": "flux-webhook: only GitHub POSTs to /hook/",
             "expression": (
                 f'http.host eq "{WEBHOOK}" and not (http.request.method eq "POST"'
-                ' and http.request.uri.path eq "/hook"'
+                ' and starts_with(http.request.uri.path, "/hook/")'
                 f' and ip.src in {{{" ".join(github_hooks)}}})'
             ),
             "action": "block",
