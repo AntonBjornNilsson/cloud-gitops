@@ -1,0 +1,29 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cloudflare-security
+  namespace: cloudflare-security
+spec:
+  endpointSelector: {}
+  ingress: []
+  egress:
+    # DNS, through Cilium's proxy so the FQDN rule below can match
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # Cloudflare API, and GitHub's /meta for the webhook IP ranges
+    - toFQDNs:
+        - matchName: api.cloudflare.com
+        - matchName: api.github.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

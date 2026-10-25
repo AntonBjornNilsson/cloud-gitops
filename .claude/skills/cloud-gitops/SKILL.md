@@ -135,6 +135,10 @@ From outside (mobile data) the host should redirect to Cloudflare Access; Traefi
 `"entryPointName":"public"` for tunnel traffic. Clients that cannot do a browser login (native/TV apps, APIs)
 fail behind an allow policy: decide per app whether to use a service token (`non_identity` policy) or a bypass.
 
+Edge security (WAF custom rules, rate limiting, zone settings) is `components/networking/cloudflare-security/`:
+rules in `app/policy.py`, pushed by a CronJob every 30 min; dashboard edits are overwritten. A new public host for
+people should be added to the EU/EEA geo rule there; a new machine path must be exempted from it.
+
 To unpublish: remove the HTTPRoute and its Access application (cfgate withdraws the DNS record) and drop `public`
 from the Ingress annotation. Never re-add a `*.${domain}` record in Cloudflare: it makes every LAN-only name resolve
 publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes before bumping it.

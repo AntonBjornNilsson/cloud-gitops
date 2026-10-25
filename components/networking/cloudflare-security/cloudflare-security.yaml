@@ -1,0 +1,80 @@
+# Cloudflare WAF custom rules, rate limiting and zone security settings from Git.
+# Rules live in app/policy.py; app/reconcile.py pushes them every 30 minutes.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloudflare-security
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+# Token permissions: Zone > Zone WAF: Edit, Zone > Zone Settings: Edit (both zones)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflare-security-token
+  namespace: cloudflare-security
+type: Opaque
+stringData:
+  token: "${cloudflare_security_api_token}"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cloudflare-security
+  namespace: cloudflare-security
+spec:
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconcile
+              image: python:3.13-alpine
+              command: ["python3", "/app/reconcile.py"]
+              env:
+                - name: DOMAIN
+                  value: "${domain}"
+                - name: ZONES
+                  value: "${domain},${auth_domain}"
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+                - name: CLOUDFLARE_API_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: cloudflare-security-token
+                      key: token
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+          volumes:
+            - name: app
+              configMap:
+                name: cloudflare-security-app
