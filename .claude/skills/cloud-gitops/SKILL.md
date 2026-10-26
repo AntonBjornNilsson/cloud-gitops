@@ -97,6 +97,8 @@ Authelia is **deny by default**: a new forward-auth app also needs an `access_co
 `components/security/authelia/authelia.yaml` (`subject: "group:<app>"`; `group:admin` already covers every host),
 and a new OIDC client an `authorization_policies` entry. Users and their groups are managed with
 `manage_users.py` in the secrets repo, which reads the available groups from those rules (nothing to list by hand).
+Second factors (YubiKeys, TOTP) are in Git too: `manage_2fa.py` in the secrets repo writes the `authelia-2fa` Secret
+and the `second-factor-sync` sidecar makes Authelia's database match it, so devices added in the web UI are removed.
 Only one user may be in `group:admin`; OIDC cluster-admin is bound by username (`cluster/cluster-oidc-admin.yaml`).
 Auth chain details: `components/networking/traefik/README.md`.
 
