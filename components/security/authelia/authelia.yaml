@@ -91,7 +91,8 @@ spec:
                     done
                   fi
                   rm -f current.yml
-                  if [ -s $src/$kind.yml ]; then
+                  # Authelia refuses to import an empty list
+                  if grep -q "username:" $src/$kind.yml 2>/dev/null; then
                     authelia storage user $kind import $cfg $src/$kind.yml || return 1
                   fi
                 done
