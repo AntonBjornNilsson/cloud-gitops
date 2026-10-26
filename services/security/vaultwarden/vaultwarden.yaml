@@ -90,6 +90,10 @@ spec:
               value: "email profile offline_access"
             - name: SSO_PKCE
               value: "true"
+            # Authelia only for login; sessions then use Vaultwarden's own
+            # refresh tokens (30 days idle) instead of Authelia's (90 min)
+            - name: SSO_AUTH_ONLY_NOT_SESSION
+              value: "true"
           envFrom:
             - secretRef:
                 name: vaultwarden-env
