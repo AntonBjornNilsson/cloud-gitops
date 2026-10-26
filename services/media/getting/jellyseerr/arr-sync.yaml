@@ -46,7 +46,7 @@ spec:
               command: ["python3", "/app/sync.py"]
               env:
                 - name: DRY_RUN
-                  value: "true"
+                  value: "false"
                 - name: PYTHONDONTWRITEBYTECODE
                   value: "1"
               envFrom:
