@@ -1,0 +1,118 @@
+# Removes titles from Radarr/Sonarr once they were deleted in Jellyfin (see arr-sync/sync.py).
+# Seerr marks them Deleted on its Jellyfin scan but never tells the *arrs, which then keep
+# them monitored as missing.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: arr-sync-api-keys
+  namespace: jellyseerr
+type: Opaque
+stringData:
+  SEERR_API_KEY: "${seerr_api_key}"
+  RADARR_API_KEY: "${radarr_api_key}"
+  SONARR_API_KEY: "${sonarr_api_key}"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: arr-sync
+  namespace: jellyseerr
+spec:
+  schedule: "15 * * * *"
+  timeZone: "Europe/Stockholm"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 300
+      template:
+        metadata:
+          labels:
+            app: arr-sync
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: sync
+              image: python:3.13-alpine
+              command: ["python3", "/app/sync.py"]
+              env:
+                - name: DRY_RUN
+                  value: "true"
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+              envFrom:
+                - secretRef:
+                    name: arr-sync-api-keys
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+          volumes:
+            - name: app
+              configMap:
+                name: arr-sync-app
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: arr-sync
+  namespace: jellyseerr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: arr-sync
+  ingress: []
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Seerr API (same namespace; Seerr allows intra-namespace ingress)
+    - toEndpoints:
+        - matchLabels:
+            app: jellyseerr
+      toPorts:
+        - ports:
+            - port: "5055"
+              protocol: TCP
+    # Radarr/Sonarr APIs (both allow the jellyseerr namespace)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: radarr
+      toPorts:
+        - ports:
+            - port: "7878"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sonarr
+      toPorts:
+        - ports:
+            - port: "8989"
+              protocol: TCP
