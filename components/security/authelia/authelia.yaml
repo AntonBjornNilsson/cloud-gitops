@@ -53,10 +53,90 @@ spec:
             items:
               - key: users_database.yml
                 path: users_database.yml
+        # Second factors (WebAuthn keys, TOTP) from the secrets repo
+        # (authelia/authelia-2fa.yaml, written by manage_2fa.py)
+        - name: second-factors
+          secret:
+            secretName: authelia-2fa
+            optional: true
       extraVolumeMounts:
         - name: users-database
           mountPath: /etc/authelia
           readOnly: true
+      # Git is the source of truth for second factors: this sidecar replaces
+      # every WebAuthn key and TOTP config in the database with the ones in
+      # the authelia-2fa Secret, at start and whenever the Secret changes.
+      # Devices registered in the web UI are removed on the next sync.
+      initContainers:
+        - name: second-factor-sync
+          image: '{{ include "authelia.image" . }}'
+          restartPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cfg="--config /configuration.yaml"
+              src=/etc/authelia-2fa
+              sync() {
+                cd /tmp || return 1
+                for kind in webauthn totp; do
+                  rm -f current.yml
+                  # "no data to export" also exits 1: nothing to delete then
+                  if authelia storage user $kind export --file current.yml $cfg >/dev/null 2>&1; then
+                    for user in $(sed -n 's/^ *username: *//p' current.yml | tr -d "'\"" | sort -u); do
+                      if [ $kind = webauthn ]; then
+                        authelia storage user webauthn delete "$user" --all $cfg || return 1
+                      else
+                        authelia storage user totp delete "$user" $cfg || return 1
+                      fi
+                    done
+                  fi
+                  rm -f current.yml
+                  if [ -s $src/$kind.yml ]; then
+                    authelia storage user $kind import $cfg $src/$kind.yml || return 1
+                  fi
+                done
+              }
+              synced=""
+              while true; do
+                want=$(cat $src/webauthn.yml $src/totp.yml 2>/dev/null | sha256sum)
+                if [ "$want" != "$synced" ]; then
+                  if sync; then synced=$want; echo "second factors synced"; else echo "sync failed, retrying"; fi
+                fi
+                sleep 30
+              done
+          env:
+            - name: AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE
+              value: /secrets/internal/storage.encryption.key
+            - name: AUTHELIA_SESSION_SECRET_FILE
+              value: /secrets/internal/session.encryption.key
+            - name: AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE
+              value: /secrets/internal/identity_validation.reset_password.jwt.hmac.key
+            - name: AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET_FILE
+              value: /secrets/internal/identity_providers.oidc.hmac.key
+            - name: X_AUTHELIA_CONFIG_FILTERS
+              value: template
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          volumeMounts:
+            - name: authelia
+              mountPath: /config
+            - name: config
+              mountPath: /configuration.yaml
+              subPath: configuration.yaml
+              readOnly: true
+            - name: secrets
+              mountPath: /secrets/internal
+              readOnly: true
+            - name: secret-authelia-jwks
+              mountPath: /secrets/jwks
+              readOnly: true
+            - name: second-factors
+              mountPath: /etc/authelia-2fa
+              readOnly: true
     persistence:
       enabled: true
       storageClass: longhorn
