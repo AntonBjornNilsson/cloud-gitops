@@ -118,6 +118,11 @@ spec:
         expose:
           default: false
           public: true
+        # Keep the X-Forwarded-For that cloudflared sets (the visitor's IP)
+        # instead of replacing it with the connector pod IP. Safe to trust
+        # blindly: the Cilium policy lets only cloudflared reach this port.
+        forwardedHeaders:
+          insecure: true
         http:
           tls:
             enabled: true

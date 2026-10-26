@@ -134,6 +134,25 @@ spec:
       timeoutSeconds: 10
       failureThreshold: 6
 
+    # Trust X-Forwarded-For from in-cluster proxies (Traefik, whose pod IP
+    # changes), so sessions show the client's IP instead of Traefik's (e.g. in
+    # Tracearr). Jellyfin keeps this in network.xml on the config volume;
+    # rewrite it on every start so Git stays the source of truth.
+    extraInitContainers:
+      - name: known-proxies
+        image: docker.io/jellyfin/jellyfin:12.1
+        command:
+          - sh
+          - -c
+          - |
+            case "${pod_cidr}" in "") echo "pod_cidr not set, skipping"; exit 0;; esac
+            test -f /config/config/network.xml || exit 0
+            sed -z -i -E 's#<KnownProxies */>|<KnownProxies>([^<]|<string>[^<]*</string>)*</KnownProxies>#<KnownProxies><string>${pod_cidr}</string></KnownProxies>#' /config/config/network.xml
+            grep -o '<KnownProxies>.*</KnownProxies>' /config/config/network.xml
+        volumeMounts:
+          - name: config
+            mountPath: /config
+
     persistence:
       config:
         enabled: true
