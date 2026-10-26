@@ -310,7 +310,8 @@ spec:
             vaultwarden:
               default_policy: deny
               rules:
-                - policy: one_factor
+                # Password vault: password + security key or TOTP
+                - policy: two_factor
                   subject: ["group:admin", "group:vaultwarden"]
             jellyfin:
               default_policy: deny
