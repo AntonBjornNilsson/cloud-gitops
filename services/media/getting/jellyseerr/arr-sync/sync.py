@@ -7,6 +7,9 @@ removed only when all of these hold, so re-requests and manual re-adds are left 
   - Radarr/Sonarr has no files left for it,
   - its latest Radarr/Sonarr history event is a file deletion.
 Files are never touched (deleteFiles=false) and no import exclusion is added.
+Once no Radarr/Sonarr entry is left for it, the Seerr entry is cleared too (this also
+drops its old requests), so the title can be requested again and Deleted entries do not
+pile up.
 """
 import json
 import os
@@ -51,38 +54,57 @@ def remove(base, key, kind, item, title, **params):
 
 
 def sync_movie(media):
+    """Returns True when no Radarr entry is left for the media."""
     key = os.environ["RADARR_API_KEY"]
+    kept = False
     for movie in call(RADARR, key, "/movie", tmdbId=media["tmdbId"]):
         title = f"{movie['title']} ({movie.get('year')})"
         if movie.get("hasFile"):
             print(f"keep movie {title}: has a file again", flush=True)
+            kept = True
             continue
         if last_event(call(RADARR, key, "/history/movie", movieId=movie["id"])) != "movieFileDeleted":
             print(f"keep movie {title}: last history event is not a file deletion", flush=True)
+            kept = True
             continue
         remove(RADARR, key, "movie", movie, title, addImportExclusion="false")
+    return not kept
 
 
 def sync_series(media):
+    """Returns True when no Sonarr entry is left for the media."""
     if not media.get("tvdbId"):
-        return
+        print(f"keep Seerr media {media['id']}: no TVDB id to look it up in Sonarr", flush=True)
+        return False
     key = os.environ["SONARR_API_KEY"]
+    kept = False
     for series in call(SONARR, key, "/series", tvdbId=media["tvdbId"]):
         title = series["title"]
         if series.get("statistics", {}).get("episodeFileCount", 0) > 0:
             print(f"keep series {title}: still has episode files", flush=True)
+            kept = True
             continue
         if last_event(call(SONARR, key, "/history/series", seriesId=series["id"])) != "episodeFileDeleted":
             print(f"keep series {title}: last history event is not a file deletion", flush=True)
+            kept = True
             continue
         remove(SONARR, key, "series", series, title, addImportListExclusion="false")
+    return not kept
+
+
+def clear_seerr(media):
+    action = "would clear" if DRY_RUN else "clearing"
+    print(f"{action} Seerr {media['mediaType']} tmdb {media['tmdbId']} (media {media['id']})", flush=True)
+    if not DRY_RUN:
+        call(SEERR, os.environ["SEERR_API_KEY"], f"/media/{media['id']}", method="DELETE")
 
 
 def main():
     deleted = seerr_deleted()
     print(f"{len(deleted)} media marked Deleted in Seerr{' (dry run)' if DRY_RUN else ''}", flush=True)
     for media in deleted:
-        (sync_movie if media["mediaType"] == "movie" else sync_series)(media)
+        if (sync_movie if media["mediaType"] == "movie" else sync_series)(media):
+            clear_seerr(media)
 
 
 if __name__ == "__main__":
