@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: ntfy
-          image: binwiederhier/ntfy:v2.28.0
+          image: binwiederhier/ntfy:v2.34.0
           args:
             - serve
             - --config=/etc/ntfy/server.yml
