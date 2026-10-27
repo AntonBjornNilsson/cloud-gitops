@@ -34,7 +34,7 @@ spec:
               command: ["python3", "/app/rename.py"]
               env:
                 - name: DRY_RUN
-                  value: "true"
+                  value: "false"
                 - name: PYTHONDONTWRITEBYTECODE
                   value: "1"
                 - name: JELLYFIN_API_KEY
