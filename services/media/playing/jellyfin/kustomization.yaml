@@ -3,3 +3,9 @@ kind: Kustomization
 resources:
   - jellyfin.yaml
   - jellyfin-exporter.yaml
+  - collection-names.yaml
+configMapGenerator:
+  - name: collection-names-app
+    namespace: jellyfin
+    files:
+      - collection-names/rename.py
