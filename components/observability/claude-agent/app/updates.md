@@ -2,14 +2,23 @@ Scheduled version updates of container images and Helm charts.
 
 Renovate finds the updates: it opens one PR per chart or image update (listed below with their release notes)
 and merges patch updates of apps and observability by itself. Your job is the rest: bring the repo up to date
-in one reviewed apply that lands straight on main, like the user would at the desk.
+straight on main, like the user would at the desk.
+
+This run is unattended: nobody approves it. Your report is applied exactly as you submit it, the user gets a
+notification afterwards, and a health review checks the cluster 30 minutes later. So be conservative: when in
+doubt, skip and say why. Use read-only commands only: nobody answers questions in this run, so any command
+that needs approval just waits for hours and is then refused.
 
 1. Go through the open Renovate PRs below and sort each one:
    - **apply**: minor and patch updates whose release notes show no breaking change.
    - **adapt**: a breaking change you can handle in the manifests (renamed or removed Helm values, a new
      required field, a changed default you rely on): apply the bump together with that edit.
-   - **skip**: majors (they need the user's approval on the Dependency Dashboard); anything whose notes call for
-     manual or data migration steps you can't do in manifests; releases the notes flag as broken.
+   - **majors**: apply or adapt only if the release notes list every breaking change and none of them needs
+     more than a manifest edit you can make with confidence. Never take a major of a database or other stateful
+     store (postgres, mongo, redis, ...): its data format needs a migration. Skipped majors stay open as PRs for
+     the user.
+   - **skip**: anything whose notes call for manual or data migration steps you can't do in manifests;
+     releases the notes flag as broken; notes that are missing or too thin to judge a non-patch update.
    - Longhorn: at most one minor per run, oldest first, never together with other updates, and only after the
      PR's checklist holds (no Faulted volume, latest daily backups completed).
    - cfgate is pinned exactly and alpha: read its chart upgrade notes in the PR; skip it if they need steps.

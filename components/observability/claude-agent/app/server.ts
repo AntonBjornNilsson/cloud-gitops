@@ -56,6 +56,8 @@ let paused: (Verdict & { ok: false }) | undefined;
 let gating = false;
 let retry: NodeJS.Timeout | undefined;
 
+const AFTER_UPDATES_MS = 30 * 60_000;
+
 async function pump(): Promise<void> {
   if (current || gating || !queue.length) return;
   gating = true;
@@ -89,6 +91,10 @@ async function pump(): Promise<void> {
   bus.emit('state');
   try {
     await execute(run, current.abort);
+    // Nobody approved an updates run's change, so a health review checks what it deployed
+    if (run.kind === 'updates' && getRun(run.id)?.outcome === 'applied') {
+      setTimeout(() => enqueue({ kind: 'health', trigger: 'after:updates' }), AFTER_UPDATES_MS);
+    }
   } catch (e) {
     console.error(`[run ${run.id}]`, e);
   } finally {

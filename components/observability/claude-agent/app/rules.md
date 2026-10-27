@@ -28,7 +28,7 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
   `sed -i` and similar do). Make the smallest correct edit.
 - Do not commit, push, pull or create branches yourself: this container has no GitHub credentials, the `publisher`
   sidecar does that part. Where the skill says to commit, `git pull --rebase` and push, finish the run instead. The
-  service then shows the user the diff and asks whether to apply it; on yes the publisher commits it to main (your
+  service then shows the user the diff and asks whether to apply it (version-update runs skip that question); on yes the publisher commits it to main (your
   report title is the subject, the summary the body), rebases onto the latest main, re-validates, pushes and Flux
   deploys it. There is no PR and no CI wait, so validate locally as the skill says before you finish.
 - Never touch cluster/flux-system/, .github/, .claude/ or components/storage/longhorn/config/restore/:

@@ -211,7 +211,8 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   jq --argjson extra "$extra" '.bypass_actors += $extra' .github/rulesets/main.json | gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input -
   ```
 - Version updates come from Renovate (`.github/renovate.json5`, weekly batch, Dependency Dashboard issue); patches
-  automerge, and the claude-agent's Saturday `updates` run merges the rest it judges safe.
+  automerge, and the claude-agent's Saturday `updates` run merges the rest it judges safe, majors included (never stateful
+  stores' majors). That run is zero-touch: applied without the ntfy question, then a health review 30 min later.
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
 

@@ -89,11 +89,11 @@
         "**Longhorn upgrade checklist**: merge one minor at a time (oldest first); before merging check that no volume is `Faulted` and the latest daily backups completed (`kubectl -n longhorn-system get volumes.longhorn.io,backups.longhorn.io`); read the version's important notes. Engines are live-upgraded afterwards (`concurrentAutomaticEngineUpgradePerNodeLimit`).",
       ],
     },
-    // Majors need an explicit go from the Dependency Dashboard
+    // Majors get PRs without a Dependency Dashboard tick; the claude-agent's
+    // weekly updates run decides from the release notes whether to merge them
     {
       matchUpdateTypes: ["major"],
       automerge: false,
-      dependencyDashboardApproval: true,
       labels: ["dependencies", "major"],
     },
   ],

@@ -109,6 +109,9 @@ async function openPrList(prefix: string, bodies = false): Promise<string> {
 
 async function buildPrompt(run: Run): Promise<string> {
   if (run.kind === 'task') return run.prompt ?? '';
+  if (run.trigger === 'after:updates') {
+    return `${readFileSync(join(APP, 'health.md'), 'utf8')}\n\nThis review follows an unattended version-update run that landed on main about 30 minutes ago. Check first that what it deployed is healthy (git log -5 shows it). If one of those bumps broke something, reverting it (the file edit back to the old version) is the smallest fix.\n\nOpen Renovate update PRs:\n${await openPrList('renovate/')}`;
+  }
   if (run.kind === 'updates') return `${readFileSync(join(APP, 'updates.md'), 'utf8')}\n\nOpen Renovate update PRs:\n${await openPrList('renovate/', true)}`;
   return `${readFileSync(join(APP, 'health.md'), 'utf8')}\n\nOpen Renovate update PRs:\n${await openPrList('renovate/')}`;
 }
@@ -415,9 +418,13 @@ async function finish(run: Run, repo: string, report: Report): Promise<void> {
   if (stat) appendEvent(run.id, { type: 'diff', stat, patch: trim((await git(repo, 'diff', 'HEAD')).slice(0, 400_000)) });
   const prList = (label: string, ns?: number[]) => (ns?.length ? `\n\n${label}: ${ns.map((n) => `#${n}`).join(', ')}` : '');
   const what = `${prList('Merge Renovate PRs', merge)}${prList('Supersede (closed after the push)', report.supersedes)}${stat ? `\n\n\`\`\`\n${stat.slice(-800)}\n\`\`\`` : ''}`;
-  update(run, { status: 'waiting' });
-  const answer = await ask(run.id, 'apply', `Apply: ${report.title}`, `${clip(report.summary, 2200)}${what}`);
-  update(run, { status: 'running' });
+  // Version updates are zero-touch: applied as reported, then checked by a health review (server.ts)
+  let answer: 'yes' | 'no' = 'yes';
+  if (run.kind !== 'updates') {
+    update(run, { status: 'waiting' });
+    answer = await ask(run.id, 'apply', `Apply: ${report.title}`, `${clip(report.summary, 2200)}${what}`);
+    update(run, { status: 'running' });
+  }
   if (answer === 'no') {
     appendEvent(run.id, { type: 'status', text: 'Change not applied. Continue the run to adjust it.' });
     return done(run, 'change declined');
