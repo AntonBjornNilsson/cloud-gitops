@@ -64,7 +64,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nginx
-          image: nginxinc/nginx-unprivileged:1.31.6-alpine-slim
+          image: nginxinc/nginx-unprivileged:1.31.7-alpine-slim
           ports:
             - name: http
               containerPort: 8080
