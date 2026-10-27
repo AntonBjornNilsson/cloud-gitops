@@ -101,7 +101,7 @@ async function pump(): Promise<void> {
 const isIdle = () => !current && queue.length === 0 && listPending().length === 0;
 
 // ── scheduler ───────────────────────────────────────────────────────────────
-type Schedule = { name: string; cron: string };
+type Schedule = { name: string; cron: string; kind?: 'health' | 'updates' };
 const SCHEDULES: Schedule[] = JSON.parse(process.env.SCHEDULES ?? '[{"name":"health","cron":"30 6,18 * * *"}]');
 for (const s of SCHEDULES) if (!validCron(s.cron)) throw new Error(`invalid cron for ${s.name}: ${s.cron}`);
 const lastFired = new Map<string, string>();
@@ -111,10 +111,11 @@ setInterval(() => {
   for (const s of SCHEDULES) {
     if (lastFired.get(s.name) === minute || !cronMatches(s.cron, now)) continue;
     lastFired.set(s.name, minute);
-    // Don't pile up health reviews behind a run that is waiting for an answer
-    const busy = [current?.run, ...queue].some((r) => r?.kind === 'health');
-    if (busy) console.log(`[schedule] ${s.name}: a health review is already queued or running, skipping`);
-    else enqueue({ kind: 'health', trigger: `schedule:${s.name}` });
+    // Don't pile up scheduled runs of a kind behind one that is waiting for an answer
+    const kind = s.kind ?? 'health';
+    const busy = [current?.run, ...queue].some((r) => r?.kind === kind);
+    if (busy) console.log(`[schedule] ${s.name}: a ${kind} run is already queued or running, skipping`);
+    else enqueue({ kind, trigger: `schedule:${s.name}` });
   }
 }, 15_000);
 
@@ -300,7 +301,7 @@ createServer(async (req, res) => {
         const models = meta.models.map((x) => x.value);
         const model = pick(body.model, models) ?? (typeof body.model === 'string' && /^claude-[\w.-]+$/.test(body.model) ? body.model : undefined);
         const effort = pick(body.effort, ['low', 'medium', 'high', 'xhigh', 'max']);
-        if (body.kind === 'health') return json(res, 201, enqueue({ kind: 'health', trigger: 'web', model, effort }));
+        if (body.kind === 'health' || body.kind === 'updates') return json(res, 201, enqueue({ kind: body.kind, trigger: 'web', model, effort }));
         const prompt = String(body.prompt ?? '').trim();
         if (!prompt) return json(res, 400, { error: 'Write what Claude should do first.' });
         const prev = body.continueFrom ? getRun(String(body.continueFrom)) : undefined;

@@ -187,7 +187,8 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   Agent SDK service (TypeScript and the web UI in `app/`, shipped as a ConfigMap and run by Node's type stripping; image
   in `image/` built by `.github/workflows/claude-agent-image.yaml`; `app/updater.ts` restarts the Deployment onto a new
   `:latest` digest once the service is idle).
-  - Runs one session at a time: scheduled health reviews (`SCHEDULES`, UTC cron) and tasks started from the web UI
+  - Runs one session at a time: scheduled health reviews and weekly version updates (`SCHEDULES`, UTC cron; the
+    updates run applies the open Renovate PRs it judges safe from their release notes, `app/updates.md`) and tasks started from the web UI
     at `claude-agent.${domain}` (Authelia): live transcript with reasoning, messages into a running session, continue a
     session, model/effort per run, token usage and claude.ai plan limits (`/usage`).
   - Claude Code auto-memory is pinned to one directory on the service's PVC (`MEMORY_DIR`, default `/data/memory`),
@@ -208,7 +209,8 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   extra=$(gh api repos/{owner}/{repo}/rulesets/<id> --jq '[.bypass_actors[] | select(.actor_type == "Integration")]')
   jq --argjson extra "$extra" '.bypass_actors += $extra' .github/rulesets/main.json | gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input -
   ```
-- Version updates come from Renovate (`.github/renovate.json5`, weekly batch, Dependency Dashboard issue).
+- Version updates come from Renovate (`.github/renovate.json5`, weekly batch, Dependency Dashboard issue); patches
+  automerge, and the claude-agent's Saturday `updates` run applies the rest it judges safe straight to `main`.
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
 

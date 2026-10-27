@@ -15,7 +15,7 @@ export type Usage = Tokens & { byModel: Record<string, Tokens> };
 export type Todo = { content: string; status: string; activeForm?: string };
 export type Run = {
   id: string;
-  kind: 'health' | 'task';
+  kind: 'health' | 'updates' | 'task';
   prompt?: string;
   trigger: string;
   continueFrom?: string;

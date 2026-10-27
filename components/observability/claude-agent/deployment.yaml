@@ -78,7 +78,8 @@ spec:
               value: "80"
             # Cron in UTC; "health" runs the scheduled health review
             - name: SCHEDULES
-              value: '[{"name": "health", "cron": "30 6,18 * * *"}]'
+              # updates: version bumps from the open Renovate PRs, after Renovate's Saturday batch
+              value: '[{"name": "health", "cron": "30 6,18 * * *"}, {"name": "updates", "kind": "updates", "cron": "0 12 * * 6"}]'
             # Unanswered questions count as "no" after this
             - name: QUESTION_TIMEOUT_MINUTES
               value: "240"

@@ -43,7 +43,7 @@ function until(t) {
   return `in ${Math.round(d / 86400)}d`;
 }
 const totalTokens = (u) => (u ? u.input + u.output + u.cacheRead + u.cacheWrite : 0);
-const runTitle = (r) => r.report?.title || (r.prompt || '').split('\n')[0].slice(0, 140) || (r.kind === 'health' ? 'Health review' : 'Task');
+const runTitle = (r) => r.report?.title || (r.prompt || '').split('\n')[0].slice(0, 140) || (r.kind === 'health' ? 'Health review' : r.kind === 'updates' ? 'Version updates' : 'Task');
 const isLive = (r) => ['queued', 'running', 'waiting'].includes(r?.status);
 const GLYPH = { done: '●', failed: '✕', interrupted: '!', running: '◐', waiting: '◆', queued: '○', stopped: '■' };
 
@@ -320,7 +320,7 @@ function composerHtml({ placeholder, models = true, health = true }) {
     <div class="actions">
       ${models ? `<select id="model" aria-label="Model">${modelOptions()}</select><select id="effort" aria-label="Effort">${effortOptions()}</select>` : ''}
       <span class="grow"></span>
-      ${health ? '<button class="btn" id="health">Run health review</button>' : ''}
+      ${health ? '<button class="btn" id="updates">Update versions</button><button class="btn" id="health">Run health review</button>' : ''}
       <button class="btn primary" id="start">Start <span class="muted small" style="color:inherit;opacity:.75">↵</span></button>
     </div></div>
     <div class="chips">${SUGGESTIONS.map((s) => `<button class="chip" data-suggest="${esc(s)}">${esc(s.length > 60 ? `${s.slice(0, 58)}…` : s)}</button>`).join('')}</div>`;
@@ -337,13 +337,15 @@ function bindComposer() {
   };
   bindSubmit(ta, start);
   $('#start').onclick = start;
-  const h = $('#health');
-  if (h) h.onclick = async () => {
-    try {
-      const r = await api('/api/runs', { kind: 'health', ...opts() });
-      navigate(`/runs/${r.id}`);
-    } catch (e) { toast(e.message); }
-  };
+  for (const kind of ['health', 'updates']) {
+    const b = $(`#${kind}`);
+    if (b) b.onclick = async () => {
+      try {
+        const r = await api('/api/runs', { kind, ...opts() });
+        navigate(`/runs/${r.id}`);
+      } catch (e) { toast(e.message); }
+    };
+  }
   view.querySelectorAll('[data-suggest]').forEach((c) => (c.onclick = () => { ta.value = c.dataset.suggest; ta.focus(); }));
   ta.focus({ preventScroll: true });
 }

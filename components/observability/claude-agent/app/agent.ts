@@ -94,11 +94,13 @@ async function prepareWorkdir(run: Run): Promise<string> {
   return repo;
 }
 
-async function openPrList(prefix: string): Promise<string> {
+// With bodies: Renovate puts the release notes there, and the agent has no web access to read them itself
+async function openPrList(prefix: string, bodies = false): Promise<string> {
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/pulls?state=open&per_page=100`, { signal: AbortSignal.timeout(15_000) });
-    const prs = (await res.json()) as { number: number; title: string; head: { ref: string } }[];
-    const lines = prs.filter((p) => p.head.ref.startsWith(prefix)).map((p) => `- #${p.number} ${p.title}`);
+    const prs = (await res.json()) as { number: number; title: string; body: string | null; head: { ref: string } }[];
+    const lines = prs.filter((p) => p.head.ref.startsWith(prefix))
+      .map((p) => `- #${p.number} ${p.title}${bodies ? `\n\n${(p.body ?? '').slice(0, 6000)}\n` : ''}`);
     return lines.length ? lines.join('\n') : '(none)';
   } catch {
     return '(could not list)';
@@ -107,6 +109,7 @@ async function openPrList(prefix: string): Promise<string> {
 
 async function buildPrompt(run: Run): Promise<string> {
   if (run.kind === 'task') return run.prompt ?? '';
+  if (run.kind === 'updates') return `${readFileSync(join(APP, 'updates.md'), 'utf8')}\n\nOpen Renovate update PRs:\n${await openPrList('renovate/', true)}`;
   return `${readFileSync(join(APP, 'health.md'), 'utf8')}\n\nOpen Renovate update PRs:\n${await openPrList('renovate/')}`;
 }
 
@@ -260,7 +263,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
 
     // Streamed input: the first prompt, then whatever the user sends while the session is live
     const first = await buildPrompt(run);
-    appendEvent(run.id, { type: 'user', text: run.kind === 'health' ? 'Scheduled health review' : first, auto: run.kind === 'health' ? first : undefined });
+    appendEvent(run.id, { type: 'user', text: run.kind === 'task' ? first : run.kind === 'updates' ? 'Version updates' : 'Scheduled health review', auto: run.kind === 'task' ? undefined : first });
     const outstanding = new Set<string>();
     const input = async function* (): AsyncGenerator<SDKUserMessage> {
       let text: string | null = first;
@@ -396,10 +399,10 @@ async function finish(run: Run, repo: string, report: Report): Promise<void> {
 
   if (!stat) {
     const healthy = report.status === 'healthy';
-    const title = run.kind === 'task'
+    const title = run.kind !== 'health'
       ? `✅ Claude Agent: ${report.title}`
       : healthy ? '✅ Claude Agent: all clear' : '✅ Claude Agent: all clear, with notable problems';
-    const intro = run.kind === 'task' ? '' : healthy
+    const intro = run.kind !== 'health' ? '' : healthy
       ? 'Looked into the cluster and everything was good.\n\n'
       : 'Looked into the cluster. Nothing to change in the repo; these need manual action:\n\n';
     await notify({ title, message: `${intro}${report.summary}`, tags: healthy ? ['white_check_mark', 'robot'] : ['white_check_mark', 'warning', 'robot'], click: runUrl(run.id), actions: [view] });

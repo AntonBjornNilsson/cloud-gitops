@@ -28,6 +28,7 @@ configMapGenerator:
       - app/limits.ts
       - app/rules.md
       - app/health.md
+      - app/updates.md
       - app/index.html
       - app/app.js
       - app/app.css
