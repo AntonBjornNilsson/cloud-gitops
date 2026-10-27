@@ -9,7 +9,7 @@ const RUNS = join(DATA, 'runs');
 mkdirSync(RUNS, { recursive: true });
 
 export type RunStatus = 'queued' | 'running' | 'waiting' | 'done' | 'failed' | 'stopped' | 'interrupted';
-export type Report = { status: 'healthy' | 'findings' | 'fixed'; title: string; summary: string };
+export type Report = { status: 'healthy' | 'findings' | 'fixed'; title: string; summary: string; merge?: number[]; supersedes?: number[] };
 export type Tokens = { input: number; output: number; cacheRead: number; cacheWrite: number };
 export type Usage = Tokens & { byModel: Record<string, Tokens> };
 export type Todo = { content: string; status: string; activeForm?: string };

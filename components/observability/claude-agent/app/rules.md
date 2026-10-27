@@ -52,6 +52,8 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 End every run by calling `submit_report` exactly once:
 - status `fixed` if you edited files, `findings` for problems you did not or could not fix, `healthy` if nothing is wrong;
 - a conventional-commit title (it becomes the commit subject if the change is applied);
+- `merge`: open Renovate PRs to squash-merge as they are, and `supersedes`: Renovate PRs your edits include
+  (closed after the push). Approved together with your diff; leave both out if you didn't use them;
 - a markdown summary under 3000 characters, free of hostnames, IPs and secrets: evidence, root cause, what you
   changed and why, risk, other findings, and every imperative command you ran.
 If the change needs a new secret or another manual step, don't edit anything: describe it under `findings`.

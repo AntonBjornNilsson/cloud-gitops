@@ -247,9 +247,11 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
           'submit_report',
           'Finish the run with a report. Call it as the last step (again after follow-up messages, if they change the outcome).',
           {
-            status: z.enum(['healthy', 'findings', 'fixed']).describe('"fixed" if you edited files, "findings" for problems you did not fix, "healthy" if nothing is wrong'),
+            status: z.enum(['healthy', 'findings', 'fixed']).describe('"fixed" if you edited files or listed PRs to merge, "findings" for problems you did not fix, "healthy" if nothing is wrong'),
             title: z.string().describe('Conventional commit subject, e.g. fix(grafana): raise memory limit to stop OOMKills'),
             summary: z.string().describe('Markdown, under 3000 characters, no hostnames, IPs or secrets'),
+            merge: z.array(z.number().int()).optional().describe('Open Renovate PRs to squash-merge as they are (no edits of yours needed)'),
+            supersedes: z.array(z.number().int()).optional().describe('Open Renovate PRs whose bump your edits include (because it needed more changes); closed once your change is on main'),
           },
           async (r) => {
             report = r;
@@ -397,7 +399,8 @@ async function finish(run: Run, repo: string, report: Report): Promise<void> {
   const stat = (await git(repo, 'diff', 'HEAD', '--stat')).trim();
   const view = { action: 'view' as const, label: '👁 Details', url: runUrl(run.id) };
 
-  if (!stat) {
+  const merge = report.merge ?? [];
+  if (!stat && !merge.length) {
     const healthy = report.status === 'healthy';
     const title = run.kind !== 'health'
       ? `✅ Claude Agent: ${report.title}`
@@ -409,20 +412,22 @@ async function finish(run: Run, repo: string, report: Report): Promise<void> {
     return done(run, healthy ? 'no changes' : 'findings reported');
   }
 
-  appendEvent(run.id, { type: 'diff', stat, patch: trim((await git(repo, 'diff', 'HEAD')).slice(0, 400_000)) });
+  if (stat) appendEvent(run.id, { type: 'diff', stat, patch: trim((await git(repo, 'diff', 'HEAD')).slice(0, 400_000)) });
+  const prList = (label: string, ns?: number[]) => (ns?.length ? `\n\n${label}: ${ns.map((n) => `#${n}`).join(', ')}` : '');
+  const what = `${prList('Merge Renovate PRs', merge)}${prList('Supersede (closed after the push)', report.supersedes)}${stat ? `\n\n\`\`\`\n${stat.slice(-800)}\n\`\`\`` : ''}`;
   update(run, { status: 'waiting' });
-  const answer = await ask(run.id, 'apply', `Apply: ${report.title}`, `${clip(report.summary, 2500)}\n\n\`\`\`\n${stat.slice(-800)}\n\`\`\``);
+  const answer = await ask(run.id, 'apply', `Apply: ${report.title}`, `${clip(report.summary, 2200)}${what}`);
   update(run, { status: 'running' });
   if (answer === 'no') {
     appendEvent(run.id, { type: 'status', text: 'Change not applied. Continue the run to adjust it.' });
     return done(run, 'change declined');
   }
 
-  appendEvent(run.id, { type: 'status', text: 'Applying: committing and pushing to main' });
+  appendEvent(run.id, { type: 'status', text: 'Applying: merging the Renovate PRs and pushing the change to main' });
   const res = await fetch(`${PUBLISHER}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ runId: run.id, repo, title: report.title, summary: report.summary }),
+    body: JSON.stringify({ runId: run.id, repo, title: report.title, summary: report.summary, merge, supersedes: report.supersedes ?? [] }),
   });
   if (res.status !== 202) throw new Error(`publisher refused: ${await res.text()}`);
   let state: { state: string; message: string; commitUrl?: string };

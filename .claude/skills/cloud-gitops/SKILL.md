@@ -188,7 +188,7 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   in `image/` built by `.github/workflows/claude-agent-image.yaml`; `app/updater.ts` restarts the Deployment onto a new
   `:latest` digest once the service is idle).
   - Runs one session at a time: scheduled health reviews and weekly version updates (`SCHEDULES`, UTC cron; the
-    updates run applies the open Renovate PRs it judges safe from their release notes, `app/updates.md`) and tasks started from the web UI
+    updates run merges the open Renovate PRs it judges safe from their release notes, `app/updates.md`) and tasks started from the web UI
     at `claude-agent.${domain}` (Authelia): live transcript with reasoning, messages into a running session, continue a
     session, model/effort per run, token usage and claude.ai plan limits (`/usage`).
   - Claude Code auto-memory is pinned to one directory on the service's PVC (`MEMORY_DIR`, default `/data/memory`),
@@ -196,9 +196,10 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   - `app/policy.ts` decides which Bash commands run directly (read-only kubectl/flux/git/text tools); every other
     command, and the final "apply this diff", is a yes/no question on ntfy topic `claude-agent` (buttons POST to the
     Authelia-free `/answer/<token>/` path; no answer in 4h = no). Rules for Claude: `app/rules.md`, `app/health.md`.
-  - On yes, the `publisher` sidecar (only container with the GitHub App key) commits the diff, rebases onto the latest
-    `main`, re-runs `kubectl kustomize` and pushes straight to `main`: no PR, no waiting for CI, the same as a session at
-    the desk. Runs end with an all-clear (listing anything that needs a human) when nothing changed.
+  - On yes, the `publisher` sidecar (only container with the GitHub App key) squash-merges the Renovate PRs Claude
+    listed (`merge`; only open `renovate/*` PRs whose `validate` hasn't failed), then commits the diff, rebases onto the
+    latest `main`, re-runs `kubectl kustomize` and pushes straight to `main`, closing PRs it `supersedes`: no waiting
+    for CI, the same as a session at the desk. Runs end with an all-clear (listing anything that needs a human) when nothing changed.
 
 ## GitHub
 
@@ -210,7 +211,7 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   jq --argjson extra "$extra" '.bypass_actors += $extra' .github/rulesets/main.json | gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input -
   ```
 - Version updates come from Renovate (`.github/renovate.json5`, weekly batch, Dependency Dashboard issue); patches
-  automerge, and the claude-agent's Saturday `updates` run applies the rest it judges safe straight to `main`.
+  automerge, and the claude-agent's Saturday `updates` run merges the rest it judges safe.
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
 
