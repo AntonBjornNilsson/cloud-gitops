@@ -1,0 +1,16 @@
+---
+# AdGuard Home (adguard-exporter sidecar: queries, blocks, upstreams, clients).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: adguard-home
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - adguard-home
+  selector:
+    matchLabels:
+      app: adguard-home
+  podMetricsEndpoints:
+    - port: metrics

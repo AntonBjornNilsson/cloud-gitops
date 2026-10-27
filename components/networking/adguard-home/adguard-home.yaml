@@ -39,9 +39,40 @@ spec:
       labels:
         app: adguard-home
     spec:
+      # LAN DNS must not sit on the media node, which freezes regularly.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - ${media_node}
+      initContainers:
+        # Git owns the config (see config/AdGuardHome.yaml); AdGuard rewrites
+        # the file at runtime, so it is copied onto the volume on every start.
+        - name: seed-config
+          image: adguard/adguardhome:v0.107.79
+          command:
+            - sh
+            - -c
+            - cp /config/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /opt/adguardhome/conf
+              subPath: conf
       containers:
         - name: adguard-home
-          image: adguard/adguardhome:v0.107.56
+          image: adguard/adguardhome:v0.107.79
           imagePullPolicy: IfNotPresent
           args:
             - "--config"
@@ -59,19 +90,13 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
-            - name: init-setup
-              containerPort: 3000
-              protocol: TCP
-            - name: dns-tls
-              containerPort: 853
-              protocol: TCP
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 256Mi
             limits:
               cpu: 1000m
-              memory: 512Mi
+              memory: 1Gi
           securityContext:
             capabilities:
               add:
@@ -83,35 +108,67 @@ spec:
             - name: data
               mountPath: /opt/adguardhome/work
               subPath: work
-          # Until the setup wizard has been completed AdGuard only serves the
-          # wizard on :3000 and never binds DNS, so liveness accepts either.
-          livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - nc -z -w 2 127.0.0.1 53 || nc -z -w 2 127.0.0.1 3000
-            initialDelaySeconds: 15
-            periodSeconds: 10
-          readinessProbe:
+          startupProbe:
             tcpSocket:
               port: 53
-            initialDelaySeconds: 10
             periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            tcpSocket:
+              port: 53
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /control/status
+              port: 80
+            periodSeconds: 10
+        # AdGuard has no users (Authelia guards the UI), so any credentials work.
+        - name: exporter
+          image: ghcr.io/henrywhitaker3/adguard-exporter:v1.2.1
+          env:
+            - name: ADGUARD_SERVERS
+              value: http://127.0.0.1:80
+            - name: ADGUARD_USERNAMES
+              value: unused
+            - name: ADGUARD_PASSWORDS
+              value: unused
+            - name: INTERVAL
+              value: 30s
+          ports:
+            - name: metrics
+              containerPort: 9618
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          livenessProbe:
+            tcpSocket:
+              port: 9618
+            periodSeconds: 30
       volumes:
+        - name: config
+          configMap:
+            name: adguard-home-config
         - name: data
           persistentVolumeClaim:
             claimName: adguard-home-data
 ---
+# LAN DNS on a fixed IP: hand ${adguard_lb_ip} out as DNS server via DHCP.
+# Local traffic policy keeps the client IPs (query log, per-client rate limit).
 apiVersion: v1
 kind: Service
 metadata:
   name: adguard-home-dns
   namespace: adguard-home
   annotations:
-    metallb.universe.tf/allow-shared-ip: "adguard-home"
+    metallb.io/loadBalancerIPs: "${adguard_lb_ip}"
 spec:
   type: LoadBalancer
+  externalTrafficPolicy: Local
   selector:
     app: adguard-home
   ports:
@@ -122,10 +179,6 @@ spec:
     - name: dns-tcp
       port: 53
       targetPort: 53
-      protocol: TCP
-    - name: http
-      port: 80
-      targetPort: 80
       protocol: TCP
 ---
 apiVersion: v1
@@ -142,18 +195,29 @@ spec:
       port: 80
       targetPort: 80
       protocol: TCP
-    - name: init-setup
-      port: 3000
-      targetPort: 3000
-      protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: adguard-home
   namespace: adguard-home
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "AdGuard Home"
+    gethomepage.dev/description: "LAN DNS and ad blocking"
+    gethomepage.dev/group: "Infrastructure"
+    gethomepage.dev/icon: "adguard-home.png"
+    gethomepage.dev/pod-selector: "app=adguard-home"
+    # The native widget needs AdGuard credentials; read the exporter's metrics instead
+    gethomepage.dev/widget.type: "prometheusmetric"
+    gethomepage.dev/widget.url: "http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428"
+    gethomepage.dev/widget.metrics.0.label: "Queries (24h)"
+    gethomepage.dev/widget.metrics.0.query: "sum(adguard_queries)"
+    gethomepage.dev/widget.metrics.0.format.type: "number"
+    gethomepage.dev/widget.metrics.1.label: "Blocked"
+    gethomepage.dev/widget.metrics.1.query: "100 * sum(adguard_queries_blocked) / clamp_min(sum(adguard_queries), 1)"
+    gethomepage.dev/widget.metrics.1.format.type: "percent"
 spec:
-  ingressClassName: traefik
   rules:
     - host: adguard.${domain}
       http:
@@ -165,13 +229,3 @@ spec:
                 name: adguard-home-web
                 port:
                   number: 80
-    - host: adguard-setup.${domain}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: adguard-home-web
-                port:
-                  number: 3000

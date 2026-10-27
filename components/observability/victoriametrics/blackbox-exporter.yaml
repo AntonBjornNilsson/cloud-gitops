@@ -198,8 +198,8 @@ spec:
       labels:
         probe_group: dns
       targets:
-        # LAN resolver (re-add when adguard-home is enabled again)
-        # - adguard-home-dns.adguard-home.svc.cluster.local:53
+        # LAN resolver (AdGuard Home)
+        - adguard-home-dns.adguard-home.svc.cluster.local:53
         # Public resolvers (upstream health / WAN DNS latency)
         - 1.1.1.1:53
         - 8.8.8.8:53

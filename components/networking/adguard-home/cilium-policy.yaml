@@ -6,7 +6,7 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # DNS queries from any entity (LAN devices, cluster pods, host, remote nodes)
+    # DNS queries from LAN devices (via the LoadBalancer IP), pods and nodes
     - fromEntities:
         - world
         - cluster
@@ -18,7 +18,7 @@ spec:
               protocol: UDP
             - port: "53"
               protocol: TCP
-    # Web UI ingress from Traefik
+    # Web UI/API only through Traefik (Authelia); AdGuard has no users of its own
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
@@ -26,21 +26,15 @@ spec:
         - ports:
             - port: "80"
               protocol: TCP
-            - port: "3000"
-              protocol: TCP
-    # Direct access to Web UI / setup from LAN via MetalLB IP
-    - fromEntities:
-        - world
-        - cluster
-        - host
-        - remote-node
+    # Exporter metrics
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
       toPorts:
         - ports:
-            - port: "80"
+            - port: "9618"
               protocol: TCP
-            - port: "3000"
-              protocol: TCP
-    # Probes and health checks
+    # Probes
     - fromEntities:
         - host
         - remote-node
@@ -55,7 +49,7 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # Upstream DNS servers (standard DNS, DoT, DoH, DoQ)
+    # Upstream resolvers (plain DNS for bootstrap, DoT/DoQ, DoH) and blocklist downloads
     - toEntities:
         - world
       toPorts:
@@ -63,21 +57,8 @@ spec:
             - port: "53"
               protocol: ANY
             - port: "853"
-              protocol: TCP
+              protocol: ANY
             - port: "443"
               protocol: TCP
-            - port: "784"
-              protocol: UDP
-    # Filter blocklist downloads and updates
-    - toEntities:
-        - world
-      toPorts:
-        - ports:
             - port: "80"
               protocol: TCP
-            - port: "443"
-              protocol: TCP
-    # Local LAN / cluster PTR reverse DNS queries
-    - toEntities:
-        - cluster
-        - host

@@ -10,7 +10,16 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  retryInterval: 1m0s
+  timeout: 5m0s
   wait: true
+  # LoadBalancer IP pool, the Longhorn volume, and Kyverno's Ingress
+  # mutations (TLS + Authelia) must exist before the unauthenticated UI does.
+  dependsOn:
+    - name: system-metallb-config
+    - name: system-longhorn
+    - name: system-kyverno-config
+    - name: system-traefik
   postBuild:
     substituteFrom:
       - kind: Secret

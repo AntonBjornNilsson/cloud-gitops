@@ -3,3 +3,9 @@ kind: Kustomization
 resources:
   - adguard-home.yaml
   - cilium-policy.yaml
+# The hash suffix restarts the pod (which re-seeds the config) on every change
+configMapGenerator:
+  - name: adguard-home-config
+    namespace: adguard-home
+    files:
+      - config/AdGuardHome.yaml

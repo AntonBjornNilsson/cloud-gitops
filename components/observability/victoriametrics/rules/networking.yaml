@@ -197,6 +197,42 @@ spec:
           annotations:
             summary: "CoreDNS considers all upstream resolvers unhealthy"
 
+    # LAN DNS answering is covered by ClusterDNSFailing (blackbox probe of adguard-home-dns).
+    - name: adguard-home
+      rules:
+        - alert: AdGuardExporterDown
+          expr: absent(up{namespace="adguard-home"} == 1)
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AdGuard Home metrics are missing"
+            description: "The adguard-exporter sidecar is not being scraped; AdGuard alerts below are blind."
+        - alert: AdGuardAPIUnreachable
+          expr: increase(adguard_scrape_errors_total[15m]) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AdGuard Home API errors for {{ $labels.server }}"
+            description: "The exporter cannot read AdGuard's API; the web UI is probably down too."
+        - alert: AdGuardProtectionDisabled
+          expr: max(adguard_protection_enabled) == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "AdGuard Home protection has been off for 30 minutes"
+            description: "Filtering was paused in the web UI; restarting the pod restores the Git config."
+        - alert: AdGuardBlockingNothing
+          expr: sum(adguard_queries) > 1000 and sum(adguard_queries_blocked) == 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "AdGuard Home has blocked nothing in the last 24h"
+            description: "Blocklists are probably failing to download (check egress and the pod log)."
+
     - name: cilium
       rules:
         - alert: CiliumAgentUnavailable
