@@ -190,6 +190,8 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   - Runs one session at a time: scheduled health reviews (`SCHEDULES`, UTC cron) and tasks started from the web UI
     at `claude-agent.${domain}` (Authelia): live transcript with reasoning, messages into a running session, continue a
     session, model/effort per run, token usage and claude.ai plan limits (`/usage`).
+  - Claude Code auto-memory is pinned to one directory on the service's PVC (`MEMORY_DIR`, default `/data/memory`),
+    shared by all runs; writes there need no approval. Memory guidance for the agent is in `app/rules.md`.
   - `app/policy.ts` decides which Bash commands run directly (read-only kubectl/flux/git/text tools); every other
     command, and the final "apply this diff", is a yes/no question on ntfy topic `claude-agent` (buttons POST to the
     Authelia-free `/answer/<token>/` path; no answer in 4h = no). Rules for Claude: `app/rules.md`, `app/health.md`.

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { appendEvent, getRun, saveRun, type Report, type Run, type Tokens, type Usage } from './store.ts';
 import { ask, cancelRun } from './questions.ts';
@@ -23,6 +23,8 @@ const BRANCH = process.env.GITHUB_BRANCH ?? 'main';
 const MAX_TURNS = Number(process.env.CLAUDE_MAX_TURNS ?? 80);
 const PUBLISHER = process.env.PUBLISHER_URL ?? 'http://127.0.0.1:8081';
 const KEEP_WORKDIRS = 10;
+// Auto-memory shared by all runs (Claude Code would key it by the per-run clone path)
+const MEMORY = process.env.MEMORY_DIR ?? '/data/memory';
 const MAX_OUTPUT = 20_000;
 
 // Tools that never change anything outside the session
@@ -209,7 +211,9 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
         const p = String(input.file_path ?? input.notebook_path ?? '');
         const rel = relative(repo, resolve(repo, p));
         if (rel && !rel.startsWith('..') && !isAbsolute(rel) && !/^(\.claude|\.git)(\/|$)/.test(rel)) return allow;
-        reason = 'writes outside the editable part of the repo clone';
+        const mem = relative(MEMORY, resolve(repo, p));
+        if (mem && !mem.startsWith('..') && !isAbsolute(mem)) return allow;
+        reason = 'writes outside the editable part of the repo clone and the memory directory';
       }
       if (name === 'Bash') {
         const v = checkCommand(String(input.command ?? ''));
@@ -268,6 +272,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
       }
     };
 
+    mkdirSync(MEMORY, { recursive: true });
     const q = query({
       prompt: input(),
       options: {
@@ -279,6 +284,7 @@ export async function execute(run: Run, abort: AbortController): Promise<void> {
         permissionMode: 'default',
         canUseTool,
         settingSources: ['project'],
+        settings: { autoMemoryEnabled: true, autoMemoryDirectory: MEMORY },
         skills: ['cloud-gitops'],
         systemPrompt: { type: 'preset', preset: 'claude_code', append: readFileSync(join(APP, 'rules.md'), 'utf8') },
         mcpServers: { agent: tools },

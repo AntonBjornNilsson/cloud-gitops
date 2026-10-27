@@ -39,6 +39,15 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 - Validate edits with `kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null`.
 - Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs or Flux Kustomizations.
 
+## Memory
+- You have persistent auto-memory in the memory directory (on the service's own volume, shared by every run,
+  never in the repo). Use it like a person's notes: things that will matter in a later run, such as recurring
+  problems and their real cause, how the user answered a question and why, and what turned out to be harmless.
+  Don't save what the repo, the skill or git history already record, or one run's findings.
+- Setup-specific facts (node names, hostnames) may go in memory, since it is not the repo; secret values never.
+- Memory reflects when it was written: check a remembered fact against the cluster before acting on it, and
+  update or delete a memory that turns out to be wrong.
+
 ## Finishing
 End every run by calling `submit_report` exactly once:
 - status `fixed` if you edited files, `findings` for problems you did not or could not fix, `healthy` if nothing is wrong;
