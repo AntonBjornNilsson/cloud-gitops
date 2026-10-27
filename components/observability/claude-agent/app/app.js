@@ -652,7 +652,7 @@ async function viewRun(id) {
         break;
       case 'status':
         d.className = 'ev status';
-        d.innerHTML = `<span>${fmtTime(ev.t)} · ${esc(ev.text)}${ev.prUrl ? ` · <a href="${esc(ev.prUrl)}" target="_blank" rel="noopener">PR</a>` : ''}</span>`;
+        d.innerHTML = `<span>${fmtTime(ev.t)} · ${esc(ev.text)}${ev.commitUrl || ev.prUrl ? ` · <a href="${esc(ev.commitUrl || ev.prUrl)}" target="_blank" rel="noopener">${ev.commitUrl ? 'Commit' : 'PR'}</a>` : ''}</span>`;
         break;
       default:
         return;

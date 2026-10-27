@@ -409,22 +409,22 @@ async function finish(run: Run, repo: string, report: Report): Promise<void> {
     return done(run, 'change declined');
   }
 
-  appendEvent(run.id, { type: 'status', text: 'Applying: opening a PR and merging it once the validate check passes' });
+  appendEvent(run.id, { type: 'status', text: 'Applying: committing and pushing to main' });
   const res = await fetch(`${PUBLISHER}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ runId: run.id, repo, kind: run.kind, title: report.title, summary: report.summary }),
+    body: JSON.stringify({ runId: run.id, repo, title: report.title, summary: report.summary }),
   });
   if (res.status !== 202) throw new Error(`publisher refused: ${await res.text()}`);
-  let state: { state: string; message: string; prUrl?: string };
+  let state: { state: string; message: string; commitUrl?: string };
   do {
     await new Promise((r) => setTimeout(r, 15_000));
     state = await (await fetch(`${PUBLISHER}/apply/${run.id}`)).json() as typeof state;
   } while (state.state === 'running');
 
-  appendEvent(run.id, { type: 'status', text: state.message, prUrl: state.prUrl });
-  const actions = [view, ...(state.prUrl ? [{ action: 'view' as const, label: 'PR', url: state.prUrl }] : [])];
-  if (state.state === 'merged') {
+  appendEvent(run.id, { type: 'status', text: state.message, commitUrl: state.commitUrl });
+  const actions = [view, ...(state.commitUrl ? [{ action: 'view' as const, label: 'Commit', url: state.commitUrl }] : [])];
+  if (state.state === 'pushed') {
     await notify({ title: `🚀 Applied: ${report.title}`.slice(0, 120), message: state.message, tags: ['rocket', 'robot'], click: runUrl(run.id), actions });
     return done(run, 'applied');
   }

@@ -25,9 +25,12 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
   that needs no manifest change (delete a stuck pod or failed Job, `flux reconcile`). Never change specs
   imperatively, never `helm`, and leave everything you suspended resumed.
 - Change files only with the Edit/Write tools: inside the clone they need no approval (shell redirects,
-  `sed -i` and similar do). Do not commit, push or create branches. When you finish, the service shows
-  the user the diff and asks whether to apply it; on yes it goes through a PR, is merged automatically once the
-  required check passes, and Flux deploys it. Make the smallest correct edit.
+  `sed -i` and similar do). Make the smallest correct edit.
+- Do not commit, push, pull or create branches yourself: this container has no GitHub credentials, the `publisher`
+  sidecar does that part. Where the skill says to commit, `git pull --rebase` and push, finish the run instead. The
+  service then shows the user the diff and asks whether to apply it; on yes the publisher commits it to main (your
+  report title is the subject, the summary the body), rebases onto the latest main, re-validates, pushes and Flux
+  deploys it. There is no PR and no CI wait, so validate locally as the skill says before you finish.
 - Never touch cluster/flux-system/, .github/, .claude/ or components/storage/longhorn/config/restore/:
   applying such a diff is refused. You may change your own service in components/observability/claude-agent/
   (code in app/); a broken change there stops you from running, so keep such edits small and careful.

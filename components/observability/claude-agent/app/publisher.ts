@@ -1,6 +1,6 @@
 // Publisher sidecar: the only container with the GitHub App key. Claude never runs here.
-// On an approved apply it guards the diff, pushes a branch, opens a PR, waits for the required
-// `validate` check and squash-merges. Listens on localhost only.
+// On an approved apply it guards the diff, commits it, rebases onto the latest main, validates and
+// pushes straight to main (the App bypasses the main ruleset, like a person at the desk). Localhost only.
 import { createServer } from 'node:http';
 import { createSign } from 'node:crypto';
 import { execFile } from 'node:child_process';
@@ -12,12 +12,11 @@ const exec = promisify(execFile);
 const REPO = process.env.GITHUB_REPO ?? '';
 const BRANCH = process.env.GITHUB_BRANCH ?? 'main';
 const APP_DIR = process.env.GITHUB_APP_DIR ?? '/etc/github-app';
-const CHECK = process.env.REQUIRED_CHECK ?? 'validate';
-const CHECK_TIMEOUT_MS = 20 * 60_000;
+const PUSH_ATTEMPTS = 3;
 // The agent may change its own component; like everything else it only lands after a yes on the diff
 const FORBIDDEN = /^(cluster\/flux-system\/|\.github\/|\.claude\/|components\/storage\/longhorn\/config\/restore\/)/;
 
-type Job = { state: 'running' | 'merged' | 'failed'; message: string; prUrl?: string };
+type Job = { state: 'running' | 'pushed' | 'failed'; message: string; commitUrl?: string };
 const jobs = new Map<string, Job>();
 
 // ── GitHub App installation token (valid 1h, cached for 50 min) ─────────────
@@ -34,33 +33,18 @@ async function installationToken(): Promise<string> {
   const res = await fetch(`https://api.github.com/app/installations/${installation}/access_tokens`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${jwt}`, Accept: 'application/vnd.github+json' },
-    body: JSON.stringify({ repositories: [REPO.split('/')[1]], permissions: { contents: 'write', pull_requests: 'write' } }),
+    body: JSON.stringify({ repositories: [REPO.split('/')[1]], permissions: { contents: 'write' } }),
   });
   if (!res.ok) throw new Error(`token exchange failed: ${res.status} ${await res.text()}`);
   cached = { token: ((await res.json()) as { token: string }).token, until: Date.now() + 50 * 60_000 };
   return cached.token;
 }
 
-async function github(method: string, path: string, body?: unknown, auth = true): Promise<any> {
-  const res = await fetch(`https://api.github.com/repos/${REPO}${path}`, {
-    method,
-    headers: {
-      Accept: 'application/vnd.github+json',
-      'User-Agent': 'claude-agent',
-      ...(auth ? { Authorization: `Bearer ${await installationToken()}` } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  if (!res.ok) throw Object.assign(new Error(`${method} ${path}: ${res.status} ${text.slice(0, 300)}`), { status: res.status });
-  return text ? JSON.parse(text) : {};
-}
-
 const git = async (cwd: string, ...args: string[]) =>
   (await exec('git', ['-c', 'safe.directory=*', '-c', 'user.name=claude-agent', '-c', 'user.email=claude-agent@users.noreply.github.com', ...args], { cwd, maxBuffer: 64 << 20 })).stdout;
 
 // ── apply ───────────────────────────────────────────────────────────────────
-async function apply(runId: string, repo: string, kind: string, title: string, summary: string, job: Job): Promise<void> {
+async function apply(runId: string, repo: string, title: string, summary: string, job: Job): Promise<void> {
   const step = (message: string) => {
     job.message = message;
     console.log(`[apply ${runId}] ${message}`);
@@ -72,50 +56,39 @@ async function apply(runId: string, repo: string, kind: string, title: string, s
   if (forbidden.length) throw new Error(`change touches protected paths: ${forbidden.join(', ')}`);
   const patch = await git(repo, 'diff', '--cached');
   if (/-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(patch) || (cached && patch.includes(cached.token))) throw new Error('diff contains a credential');
-  await exec('kubectl', ['kustomize', 'components'], { cwd: repo, maxBuffer: 256 << 20 });
-  await exec('kubectl', ['kustomize', 'services'], { cwd: repo, maxBuffer: 256 << 20 });
-
-  const branch = `claude/${kind}-${runId}`;
-  step(`Pushing ${branch}`);
-  await git(repo, 'switch', '--quiet', '-C', branch);
-  await git(repo, 'commit', '--quiet', '-m', `${title}\n\nApproved from ntfy, applied by the claude-agent service (run ${runId}).\n\nCo-Authored-By: Claude <noreply@anthropic.com>`);
-  // The token is in the remote URL: never let git's error text (which echoes the command) escape
-  await git(repo, 'push', '--quiet', '--force', `https://x-access-token:${await installationToken()}@github.com/${REPO}.git`, `HEAD:refs/heads/${branch}`)
-    .catch((e) => {
-      throw new Error(`git push failed: ${String(e.stderr ?? '').replace(/x-access-token:[^@]+@/g, 'x-access-token:***@').slice(0, 300)}`);
-    });
-  const sha = (await git(repo, 'rev-parse', 'HEAD')).trim();
-
-  const pr = await github('POST', '/pulls', {
-    title,
-    head: branch,
-    base: BRANCH,
-    body: `${summary}\n\n---\n_Approved from ntfy and merged automatically by the claude-agent service once \`${CHECK}\` passes._\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)`,
-  });
-  job.prUrl = pr.html_url;
-  step(`PR #${pr.number} opened, waiting for the ${CHECK} check`);
-
-  // Public repo: check runs are readable without the token (whose permissions don't include checks)
-  const deadline = Date.now() + CHECK_TIMEOUT_MS;
-  let conclusion: string | null = null;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 30_000));
-    const runs = await github('GET', `/commits/${sha}/check-runs?check_name=${CHECK}`, undefined, false).catch(() => ({ check_runs: [] }));
-    const run = runs.check_runs?.[0];
-    if (run?.status === 'completed') {
-      conclusion = run.conclusion;
-      break;
+  const base = (await git(repo, 'rev-parse', 'HEAD')).trim();
+  await git(repo, 'commit', '--quiet', '-m', `${title}\n\n${summary}\n\nApproved from ntfy, applied by the claude-agent service (run ${runId}).\n\nCo-Authored-By: Claude <noreply@anthropic.com>`);
+  try {
+    for (let attempt = 1; ; attempt++) {
+      // Like `git pull --rebase` before a push: the backup bot and people push to main too
+      step(attempt === 1 ? `Rebasing onto the latest ${BRANCH}` : `${BRANCH} moved, rebasing again`);
+      await git(repo, 'fetch', '--quiet', 'origin', BRANCH);
+      await git(repo, 'rebase', '--quiet', 'FETCH_HEAD').catch(async (e) => {
+        await git(repo, 'rebase', '--abort').catch(() => undefined);
+        throw new Error(`conflicts with the latest ${BRANCH}; continue the run to redo the change. ${String(e.stdout ?? '').slice(0, 300)}`);
+      });
+      await exec('kubectl', ['kustomize', 'components'], { cwd: repo, maxBuffer: 256 << 20 });
+      await exec('kubectl', ['kustomize', 'services'], { cwd: repo, maxBuffer: 256 << 20 });
+      step(`Pushing to ${BRANCH}`);
+      // The token is in the remote URL: never let git's error text (which echoes the command) escape
+      const pushed = await git(repo, 'push', '--quiet', `https://x-access-token:${await installationToken()}@github.com/${REPO}.git`, `HEAD:refs/heads/${BRANCH}`)
+        .then(() => true, (e) => {
+          const err = String(e.stderr ?? '').replace(/x-access-token:[^@]+@/g, 'x-access-token:***@');
+          if (attempt < PUSH_ATTEMPTS && /\[rejected\]|fetch first|non-fast-forward/.test(err)) return false;
+          throw new Error(`git push failed: ${err.slice(0, 300)}`);
+        });
+      if (pushed) break;
     }
+  } catch (e) {
+    // Leave the change uncommitted on top of whatever HEAD is now, so a continued run sees it as its diff
+    if ((await git(repo, 'rev-parse', 'HEAD')).trim() !== base) await git(repo, 'reset', '--quiet', '--soft', 'HEAD~1').catch(() => undefined);
+    throw e;
   }
-  if (conclusion !== 'success') throw new Error(`${CHECK} ${conclusion ?? 'did not finish in time'}; PR #${pr.number} left open: ${pr.html_url}`);
 
-  await github('PUT', `/pulls/${pr.number}/merge`, { merge_method: 'squash', commit_title: `${title} (#${pr.number})` });
-  await github('DELETE', `/git/refs/heads/${branch}`).catch(() => undefined);
-  // Later changes in a continued run start from the merged main, not from this branch
-  await git(repo, 'fetch', '--quiet', '--depth', '50', 'origin', BRANCH);
-  await git(repo, 'switch', '--quiet', '-C', BRANCH, 'FETCH_HEAD');
-  job.state = 'merged';
-  step(`PR #${pr.number} merged into ${BRANCH}; Flux deploys it on its next sync.`);
+  const sha = (await git(repo, 'rev-parse', 'HEAD')).trim();
+  job.commitUrl = `https://github.com/${REPO}/commit/${sha}`;
+  job.state = 'pushed';
+  step(`Pushed ${sha.slice(0, 7)} to ${BRANCH}; Flux deploys it on its next sync.`);
 }
 
 // ── HTTP ────────────────────────────────────────────────────────────────────
@@ -132,12 +105,12 @@ createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname === '/apply') {
     let raw = '';
     for await (const chunk of req) raw += chunk;
-    const { runId, repo, kind, title, summary } = JSON.parse(raw || '{}');
+    const { runId, repo, title, summary } = JSON.parse(raw || '{}');
     if (!/^[\w-]+$/.test(runId ?? '') || !resolve(String(repo ?? '/')).startsWith('/work/') || !title) return json(res, 400, { error: 'bad request' });
     if (jobs.get(runId)?.state === 'running') return json(res, 409, { error: 'already applying' });
     const job: Job = { state: 'running', message: 'Starting' };
     jobs.set(runId, job);
-    apply(runId, resolve(repo), /^(health|task)$/.test(kind) ? kind : 'task', String(title).slice(0, 120), String(summary ?? ''), job).catch((e) => {
+    apply(runId, resolve(repo), String(title).slice(0, 120), String(summary ?? ''), job).catch((e) => {
       job.state = 'failed';
       job.message = `Not applied: ${(e as Error).message}`;
       console.error(`[apply ${runId}] ${job.message}`);

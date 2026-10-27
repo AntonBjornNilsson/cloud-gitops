@@ -193,13 +193,19 @@ When two apps talk, update **both** sides' policies. Dropped traffic -> check Hu
   - `app/policy.ts` decides which Bash commands run directly (read-only kubectl/flux/git/text tools); every other
     command, and the final "apply this diff", is a yes/no question on ntfy topic `claude-agent` (buttons POST to the
     Authelia-free `/answer/<token>/` path; no answer in 4h = no). Rules for Claude: `app/rules.md`, `app/health.md`.
-  - On yes, the `publisher` sidecar (only container with the GitHub App key) opens a `claude/*` PR and squash-merges
-    it once `validate` passes. Runs end with an all-clear (listing anything that needs a human) when nothing changed.
+  - On yes, the `publisher` sidecar (only container with the GitHub App key) commits the diff, rebases onto the latest
+    `main`, re-runs `kubectl kustomize` and pushes straight to `main`: no PR, no waiting for CI, the same as a session at
+    the desk. Runs end with an all-clear (listing anything that needs a human) when nothing changed.
 
 ## GitHub
 
-- `main` is protected by `.github/rulesets/main.json` (PR + `validate` check). Admins bypass, the agent's GitHub App does not.
-  After editing the JSON, re-apply it with `gh api` (PUT on the existing ruleset id).
+- `main` is protected by `.github/rulesets/main.json` (PR + `validate` check). Admins and the agent's GitHub App bypass it.
+  The App's bypass entry (`actor_type: Integration`) exists only on the live ruleset, since its id is setup info. After
+  editing the JSON, re-apply it with `gh api` (PUT on the existing ruleset id) and carry that entry over:
+  ```bash
+  extra=$(gh api repos/{owner}/{repo}/rulesets/<id> --jq '[.bypass_actors[] | select(.actor_type == "Integration")]')
+  jq --argjson extra "$extra" '.bypass_actors += $extra' .github/rulesets/main.json | gh api -X PUT repos/{owner}/{repo}/rulesets/<id> --input -
+  ```
 - Version updates come from Renovate (`.github/renovate.json5`, weekly batch, Dependency Dashboard issue).
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).

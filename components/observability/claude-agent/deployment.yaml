@@ -2,8 +2,8 @@
 #   agent:     Claude (Agent SDK) with cluster-admin kubectl, the scheduler, web UI and ntfy questions.
 #              Read-only commands run directly; cluster writes and repo applies wait for a yes on ntfy.
 #              No GitHub credentials.
-#   publisher: holds the GitHub App key; on an approved apply it opens a PR and merges it once
-#              `validate` passes. Listens on localhost only and never runs Claude.
+#   publisher: holds the GitHub App key; on an approved apply it commits, rebases onto the latest main,
+#              validates and pushes to main. Listens on localhost only and never runs Claude.
 # Code and web UI live in the claude-agent-app ConfigMap (app/), so changes roll out without an image build.
 # A new image is picked up by the service itself: it restarts this Deployment once idle (app/updater.ts).
 apiVersion: v1
