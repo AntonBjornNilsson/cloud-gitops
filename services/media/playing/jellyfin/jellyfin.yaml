@@ -90,6 +90,20 @@ spec:
       rollingUpdate:
         maxSurge: 0
         maxUnavailable: 1
+    # The image defaults to root but needs nothing from it (software transcoding, no
+    # devices). The existing config is root-owned; fsGroup makes it group-writable once.
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
     # Software transcodes peak at ~2 cores and ~1.5Gi
     resources:
       limits:
@@ -158,6 +172,10 @@ spec:
     extraInitContainers:
       - name: known-proxies
         image: docker.io/jellyfin/jellyfin:12.1
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         command:
           - sh
           - -c
@@ -178,6 +196,10 @@ spec:
       # than a day) removes, and a few evening streams filled the cache.
       - name: transcode-cleanup
         image: docker.io/jellyfin/jellyfin:12.1
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         command:
           - sh
           - -c
