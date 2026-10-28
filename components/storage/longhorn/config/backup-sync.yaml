@@ -46,9 +46,20 @@ spec:
         spec:
           serviceAccountName: longhorn-backup-sync
           restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: sync
               image: python:3.11-alpine
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
               command:
                 - python3
                 - /app/sync.py
