@@ -36,7 +36,7 @@ spec:
   values:
     # Standalone Cilium with kube-proxy replacement
     kubeProxyReplacement: true
-    k8sServiceHost: "192.168.21.105"
+    k8sServiceHost: "${k8s_api_host}"
     k8sServicePort: 6443
 
     # Routing configuration
