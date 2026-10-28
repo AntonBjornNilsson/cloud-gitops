@@ -47,7 +47,7 @@ This guide describes the architectural layout, component vs. service distinction
 >           name: flux-substitutions
 >     ```
 >   - In manifests and container specs, use variable placeholders: `${domain}`, `${auth_domain}`, `${admin_email}`, `${github_repo}`, `${<custom_secret>}`.
->   - All actual secret values and domain mappings must reside exclusively in the separate private repository `cloud-gitops-secrets` (`flux-substitutions.yaml`).
+>   - All actual secret values and domain mappings must reside exclusively in the separate private repository `cloud-gitops-secrets`: shared vars in the `flux-substitutions` Secret, the rest in one Secret per area (`flux-substitutions/<area>.yaml`, e.g. `network-substitutions`). List the area Secrets a Kustomization uses after `flux-substitutions` and run `scripts/check-substitutions.py` (see the cloud-gitops skill, rule 3).
 
 ---
 

@@ -26,13 +26,27 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
 2. **Use the admin kube context** (cluster-admin; its name is in local memory, never in the repo) for kubectl/flux:
    pass it per command (`--context=<admin>`), never rely on the current context, never run `kubectl config use-context`.
    Admin rights do not relax rule 1.
-3. **No plaintext secrets or private domains.** Use `${var}` placeholders; values come from the
-   `flux-substitutions` Secret (in `cloud-gitops-secrets`) via `postBuild.substituteFrom`.
-   Common vars: `${domain}`, `${auth_domain}`, `${admin_email}`, `${github_repo}`, `${oidc_issuer_host}`.
-   `${cloudflare_*}` vars live in the separate `cloudflare-substitutions` Secret (`cloudflare/` in
-   `cloud-gitops-secrets`) and `${authelia_*}` vars in `authelia-substitutions` (`authelia/`);
-   Kustomizations that need them list those Secrets after `flux-substitutions` in `substituteFrom`.
-   New secrets must be added to `cloud-gitops-secrets` by the user — tell them which key to add.
+3. **No plaintext secrets or private domains.** Use `${var}` placeholders; values come from Secrets in
+   `cloud-gitops-secrets` via `postBuild.substituteFrom`, one Secret per area:
+   | Secret (file in the secrets repo) | Vars |
+   |---|---|
+   | `flux-substitutions` (`flux-substitutions/core.yaml`) | shared: `domain`, `auth_domain`, `admin_email`, `github_repo`, node placement, `pod_cidr` |
+   | `network-substitutions` (`flux-substitutions/network.yaml`) | MetalLB pools, LoadBalancer IPs, `k8s_api_host`, `tailscale_*` |
+   | `observability-substitutions` (`flux-substitutions/observability.yaml`) | Grafana OIDC (`victoriametrics_*`), `ntfy_*`, `grafana_admin_*`, `homeassistant_token` |
+   | `storage-substitutions` (`flux-substitutions/storage.yaml`) | Longhorn S3 backups, backup-sync GitHub token |
+   | `claude-agent-substitutions` (`flux-substitutions/claude-agent.yaml`) | GitHub App, `ghcr_repo`, Claude token |
+   | `media-substitutions` (`flux-substitutions/media.yaml`) | `pia_*`, *arr API keys, dispatcharr, jellyfin, tracearr |
+   | `apps-substitutions` (`flux-substitutions/apps.yaml`) | headlamp, open-webui, homepage, weather, vaultwarden, unifi |
+   | `cloudflare-substitutions` (`cloudflare/`) | `cloudflare_*` |
+   | `authelia-substitutions` (`authelia/`) | `authelia_*` |
+
+   Every Kustomization lists `flux-substitutions` first, then the area Secrets whose vars it uses
+   (`flux-services` lists network, observability, media and apps). A var whose Secret is missing from the list
+   becomes an **empty string without an error**: after adding a var or wiring, run
+   `scripts/check-substitutions.py --context=<admin>` (or `--secrets-dir <secrets-repo checkout>` to check a
+   secrets-repo change before pushing it). Add a var to the Secret of its area; when moving vars between
+   Secrets, add them to the new Secret and wire it first, and remove them from the old one last.
+   New secrets must be added to `cloud-gitops-secrets` by the user — tell them which key and Secret to add.
    Never write hardcoded domain/credential fallbacks in scripts (`os.environ.get("X", "")`, not a real URL).
 4. **Every Namespace** gets `annotations: kustomize.toolkit.fluxcd.io/prune: disabled` (Kyverno also enforces it).
 5. **Every container has CPU and memory requests *and* limits**: app containers, init containers, sidecars,

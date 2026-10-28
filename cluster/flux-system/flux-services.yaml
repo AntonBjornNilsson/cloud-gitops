@@ -22,3 +22,11 @@ spec:
     substituteFrom:
       - kind: Secret
         name: flux-substitutions
+      - kind: Secret
+        name: network-substitutions
+      - kind: Secret
+        name: observability-substitutions
+      - kind: Secret
+        name: media-substitutions
+      - kind: Secret
+        name: apps-substitutions
