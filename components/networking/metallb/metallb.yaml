@@ -40,6 +40,11 @@ spec:
   timeout: 5m
   values:
     controller:
+      # Pod securityContext, merged into the chart default (65534, fsGroup). The speaker
+      # and frr-k8s need host networking and capabilities (allowlisted).
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       resources:
         requests:
           cpu: 5m
