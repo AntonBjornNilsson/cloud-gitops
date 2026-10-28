@@ -49,15 +49,36 @@ spec:
                     operator: NotIn
                     values:
                       - ${media_node}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+        # Lets the non-root process bind port 53 and 80 (namespaced, safe sysctl)
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
       initContainers:
         # Git owns the config (see config/AdGuardHome.yaml); AdGuard rewrites
         # the file at runtime, so it is copied onto the volume on every start.
         - name: seed-config
           image: adguard/adguardhome:v0.107.79
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - sh
             - -c
-            - cp /config/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml
+            - |
+              cp /config/AdGuardHome.yaml /opt/adguardhome/conf/AdGuardHome.yaml
+              # The image's binary carries cap_net_bind_service as a file capability, which a
+              # non-root process with no-new-privileges cannot exec. A plain copy drops it; the
+              # sysctl above already allows binding 53 and 80.
+              cp /opt/adguardhome/AdGuardHome /adguard-bin/AdGuardHome
           resources:
             requests:
               cpu: 10m
@@ -71,10 +92,13 @@ spec:
             - name: data
               mountPath: /opt/adguardhome/conf
               subPath: conf
+            - name: adguard-bin
+              mountPath: /adguard-bin
       containers:
         - name: adguard-home
           image: adguard/adguardhome:v0.107.79
           imagePullPolicy: IfNotPresent
+          command: ["/adguard-bin/AdGuardHome"]
           args:
             - "--config"
             - "/opt/adguardhome/conf/AdGuardHome.yaml"
@@ -99,10 +123,13 @@ spec:
               cpu: 1000m
               memory: 1Gi
           securityContext:
+            allowPrivilegeEscalation: false
             capabilities:
-              add:
-                - NET_BIND_SERVICE
+              drop: ["ALL"]
           volumeMounts:
+            - name: adguard-bin
+              mountPath: /adguard-bin
+              readOnly: true
             - name: data
               mountPath: /opt/adguardhome/conf
               subPath: conf
@@ -127,6 +154,10 @@ spec:
         # AdGuard has no users (Authelia guards the UI), so any credentials work.
         - name: exporter
           image: ghcr.io/henrywhitaker3/adguard-exporter:v1.2.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: ADGUARD_SERVERS
               value: http://127.0.0.1:80
@@ -155,6 +186,8 @@ spec:
         - name: config
           configMap:
             name: adguard-home-config
+        - name: adguard-bin
+          emptyDir: {}
         - name: data
           persistentVolumeClaim:
             claimName: adguard-home-data
