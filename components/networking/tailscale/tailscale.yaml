@@ -44,7 +44,11 @@ spec:
       clientId: ${tailscale_client_id}
       clientSecret: ${tailscale_client_secret}
     operatorConfig:
-      # The image defaults to root; the operator needs no local privileges
+      # The image defaults to root; the operator needs no local privileges. Its state
+      # is in a Secret (OPERATOR_SECRET); tsnet only needs a writable $HOME/.config.
+      extraEnv:
+        - name: HOME
+          value: /tmp
       podSecurityContext:
         runAsNonRoot: true
         runAsUser: 65534
