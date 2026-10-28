@@ -46,6 +46,21 @@ spec:
       replicas: 1
       strategy:
         type: Recreate
+      # The image defaults to root; the existing SQLite data on /config is root-owned,
+      # so fsGroup makes it group-writable once (OnRootMismatch)
+      securityContext:
+        pod:
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          fsGroup: 1000
+          fsGroupChangePolicy: OnRootMismatch
+          seccompProfile:
+            type: RuntimeDefault
+        container:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
       # Password hashing (argon2) spikes CPU and memory on every login
       resources:
         requests:
@@ -79,6 +94,10 @@ spec:
         - name: second-factor-sync
           image: '{{ include "authelia.image" . }}'
           restartPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["/bin/sh", "-c"]
           args:
             - |
