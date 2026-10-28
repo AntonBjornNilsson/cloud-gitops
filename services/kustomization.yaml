@@ -28,7 +28,7 @@ resources:
   # - media/playing/stalkarr  # needs ghcr_owner, ghcr_pull_auth, stalkarr_secret, stalkarr_devices
 
   # Home Automation
-  # - home-automation/homeassistant
+  - home-automation/homeassistant
 
   # Management
   - management/headlamp

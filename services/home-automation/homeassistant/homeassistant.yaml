@@ -1,4 +1,3 @@
----
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -6,60 +5,144 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: gabe565
+  name: homeassistant-config
   namespace: homeassistant
+  labels:
+    backup.longhorn.io/enabled: "true"
 spec:
-  interval: 24h
-  url: https://charts.gabe565.com
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
 ---
-apiVersion: helm.toolkit.fluxcd.io/v2
-kind: HelmRelease
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: homeassistant
   namespace: homeassistant
 spec:
-  interval: 12h
-  chart:
+  # SQLite recorder database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: homeassistant
+  template:
+    metadata:
+      labels:
+        app: homeassistant
     spec:
-      chart: home-assistant
-      version: "*"
-      sourceRef:
-        kind: HelmRepository
-        name: gabe565
-        namespace: homeassistant
-      interval: 12h
-  timeout: 30s
-  install:
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 2m
-  upgrade:
-    strategy:
-      name: RetryOnFailure
-      retryInterval: 3m
-  values:
-    env:
-      TZ: Europe/Stockholm
-    ingress:
-      main:
-        enabled: true
-        className: "traefik"
-        hosts:
-          - host: homeassistant.${domain}
-            paths:
-              - path: /
-                pathType: Prefix
-    persistence:
-      config:
-        enabled: true
-        type: persistentVolumeClaim
-        accessMode: ReadWriteOnce
-        size: 10Gi
-        globalMounts:
-          - path: /config
+      initContainers:
+        # configuration.yaml includes these; Home Assistant only creates them
+        # together with a default configuration.yaml, which Git provides instead
+        - name: include-files
+          image: ghcr.io/home-assistant/home-assistant:2026.10.4
+          command:
+            - sh
+            - -c
+            - |
+              test -f /config/automations.yaml || echo "[]" > /config/automations.yaml
+              touch /config/scripts.yaml /config/scenes.yaml
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      containers:
+        - name: homeassistant
+          image: ghcr.io/home-assistant/home-assistant:2026.10.4
+          env:
+            - name: TZ
+              value: "Europe/Stockholm"
+          ports:
+            - name: http
+              containerPort: 8123
+          startupProbe:
+            httpGet:
+              path: /manifest.json
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /manifest.json
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /manifest.json
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: configuration
+              mountPath: /config/configuration.yaml
+              subPath: configuration.yaml
+              readOnly: true
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: homeassistant-config
+        - name: configuration
+          configMap:
+            name: homeassistant-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homeassistant
+  namespace: homeassistant
+spec:
+  selector:
+    app: homeassistant
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: homeassistant
+  namespace: homeassistant
+  # Home Assistant authenticates itself; Authelia would block the companion
+  # apps. LAN-only (websecure); deliberately not published through cfgate.
+  labels:
+    enable-oauth: "false"
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: ""
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Home Assistant"
+    gethomepage.dev/description: "Home automation"
+    gethomepage.dev/group: "Infrastructure"
+    gethomepage.dev/icon: "home-assistant.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=homeassistant"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: homeassistant.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: homeassistant
+                port:
+                  number: 8123
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -67,21 +150,14 @@ metadata:
   name: homeassistant
   namespace: homeassistant
 spec:
-  endpointSelector: {}
+  endpointSelector:
+    matchLabels:
+      app: homeassistant
   ingress:
-    # Web and WebSocket ingress from Traefik and local LAN
+    # Web UI, WebSocket API and companion apps through Traefik
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
-      toPorts:
-        - ports:
-            - port: "8123"
-              protocol: TCP
-    - fromEntities:
-        - cluster
-        - host
-        - remote-node
-        - world
       toPorts:
         - ports:
             - port: "8123"
@@ -91,6 +167,9 @@ spec:
         - host
         - remote-node
         - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
   egress:
     # DNS resolution
     - toEndpoints:
@@ -101,10 +180,9 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # Local network IoT devices, integrations, and external cloud services
+    # LAN devices (polled by IP) and cloud integrations
     - toEntities:
         - world
-        - cluster
-        - host
-        - remote-node
-
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}

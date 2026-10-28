@@ -50,7 +50,7 @@ TODO                             user's backlog (">" = done)
 ```
 
 Enable/disable = uncomment/comment the line in `components/kustomization.yaml` or `services/kustomization.yaml`.
-Currently disabled examples: aws, the *arr stack, homeassistant, vaultwarden, github-runners, skyrim.
+Currently disabled examples: aws, stalkarr, github-runners, skyrim.
 
 ## Components (infrastructure)
 

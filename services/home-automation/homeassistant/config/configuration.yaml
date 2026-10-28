@@ -1,0 +1,15 @@
+# Managed in Git (mounted read-only); automations, scripts and scenes made in the
+# UI go to their own files on the config volume.
+default_config:
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# Only reached through Traefik: trust its X-Forwarded-For (its pod IP changes) so
+# logins and bans see the client's IP. Requests carrying the header from anywhere
+# else are rejected.
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - ${pod_cidr}
