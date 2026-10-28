@@ -87,9 +87,16 @@ spec:
       labels:
         app: unifi
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: unifi
           image: lscr.io/linuxserver/unifi-network-application:latest
+          # Root: this linuxserver image does not support non-root operation; s6 drops the
+          # app to PUID itself (allowlisted in the Kyverno restricted policies)
+          securityContext:
+            allowPrivilegeEscalation: false
           env:
             - name: PUID
               value: "1000"
@@ -164,6 +171,12 @@ spec:
               mountPath: /config
         - name: mongo
           image: docker.io/mongo:8.0
+          # The data is already owned by the image's mongodb user (999)
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            allowPrivilegeEscalation: false
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               value: root

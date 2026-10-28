@@ -91,9 +91,25 @@ spec:
         # Bump to restart ntfy after changing server.yml
         config-version: "6"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+        # Lets the non-root process bind port 80 (namespaced, safe sysctl)
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
       containers:
         - name: ntfy
           image: binwiederhier/ntfy:v2.34.0
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           args:
             - serve
             - --config=/etc/ntfy/server.yml

@@ -64,9 +64,19 @@ spec:
       labels:
         app: dispatcharr-db
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: db
           image: postgres:17.11
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: POSTGRES_DB
               value: dispatcharr
@@ -207,11 +217,17 @@ spec:
       # and keeping it off leaves that node's disk and CPU to etcd.
       # gluetun is a native sidecar: web/celery only start once the VPN is up. Its kill switch
       # blocks egress until then, so jobs Dispatcharr runs at startup (EPG/M3U refresh) would fail.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
           restartPolicy: Always
+          # Root with NET_ADMIN for the tunnel and kill switch (allowlisted in the Kyverno
+          # restricted policies)
           securityContext:
+            allowPrivilegeEscalation: false
             capabilities:
               add:
                 - NET_ADMIN
@@ -271,6 +287,10 @@ spec:
         # re-pulled on its own restart, so a new release left celery waiting on web forever.
         - name: web
           image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          # Root: the entrypoint writes nginx/uwsgi config and drops to 1000 with su, which
+          # needs the default capabilities (allowlisted in the Kyverno restricted policies)
+          securityContext:
+            allowPrivilegeEscalation: false
           # dispatcharr-exporter plugin (installed and configured in the Dispatcharr UI,
           # settings live in the DB): auto-start, port 9192, scraped by VMPodScrape dispatcharr.
           ports:
@@ -319,6 +339,8 @@ spec:
               subPath: media
         - name: celery
           image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          securityContext:
+            allowPrivilegeEscalation: false
           command:
             - /app/docker/entrypoint.celery.sh
           env:

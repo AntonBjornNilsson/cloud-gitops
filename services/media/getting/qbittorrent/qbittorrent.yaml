@@ -41,9 +41,36 @@ spec:
       tolerations:
         - key: "node-role.kubernetes.io/control-plane"
           effect: "NoSchedule"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
+        - name: run-dir
+          image: lscr.io/linuxserver/qbittorrent:latest
+          command: ["mkdir", "-p", "/emptydir/run"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - name: run
+              mountPath: /emptydir
         - name: init-qbittorrent-config
           image: busybox:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - /bin/sh
             - -c
@@ -99,7 +126,13 @@ spec:
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
           restartPolicy: Always
+          # Root with NET_ADMIN for the tunnel and kill switch (allowlisted in the Kyverno
+          # restricted policies); every other container in the pod runs as 1000.
           securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
             capabilities:
               add:
                 - NET_ADMIN
@@ -163,6 +196,10 @@ spec:
       containers:
         - name: qbittorrent
           image: lscr.io/linuxserver/qbittorrent:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: PUID
               value: "1000"
@@ -198,12 +235,19 @@ spec:
               cpu: 2
               memory: 3Gi
           volumeMounts:
+            - name: run
+              mountPath: /run
+              subPath: run
             - name: config
               mountPath: /config
             - name: data
               mountPath: /data
         - name: port-forward-sync
           image: curlimages/curl:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - /bin/sh
             - -c
@@ -235,6 +279,10 @@ spec:
             - name: gluetun-data
               mountPath: /tmp/gluetun
       volumes:
+        # Running as non-root, s6-overlay needs a /run owned by its user: an emptyDir is
+        # root-owned, so the run-dir init container creates a subdirectory as 1000
+        - name: run
+          emptyDir: {}
         - name: config
           persistentVolumeClaim:
             claimName: qbittorrent-config
