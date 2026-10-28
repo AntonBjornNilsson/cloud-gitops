@@ -64,6 +64,10 @@ spec:
       # Same as Grafana: link to existing accounts by email (single IdP, unique emails)
       - name: OAUTH_MERGE_ACCOUNTS_BY_EMAIL
         value: "true"
+      # On the volume: the default (/app/backend, in the image) is lost on every restart
+      # and not writable by the non-root user
+      - name: WEBUI_SECRET_KEY_FILE
+        value: /app/backend/data/.webui_secret_key
     replicaCount: 1
     resources:
       requests:
@@ -72,8 +76,38 @@ spec:
       limits:
         cpu: 2
         memory: 2Gi
-    # Init container copying the app data into the volume
+    # The image defaults to root. As 1000 the app only needs its data volume (root-owned
+    # from before; fsGroup makes it group-writable once) and a writable static dir, which
+    # it rewrites on startup: an emptyDir seeded from the image by copy-app-data.
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    volumes:
+      - name: static
+        emptyDir: {}
+    volumeMounts:
+      initContainer:
+        - name: static
+          mountPath: /tmp/static
+      container:
+        - name: static
+          mountPath: /app/backend/open_webui/static
+    # Init container copying the app data into the volume (chart default command), and
+    # the image's static files into the writable static dir
     copyAppData:
+      command:
+        - sh
+        - -c
+        - cp -R -n /app/backend/data/* /tmp/app-data/; cp -R /app/backend/open_webui/static/. /tmp/static/
       resources:
         requests:
           cpu: 10m
@@ -96,6 +130,17 @@ spec:
       manager: redis
       redis:
         enabled: true
+        # redis user/group of the alpine image; no volume
+        podSecurityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+          runAsGroup: 1000
+          seccompProfile:
+            type: RuntimeDefault
+        containerSecurityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         resources:
           requests:
             cpu: 5m
