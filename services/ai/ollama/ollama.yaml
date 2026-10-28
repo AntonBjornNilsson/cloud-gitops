@@ -56,6 +56,16 @@ spec:
       type: ClusterIP
     image:
       tag: "rocm" # force amd
+    # Root: /dev/kfd and the render node belong to the host's render group, whose gid
+    # differs per node, and the models live under /root/.ollama (allowlisted in the
+    # Kyverno restricted policies). Root owns all of these, so no capabilities are kept.
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
     persistentVolume:
       enabled: true
       size: 60Gi
