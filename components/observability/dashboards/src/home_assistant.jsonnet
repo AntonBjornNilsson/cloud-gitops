@@ -1,5 +1,5 @@
 // grafana-folder: Home Automation
-// Home Assistant: entities, sensors (climate, power, batteries), lights and
+// Home Assistant: entities, sensors (climate, power, batteries), blinds and
 // switches, state-change activity and the pod's health.
 // Metrics: Home Assistant's prometheus integration (VMPodScrape homeassistant).
 // Every entity carries entity/friendly_name/domain labels; panels for device
@@ -16,7 +16,7 @@ local issues = [{ color: 'green', value: null }, { color: 'orange', value: 1 }];
 
 dashboard.new('Home Assistant')
 + dashboard.withUid('home-assistant')
-+ dashboard.withDescription('Home Assistant entities, sensors, lights and switches, activity and pod health.')
++ dashboard.withDescription('Home Assistant entities, sensors, blinds and switches, activity and pod health.')
 + dashboard.withTags(['home-automation', 'homeassistant'])
 + dashboard.withTimezone('browser')
 + dashboard.time.withFrom('now-24h')
@@ -29,7 +29,8 @@ dashboard.new('Home Assistant')
   m.stat('Entities', 'count(homeassistant_entity_available)', 0, 1),
   m.stat('Unavailable', 'count(homeassistant_entity_available == 0) or vector(0)', 3, 1,
          thresholds=issues, graph=true, desc='Entities whose device is offline or whose integration failed to load.'),
-  m.stat('Lights on', 'count(homeassistant_light_brightness_percent > 0) or vector(0)', 6, 1, noValue='-'),
+  m.stat('Blinds open', 'count(homeassistant_cover_position > 0) or vector(0)', 6, 1,
+         desc='Covers (blinds) not fully closed.'),
   m.stat('Switches on', 'count(homeassistant_switch_state == 1) or vector(0)', 9, 1, noValue='-'),
   m.stat('Low batteries', 'count(homeassistant_sensor_battery_percent < 20) or vector(0)', 12, 1,
          thresholds=issues, desc='Battery sensors below 20%.'),
@@ -67,11 +68,11 @@ dashboard.new('Home Assistant')
     desc='Increase of energy meters (kWh) over the selected time range.'),
 
   // --- Devices ------------------------------------------------------------------
-  m.row('Lights, switches and batteries', 39),
-  m.ts('Light brightness', [
-    q('homeassistant_light_brightness_percent', '{{friendly_name}}'),
+  m.row('Blinds, switches and batteries', 39),
+  m.ts('Blind position', [
+    q('homeassistant_cover_position', '{{friendly_name}}'),
   ], 0, 40, 12, 8, 'percent', min=0,
-    desc='0 = off. IKEA Trådfri and other lights report their brightness here.'),
+    desc='0 = closed, 100 = open. IKEA blinds via the DIRIGERA Matter bridge report here.'),
   m.ts('Switches and binary sensors', [
     q('homeassistant_switch_state', '{{friendly_name}}'),
     q('homeassistant_binary_sensor_state', '{{friendly_name}}'),

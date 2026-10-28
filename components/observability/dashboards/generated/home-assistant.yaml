@@ -16,7 +16,7 @@ spec:
       dashboards: "grafana"
   json: |
     {
-       "description": "Home Assistant entities, sensors, lights and switches, activity and pod health.",
+       "description": "Home Assistant entities, sensors, blinds and switches, activity and pod health.",
        "graphTooltip": 1,
        "panels": [
           {
@@ -133,12 +133,12 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
+             "description": "Covers (blinds) not fully closed.",
              "fieldConfig": {
                 "defaults": {
                    "color": {
                       "mode": "thresholds"
                    },
-                   "noValue": "-",
                    "thresholds": {
                       "steps": [
                          {
@@ -168,11 +168,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count(homeassistant_light_brightness_percent > 0) or vector(0)",
+                   "expr": "count(homeassistant_cover_position > 0) or vector(0)",
                    "legendFormat": ""
                 }
              ],
-             "title": "Lights on",
+             "title": "Blinds open",
              "type": "stat"
           },
           {
@@ -817,7 +817,7 @@ spec:
                 "y": 39
              },
              "id": 19,
-             "title": "Lights, switches and batteries",
+             "title": "Blinds, switches and batteries",
              "type": "row"
           },
           {
@@ -825,7 +825,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
-             "description": "0 = off. IKEA Trådfri and other lights report their brightness here.",
+             "description": "0 = closed, 100 = open. IKEA blinds via the DIRIGERA Matter bridge report here.",
              "fieldConfig": {
                 "defaults": {
                    "custom": {
@@ -865,11 +865,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "homeassistant_light_brightness_percent",
+                   "expr": "homeassistant_cover_position",
                    "legendFormat": "{{friendly_name}}"
                 }
              ],
-             "title": "Light brightness",
+             "title": "Blind position",
              "type": "timeseries"
           },
           {
