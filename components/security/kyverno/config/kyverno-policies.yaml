@@ -31,8 +31,8 @@ spec:
     # restricted = the baseline policies plus the restricted-only ones below
     podSecurityStandard: restricted
     validationFailureAction: Enforce
-    # Restricted-only policies report (PolicyReports) without blocking, until
-    # workloads are hardened and allowlisted for them
+    # Restricted-only policies report (PolicyReports) without blocking. Workloads are
+    # hardened and the exceptions allowlisted below, so these can move to Enforce.
     validationFailureActionByPolicy:
       disallow-capabilities-strict: Audit
       disallow-privilege-escalation: Audit
@@ -127,3 +127,130 @@ spec:
         any:
           - resources:
               namespaces: [kube-system]
+      # --- Restricted profile. Every other workload runs as non-root with no
+      # capabilities, no privilege escalation and the RuntimeDefault seccomp profile.
+      disallow-capabilities-strict:
+        any:
+          # Node infrastructure created by operators (CNI, CSI, BGP/L2, sysctls)
+          - resources:
+              namespaces: [kube-system, longhorn-system, metallb, node-sysctls]
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["smartctl-exporter*"]
+          # gluetun VPN sidecar: root with its default capabilities plus NET_ADMIN
+          - resources:
+              namespaces: [dispatcharr]
+              names: ["dispatcharr-web*"]
+          - resources:
+              namespaces: [prowlarr]
+              names: ["prowlarr*"]
+          - resources:
+              namespaces: [qbittorrent]
+              names: ["qbittorrent*"]
+          # Images that need root with the default capabilities (s6 init / su / nginx
+          # workers); matter-server only for the init container's chown
+          - resources:
+              namespaces: [homeassistant]
+              names: ["homeassistant*", "matter-server*"]
+          - resources:
+              namespaces: [unifi]
+              names: ["unifi*"]
+          - resources:
+              namespaces: [nginx-echo-namespace]
+              names: ["nginx-deployment*"]
+      disallow-privilege-escalation:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system, metallb, node-sysctls]
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["smartctl-exporter*"]
+      require-run-as-non-root-user:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system]
+          # Explicit runAsUser 0: SMART reads, node log reader, chown init, gluetun
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["smartctl-exporter*", "vlagent-logs*"]
+          - resources:
+              namespaces: [homeassistant]
+              names: ["matter-server*"]
+          - resources:
+              namespaces: [prowlarr]
+              names: ["prowlarr*"]
+          - resources:
+              namespaces: [qbittorrent]
+              names: ["qbittorrent*"]
+      require-run-as-nonroot:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system, metallb, node-sysctls]
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["smartctl-exporter*", "vlagent-logs*"]
+          - resources:
+              namespaces: [dispatcharr]
+              names: ["dispatcharr-web*"]
+          - resources:
+              namespaces: [prowlarr]
+              names: ["prowlarr*"]
+          - resources:
+              namespaces: [qbittorrent]
+              names: ["qbittorrent*"]
+          - resources:
+              namespaces: [homeassistant]
+              names: ["homeassistant*", "matter-server*"]
+          - resources:
+              namespaces: [unifi]
+              names: ["unifi*"]
+          - resources:
+              namespaces: [nginx-echo-namespace]
+              names: ["nginx-deployment*"]
+          # GPU device nodes belong to a per-node render gid; root keeps no capabilities
+          - resources:
+              namespaces: [ollama]
+              names: ["ollama*"]
+      restrict-seccomp-strict:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system, metallb, node-sysctls]
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["smartctl-exporter*"]
+      restrict-volume-types:
+        any:
+          # hostPath: same workloads as disallow-host-path above
+          - resources:
+              namespaces: [kube-system, longhorn-system]
+          - resources:
+              namespaces: [victoriametrics]
+              names:
+                - "victoriametrics-prometheus-node-exporter*"
+                - "smartctl-exporter*"
+                - "vlagent-logs*"
+          - resources:
+              namespaces: [homeassistant]
+              names: ["matter-server*"]
+          - resources:
+              namespaces:
+                - bazarr
+                - cleanuparr
+                - dispatcharr
+                - jellyfin
+                - prowlarr
+                - qbittorrent
+                - radarr
+                - sonarr
