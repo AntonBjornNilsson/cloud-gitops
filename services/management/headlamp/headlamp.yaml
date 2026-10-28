@@ -64,7 +64,11 @@ spec:
     # (emptyDir, so they are re-downloaded on every pod start).
     pluginsManager:
       enabled: true
+      # Replaces the chart's template default (100:101), so the user is repeated here
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
