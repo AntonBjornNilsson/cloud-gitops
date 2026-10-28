@@ -113,8 +113,9 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 256Mi
+              memory: 768Mi
             limits:
+              cpu: 1
               memory: 2Gi
           volumeMounts:
             # PGDATA is <mount>/data, which keeps lost+found out of the data directory
@@ -178,6 +179,7 @@ spec:
               cpu: 10m
               memory: 32Mi
             limits:
+              cpu: 200m
               memory: 256Mi
           volumeMounts:
             - name: data
@@ -223,6 +225,13 @@ spec:
         - name: mkdirs
           image: ghcr.io/connorgallopo/tracearr:latest
           command: ["mkdir", "-p", "/data/backup", "/data/tracearr/image-cache"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
           volumeMounts:
             - name: data
               mountPath: /data
@@ -287,6 +296,7 @@ spec:
               cpu: 50m
               memory: 384Mi
             limits:
+              cpu: 1
               memory: 1536Mi
           volumeMounts:
             - name: data

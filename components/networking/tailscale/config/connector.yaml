@@ -7,6 +7,32 @@ metadata:
   name: home-lan
 spec:
   hostname: home-lan
+  proxyClass: resources
   subnetRouter:
     # Flow list from the secrets repo, e.g. ["<cidr-1>", "<cidr-2>"]
     advertiseRoutes: ${tailscale_advertise_routes}
+---
+# The operator only sets a token request on the proxy containers
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: resources
+spec:
+  statefulSet:
+    pod:
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 1
+            memory: 256Mi
+      tailscaleInitContainer:
+        resources:
+          requests:
+            cpu: 1m
+            memory: 8Mi
+          limits:
+            cpu: 100m
+            memory: 32Mi

@@ -44,6 +44,13 @@ spec:
     crds: CreateReplace
   values:
     replicaCount: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
     image:
       repository: ghcr.io/actions/gha-runner-scale-set-controller
       pullPolicy: IfNotPresent

@@ -38,4 +38,89 @@ spec:
       name: RetryOnFailure
       retryInterval: 1m
   timeout: 5m
+  values:
+    controller:
+      resources:
+        requests:
+          cpu: 5m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 384Mi
+    speaker:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 48Mi
+        limits:
+          cpu: 500m
+          memory: 192Mi
+    frr-k8s:
+      frrk8s:
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        frr:
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+        frrMetrics:
+          resources:
+            requests:
+              cpu: 5m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        frrStatus:
+          resources:
+            requests:
+              cpu: 5m
+              memory: 24Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+        reloader:
+          resources:
+            requests:
+              cpu: 1m
+              memory: 8Mi
+            limits:
+              cpu: 100m
+              memory: 32Mi
+  # frr-k8s' init containers and status cleaner have no resources in the chart values
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: DaemonSet
+              name: metallb-frr-k8s
+            patch: |
+              - op: add
+                path: /spec/template/spec/initContainers/0/resources
+                value: {requests: {cpu: 5m, memory: 16Mi}, limits: {cpu: 100m, memory: 64Mi}}
+              - op: add
+                path: /spec/template/spec/initContainers/1/resources
+                value: {requests: {cpu: 5m, memory: 16Mi}, limits: {cpu: 100m, memory: 64Mi}}
+              - op: add
+                path: /spec/template/spec/initContainers/2/resources
+                value: {requests: {cpu: 5m, memory: 16Mi}, limits: {cpu: 100m, memory: 64Mi}}
+              - op: add
+                path: /spec/template/spec/initContainers/3/resources
+                value: {requests: {cpu: 5m, memory: 16Mi}, limits: {cpu: 100m, memory: 64Mi}}
+          - target:
+              kind: Deployment
+              name: metallb-frr-k8s-statuscleaner
+            patch: |
+              - op: add
+                path: /spec/template/spec/containers/0/resources
+                value: {requests: {cpu: 5m, memory: 32Mi}, limits: {cpu: 100m, memory: 128Mi}}
 ---

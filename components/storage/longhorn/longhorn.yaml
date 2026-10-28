@@ -83,4 +83,67 @@ spec:
         effect: "NoSchedule"
     # longhornUI:
     #   replicas: 1
+  # The chart has no resources values. Longhorn creates the CSI sidecars, engine-image,
+  # instance-manager and share-manager pods itself; those can't be given limits
+  # (instance-manager CPU is reserved via the guaranteedInstanceManagerCPU setting).
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: DaemonSet
+              name: longhorn-manager
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: longhorn-manager
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: longhorn-manager
+                      resources:
+                        requests: {cpu: 50m, memory: 384Mi}
+                        limits: {cpu: 2, memory: 1Gi}
+                    - name: pre-pull-share-manager-image
+                      resources:
+                        requests: {cpu: 1m, memory: 8Mi}
+                        limits: {cpu: 100m, memory: 32Mi}
+          - target:
+              kind: Deployment
+              name: longhorn-driver-deployer
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: longhorn-driver-deployer
+              spec:
+                template:
+                  spec:
+                    initContainers:
+                    - name: wait-longhorn-manager
+                      resources:
+                        requests: {cpu: 1m, memory: 8Mi}
+                        limits: {cpu: 100m, memory: 32Mi}
+                    containers:
+                    - name: longhorn-driver-deployer
+                      resources:
+                        requests: {cpu: 5m, memory: 16Mi}
+                        limits: {cpu: 100m, memory: 64Mi}
+          - target:
+              kind: Deployment
+              name: longhorn-ui
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: longhorn-ui
+              spec:
+                template:
+                  spec:
+                    containers:
+                    - name: longhorn-ui
+                      resources:
+                        requests: {cpu: 5m, memory: 16Mi}
+                        limits: {cpu: 100m, memory: 64Mi}
 ---

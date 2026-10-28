@@ -47,6 +47,13 @@ spec:
       repository: ghcr.io/gethomepage/homepage
       tag: v2.5.0
     enableRbac: true
+    resources:
+      requests:
+        cpu: 5m
+        memory: 192Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
     serviceAccount:
       create: true
     env:

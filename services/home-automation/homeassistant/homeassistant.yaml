@@ -47,6 +47,13 @@ spec:
             - |
               test -f /config/automations.yaml || echo "[]" > /config/automations.yaml
               touch /config/scripts.yaml /config/scenes.yaml
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -56,6 +63,13 @@ spec:
           env:
             - name: TRUSTED_PROXIES
               value: "${pod_cidr}"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -93,9 +107,10 @@ spec:
             timeoutSeconds: 5
           resources:
             requests:
-              cpu: 100m
+              cpu: 350m
               memory: 512Mi
             limits:
+              cpu: 2
               memory: 2Gi
           volumeMounts:
             - name: config

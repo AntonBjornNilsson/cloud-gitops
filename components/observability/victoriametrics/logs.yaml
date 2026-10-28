@@ -17,9 +17,10 @@ spec:
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
+      memory: 512Mi
     limits:
-      memory: 1Gi
+      cpu: 1
+      memory: 2Gi
 ---
 # Per-node collector shipping every container's logs (with pod/namespace/
 # container metadata) to VictoriaLogs.
@@ -39,6 +40,7 @@ spec:
   resources:
     requests:
       cpu: 20m
-      memory: 64Mi
+      memory: 192Mi
     limits:
+      cpu: 500m
       memory: 512Mi

@@ -27,9 +27,10 @@ spec:
     image: cloudflare/cloudflared:2026.10.2
     resources:
       requests:
-        cpu: 50m
-        memory: 64Mi
+        cpu: 20m
+        memory: 48Mi
       limits:
+        cpu: 500m
         memory: 256Mi
   # Hostnames without an HTTPRoute get a 404 from the connector
   fallbackTarget: http_status:404

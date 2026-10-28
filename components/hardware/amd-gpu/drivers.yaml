@@ -31,6 +31,13 @@ spec:
           privileged: true
           capabilities:
             drop: ["ALL"]
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            cpu: 200m
+            memory: 64Mi
         volumeMounts:
           - name: dp
             mountPath: /var/lib/kubelet/device-plugins

@@ -28,6 +28,15 @@ spec:
         spec:
           securityContext:
             fsGroup: 10001
+          containers:
+            - name: grafana
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 256Mi
+                limits:
+                  cpu: 1
+                  memory: 1Gi
           volumes:
             - name: grafana-data
               persistentVolumeClaim:

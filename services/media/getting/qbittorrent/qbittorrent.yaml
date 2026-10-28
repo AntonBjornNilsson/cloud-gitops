@@ -84,6 +84,13 @@ spec:
               set_pref 'WebUI\AuthSubnetWhitelistEnabled' true
               set_pref 'WebUI\AuthSubnetWhitelist' '127.0.0.1/32, 10.244.0.0/16'
               chown -R 1000:1000 /config
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -143,9 +150,10 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 20m
-              memory: 32Mi
+              cpu: 400m
+              memory: 64Mi
             limits:
+              cpu: 2
               memory: 256Mi
           volumeMounts:
             - name: gluetun-data
@@ -184,10 +192,11 @@ spec:
             periodSeconds: 10
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 250m
+              memory: 768Mi
             limits:
-              memory: 2Gi
+              cpu: 2
+              memory: 3Gi
           volumeMounts:
             - name: config
               mountPath: /config
@@ -215,6 +224,13 @@ spec:
                 fi
                 sleep 15
               done
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
           volumeMounts:
             - name: gluetun-data
               mountPath: /tmp/gluetun

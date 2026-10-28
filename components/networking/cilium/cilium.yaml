@@ -49,9 +49,48 @@ spec:
         enabled: false
       hostRoot: /sys/fs/cgroup
 
+    # Agent memory grows with endpoints/policies; an OOM kill drops pod networking on that node
+    resources:
+      requests:
+        cpu: 150m
+        memory: 384Mi
+      limits:
+        cpu: 2
+        memory: 1Gi
+    initResources:
+      requests:
+        cpu: 5m
+        memory: 32Mi
+      limits:
+        cpu: 1
+        memory: 512Mi
+    cni:
+      resources:
+        requests:
+          cpu: 5m
+          memory: 16Mi
+        limits:
+          cpu: 500m
+          memory: 128Mi
+    envoy:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 1
+          memory: 256Mi
+
     # Operator configuration
     operator:
       replicas: 1
+      resources:
+        requests:
+          cpu: 10m
+          memory: 96Mi
+        limits:
+          cpu: 500m
+          memory: 384Mi
       tolerations:
         - operator: Exists
       prometheus:
@@ -81,6 +120,13 @@ spec:
       enabled: true
       relay:
         enabled: true
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
       # Redact sensitive headers & credentials in L7 flows
       redact:
         enabled: true
@@ -112,6 +158,22 @@ spec:
       ui:
         enabled: true
         rollOutPods: true
+        backend:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 48Mi
+            limits:
+              cpu: 200m
+              memory: 192Mi
+        frontend:
+          resources:
+            requests:
+              cpu: 5m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
         ingress:
           enabled: true
           annotations:

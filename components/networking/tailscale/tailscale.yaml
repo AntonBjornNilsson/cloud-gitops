@@ -45,3 +45,10 @@ spec:
       clientSecret: ${tailscale_client_secret}
     operatorConfig:
       hostname: k8s-operator
+      resources:
+        requests:
+          cpu: 5m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi

@@ -65,6 +65,22 @@ spec:
       - name: OAUTH_MERGE_ACCOUNTS_BY_EMAIL
         value: "true"
     replicaCount: 1
+    resources:
+      requests:
+        cpu: 10m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 2Gi
+    # Init container copying the app data into the volume
+    copyAppData:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
     persistence:
       labels:
         backup.longhorn.io/enabled: "true"
@@ -80,6 +96,13 @@ spec:
       manager: redis
       redis:
         enabled: true
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            cpu: 200m
+            memory: 64Mi
 
     pipelines:
       enabled: false

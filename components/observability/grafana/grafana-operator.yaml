@@ -33,3 +33,11 @@ spec:
         namespace: grafana
       interval: 12h
   timeout: 5m
+  values:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

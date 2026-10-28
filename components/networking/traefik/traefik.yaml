@@ -44,6 +44,13 @@ spec:
       retryInterval: 1m
   timeout: 5m
   values:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 2
+        memory: 512Mi
     api:
       dashboard: true
     ingressRoute:

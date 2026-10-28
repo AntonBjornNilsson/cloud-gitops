@@ -48,13 +48,23 @@ spec:
     # Admission controller configuration
     admissionController:
       replicas: 2
-      resources:
-        requests:
-          memory: "256Mi"
-          cpu: "100m"
-        limits:
-          memory: "512Mi"
-          cpu: "500m"
+      # The chart reads container.resources here, not resources
+      container:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            cpu: 1
+            memory: 384Mi
+      initContainer:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
       # Configure the admission webhook
       serviceMonitor:
         enabled: true
@@ -65,11 +75,11 @@ spec:
         enabled: true
       resources:
         requests:
-          memory: "128Mi"
-          cpu: "100m"
+          cpu: 20m
+          memory: 128Mi
         limits:
-          memory: "256Mi"
-          cpu: "200m"
+          cpu: 500m
+          memory: 384Mi
     # Cleanup controller for TTL-based cleanup policies
     cleanupController:
       replicas: 1
@@ -77,11 +87,11 @@ spec:
         enabled: true
       resources:
         requests:
-          memory: "128Mi"
-          cpu: "100m"
+          cpu: 10m
+          memory: 48Mi
         limits:
-          memory: "256Mi"
-          cpu: "200m"
+          cpu: 500m
+          memory: 192Mi
     # Reports controller for policy reports
     reportsController:
       replicas: 1
@@ -89,11 +99,29 @@ spec:
         enabled: true
       resources:
         requests:
-          memory: "128Mi"
-          cpu: "100m"
+          cpu: 10m
+          memory: 96Mi
         limits:
-          memory: "256Mi"
-          cpu: "200m"
+          cpu: 500m
+          memory: 256Mi
+    # Hook jobs (CRD migration on upgrade, webhook cleanup on uninstall)
+    crds:
+      migration:
+        podResources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+    webhooksCleanup:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
     # Configure webhook failure policy
     config:
       # Resources to exclude from policy enforcement

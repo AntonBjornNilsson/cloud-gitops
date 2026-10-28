@@ -82,8 +82,9 @@ spec:
           resources:
             requests:
               cpu: 10m
-              memory: 32Mi
+              memory: 48Mi
             limits:
+              cpu: 500m
               memory: 256Mi
           volumeMounts:
             - name: tun
@@ -112,9 +113,8 @@ spec:
             requests:
               cpu: 50m
               memory: 256Mi
-            # Each solve runs its own headless Chromium; requests stuck on an unsolvable
-            # challenge pile up until they time out, so leave room for several at once
             limits:
+              cpu: 2
               memory: 2Gi
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest
@@ -156,8 +156,9 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 192Mi
             limits:
+              cpu: 1
               memory: 512Mi
           volumeMounts:
             - name: config

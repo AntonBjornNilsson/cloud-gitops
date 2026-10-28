@@ -63,6 +63,7 @@ spec:
               cpu: 10m
               memory: 16Mi
             limits:
+              cpu: 200m
               memory: 64Mi
           volumeMounts:
             - name: config
@@ -139,16 +140,17 @@ spec:
             - name: metrics
               containerPort: 9618
               protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 9618
+            periodSeconds: 30
           resources:
             requests:
               cpu: 10m
               memory: 32Mi
             limits:
+              cpu: 200m
               memory: 128Mi
-          livenessProbe:
-            tcpSocket:
-              port: 9618
-            periodSeconds: 30
       volumes:
         - name: config
           configMap:

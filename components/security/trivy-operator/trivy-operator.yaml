@@ -109,17 +109,19 @@ spec:
       server:
         resources:
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 10m
+            memory: 256Mi
           limits:
             cpu: "1"
             memory: 1Gi
     # Don't install the (inactive) CIS/NSA/PSS ClusterComplianceReports.
     compliance:
       specs: []
+    # Operator memory reached the old 512Mi limit (report reconciles of large images)
     resources:
       requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
+        cpu: 25m
         memory: 512Mi
+      limits:
+        cpu: 1
+        memory: 1Gi

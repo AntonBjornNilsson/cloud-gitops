@@ -90,13 +90,14 @@ spec:
       rollingUpdate:
         maxSurge: 0
         maxUnavailable: 1
+    # Software transcodes peak at ~2 cores and ~1.5Gi
     resources:
       limits:
-        cpu: 2000m
-        memory: 2048Mi
+        cpu: 4
+        memory: 3Gi
       requests:
         cpu: 500m
-        memory: 512Mi
+        memory: 768Mi
 
     ingress:
       enabled: true
@@ -165,6 +166,9 @@ spec:
             test -f /config/config/network.xml || exit 0
             sed -z -i -E 's#<KnownProxies */>|<KnownProxies>([^<]|<string>[^<]*</string>)*</KnownProxies>#<KnownProxies><string>${pod_cidr}</string></KnownProxies>#' /config/config/network.xml
             grep -o '<KnownProxies>.*</KnownProxies>' /config/config/network.xml
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 200m, memory: 64Mi}
         volumeMounts:
           - name: config
             mountPath: /config
@@ -181,6 +185,9 @@ spec:
             test -f /config/config/encoding.xml || exit 0
             sed -i -E 's#<(EnableThrottling|EnableSegmentDeletion)>false<#<\1>true<#' /config/config/encoding.xml
             grep -oE '<(EnableThrottling|EnableSegmentDeletion)>[a-z]*' /config/config/encoding.xml
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 200m, memory: 64Mi}
         volumeMounts:
           - name: config
             mountPath: /config

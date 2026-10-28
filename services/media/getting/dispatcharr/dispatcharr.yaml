@@ -100,6 +100,13 @@ spec:
                 - dispatch
                 - -d
                 - dispatcharr
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
           volumeMounts:
             - name: db-data
               mountPath: /var/lib/postgresql/data
@@ -149,6 +156,13 @@ spec:
               command:
                 - redis-cli
                 - ping
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
 ---
 apiVersion: v1
 kind: Service
@@ -231,6 +245,13 @@ spec:
               command: ["/gluetun-entrypoint", "healthcheck"]
             periodSeconds: 10
             failureThreshold: 3
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              cpu: 1
+              memory: 256Mi
           volumeMounts:
             - name: tun
               mountPath: /dev/net/tun
@@ -270,6 +291,13 @@ spec:
               port: 9191
             periodSeconds: 10
             failureThreshold: 3
+          resources:
+            requests:
+              cpu: 600m
+              memory: 768Mi
+            limits:
+              cpu: 3
+              memory: 2Gi
           volumeMounts:
             - name: data
               mountPath: /data
@@ -321,6 +349,13 @@ spec:
               command: ["pgrep", "-f", "dispatcharr beat"]
             periodSeconds: 60
             failureThreshold: 3
+          resources:
+            requests:
+              cpu: 750m
+              memory: 640Mi
+            limits:
+              cpu: 3
+              memory: 2Gi
           volumeMounts:
             - name: data
               mountPath: /data

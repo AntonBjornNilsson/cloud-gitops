@@ -8,6 +8,13 @@ metadata:
   name: logs
   namespace: victoriametrics
 spec:
+  configReloaderResources:
+    requests:
+      cpu: 5m
+      memory: 24Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
   selectAllByDefault: false
   ruleNamespaceSelector: {}
   ruleSelector:
@@ -26,10 +33,11 @@ spec:
     rule.defaultRuleType: vlogs
   resources:
     requests:
-      cpu: 10m
+      cpu: 5m
       memory: 32Mi
     limits:
-      memory: 256Mi
+      cpu: 200m
+      memory: 128Mi
 ---
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule

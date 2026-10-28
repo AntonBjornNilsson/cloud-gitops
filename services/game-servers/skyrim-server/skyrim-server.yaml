@@ -99,6 +99,13 @@ spec:
             - containerPort: 10578
               protocol: UDP
               name: udp-game
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2
+              memory: 2Gi
           volumeMounts:
             - name: config-volume
               mountPath: /st-server/config

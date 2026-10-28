@@ -73,6 +73,13 @@ spec:
             labels:
               headlamp-prometheus: "true"
           spec: {}
+        resources:
+          requests:
+            cpu: 150m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 3Gi
 
     vmagent:
       spec:
@@ -85,10 +92,18 @@ spec:
           promscrape.maxScrapeSize: "64MB"
         resources:
           requests:
-            cpu: 50m
-            memory: 256Mi
+            cpu: 200m
+            memory: 512Mi
           limits:
-            memory: 1Gi
+            cpu: 1
+            memory: 1536Mi
+        configReloaderResources:
+          requests:
+            cpu: 5m
+            memory: 24Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
 
     vmalert:
       spec:
@@ -104,6 +119,20 @@ spec:
           # expression in Grafana Explore.
           external.url: "https://grafana.${domain}"
           external.alert.source: 'explore?orgId=1&left={"datasource":"VictoriaMetrics","queries":[{"expr":{{`{{ .Expr|jsonEscape|queryEscape }}`}},"refId":"A"}],"range":{"from":"now-1h","to":"now"}}'
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        configReloaderResources:
+          requests:
+            cpu: 5m
+            memory: 24Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
 
     # Logs (VictoriaLogs + collector) and traces (VictoriaTraces) are
     # standalone CRs in logs.yaml / traces.yaml; enable the chart's matching
@@ -122,6 +151,20 @@ spec:
     alertmanager:
       spec:
         disableNamespaceMatcher: true
+        resources:
+          requests:
+            cpu: 10m
+            memory: 48Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        configReloaderResources:
+          requests:
+            cpu: 5m
+            memory: 24Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
 
     # --- Scrape targets -----------------------------------------------------
     # k0s runs etcd, kube-scheduler and kube-controller-manager on controller
@@ -162,6 +205,13 @@ spec:
           hostPath: /var/run/dbus/system_bus_socket
           mountPath: /var/run/dbus/system_bus_socket
           readOnly: true
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 250m
+          memory: 128Mi
 
     kube-state-metrics:
       # Flux object state (gotk_resource_info) for reconciliation alerts and
@@ -320,6 +370,22 @@ spec:
                   ready: [status, conditions, '[type=Ready]', status]
                   suspended: [spec, suspend]
                   webhook_path: [status, webhookPath]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 96Mi
+        limits:
+          cpu: 500m
+          memory: 384Mi
+
+    victoria-metrics-operator:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 96Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository

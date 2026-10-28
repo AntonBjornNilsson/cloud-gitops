@@ -101,6 +101,7 @@ spec:
                   cpu: 20m
                   memory: 128Mi
                 limits:
+                  cpu: 1
                   memory: 512Mi
               volumeMounts:
                 # Writable: Recyclarr clones the TRaSH guides repo and keeps a cache here

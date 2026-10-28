@@ -46,6 +46,14 @@ spec:
       replicas: 1
       strategy:
         type: Recreate
+      # Password hashing (argon2) spikes CPU and memory on every login
+      resources:
+        requests:
+          cpu: 25m
+          memory: 384Mi
+        limits:
+          cpu: 2
+          memory: 1Gi
       extraVolumes:
         - name: users-database
           secret:
@@ -118,9 +126,10 @@ spec:
               value: template
           resources:
             requests:
-              cpu: 5m
+              cpu: 10m
               memory: 32Mi
             limits:
+              cpu: 200m
               memory: 128Mi
           volumeMounts:
             - name: authelia

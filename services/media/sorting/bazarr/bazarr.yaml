@@ -75,9 +75,10 @@ spec:
             timeoutSeconds: 5
           resources:
             requests:
-              cpu: 50m
+              cpu: 60m
               memory: 256Mi
             limits:
+              cpu: 2
               memory: 1Gi
           volumeMounts:
             - name: config
