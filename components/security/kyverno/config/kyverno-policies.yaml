@@ -1,6 +1,7 @@
 # Pod Security Standards (baseline profile) as Kyverno ClusterPolicies.
 # Workloads that legitimately need more (CNI, CSI, GPU, node agents, host
-# networking) are allowlisted per policy in policyExclude below.
+# networking) are allowlisted per policy in policyExclude below. Violations
+# show up in PolicyReports (kubectl get policyreports -A) and in admission errors.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
@@ -27,6 +28,91 @@ spec:
       retries: 3
   values:
     podSecurityStandard: baseline
-    # Audit first: collect violations in PolicyReports before enforcing
-    validationFailureAction: Audit
+    validationFailureAction: Enforce
     background: true
+    # Allowlist, per policy. Each entry is the smallest scope that covers the
+    # need: whole namespace for node-level infrastructure whose pods are
+    # created by operators (Cilium, Longhorn, MetalLB, AMD GPU), name prefix
+    # elsewhere. Autogen applies these to Deployments/DaemonSets/... too.
+    # A new workload that needs one of these: add it here, with the reason.
+    policyExclude:
+      disallow-capabilities:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system, metallb]
+          # gluetun VPN sidecar needs NET_ADMIN for its tunnel and firewall
+          - resources:
+              namespaces: [dispatcharr]
+              names: ["dispatcharr-web*"]
+          - resources:
+              namespaces: [prowlarr]
+              names: ["prowlarr*"]
+          - resources:
+              namespaces: [qbittorrent]
+              names: ["qbittorrent*"]
+      disallow-host-namespaces:
+        any:
+          - resources:
+              namespaces: [kube-system, metallb]
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["victoriametrics-prometheus-node-exporter*"]
+          # Matter needs hostNetwork for IPv6 link-local / mDNS to devices
+          - resources:
+              namespaces: [homeassistant]
+              names: ["matter-server*"]
+      disallow-host-path:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system]
+          - resources:
+              namespaces: [victoriametrics]
+              names:
+                - "victoriametrics-prometheus-node-exporter*"
+                - "smartctl-exporter*"
+                - "vlagent-logs*"
+          - resources:
+              namespaces: [homeassistant]
+              names: ["matter-server*"]
+          # Media library on the media node's disk
+          - resources:
+              namespaces:
+                - bazarr
+                - cleanuparr
+                - dispatcharr
+                - jellyfin
+                - prowlarr
+                - qbittorrent
+                - radarr
+                - sonarr
+      disallow-host-ports:
+        any:
+          - resources:
+              namespaces: [kube-system, metallb]
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["victoriametrics-prometheus-node-exporter*"]
+      disallow-privileged-containers:
+        any:
+          - resources:
+              namespaces: [kube-system, longhorn-system]
+          # Sets kernel sysctls on every node
+          - resources:
+              namespaces: [node-sysctls]
+              names: ["node-sysctls*"]
+          # Tailscale proxies (operator-created ts-* StatefulSets)
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
+          # Raw disk access for SMART data
+          - resources:
+              namespaces: [victoriametrics]
+              names: ["smartctl-exporter*"]
+      disallow-selinux:
+        any:
+          - resources:
+              namespaces: [kube-system]
+      restrict-seccomp:
+        any:
+          - resources:
+              namespaces: [kube-system]
