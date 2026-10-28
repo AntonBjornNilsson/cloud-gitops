@@ -7,6 +7,8 @@ metadata:
   name: logs
   namespace: victoriametrics
 spec:
+  # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+  useStrictSecurity: true
   retentionPeriod: "14d"
   storage:
     accessModes:
@@ -37,6 +39,17 @@ spec:
   # Run on every node, including tainted ones (e.g. the GPU node)
   tolerations:
     - operator: Exists
+  # Root: reads the node's root-owned container logs and keeps its position in a
+  # hostPath (allowlisted in the Kyverno restricted policies). Root needs no
+  # capabilities for its own files, so all are dropped.
+  securityContext:
+    runAsNonRoot: false
+    runAsUser: 0
+    seccompProfile:
+      type: RuntimeDefault
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
   resources:
     requests:
       cpu: 20m

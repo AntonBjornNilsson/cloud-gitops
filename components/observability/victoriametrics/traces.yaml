@@ -8,6 +8,8 @@ metadata:
   name: traces
   namespace: victoriametrics
 spec:
+  # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+  useStrictSecurity: true
   retentionPeriod: "7d"
   storage:
     accessModes:

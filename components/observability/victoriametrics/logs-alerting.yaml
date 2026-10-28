@@ -8,6 +8,8 @@ metadata:
   name: logs
   namespace: victoriametrics
 spec:
+  # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+  useStrictSecurity: true
   configReloaderResources:
     requests:
       cpu: 5m

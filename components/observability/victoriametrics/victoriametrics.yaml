@@ -64,6 +64,8 @@ spec:
     # --- Metrics -----------------------------------------------------------
     vmsingle:
       spec:
+        # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+        useStrictSecurity: true
         retentionPeriod: "1"
         # Label the default service so Headlamp's Prometheus plugin
         # auto-detects it and queries it through the API server proxy.
@@ -83,6 +85,8 @@ spec:
 
     vmagent:
       spec:
+        # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+        useStrictSecurity: true
         # Several upstream dashboards (Hubble, Kubernetes views) filter on a
         # "cluster" label.
         externalLabels:
@@ -107,6 +111,8 @@ spec:
 
     vmalert:
       spec:
+        # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+        useStrictSecurity: true
         # LogsQL rules are evaluated by the "logs" VMAlert (logs-alerting.yaml)
         ruleNamespaceSelector: {}
         ruleSelector:
@@ -150,6 +156,8 @@ spec:
     # config's own namespace, i.e. almost nothing reached ntfy.
     alertmanager:
       spec:
+        # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
+        useStrictSecurity: true
         disableNamespaceMatcher: true
         resources:
           requests:
