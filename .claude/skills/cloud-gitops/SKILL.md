@@ -168,7 +168,11 @@ publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes
 
 The `kyverno-policies` chart (`components/security/kyverno/config/kyverno-policies.yaml`) enforces the Pod Security
 Standards **baseline** profile: no privileged containers, added capabilities, hostPath, host namespaces/ports,
-custom SELinux/AppArmor/seccomp/sysctls. A violating Pod or controller is denied at admission
+custom SELinux/AppArmor/seccomp/sysctls. The **restricted** profile's extra policies (`disallow-capabilities-strict`,
+`disallow-privilege-escalation`, `require-run-as-non-root-user`, `require-run-as-nonroot`, `restrict-seccomp-strict`,
+`restrict-volume-types`) only audit (`validationFailureActionByPolicy: Audit`): write new workloads to pass them
+(`runAsNonRoot`, `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]`, `seccompProfile: RuntimeDefault`).
+A violating Pod or controller is denied at admission
 (`admission webhook "validate.kyverno.svc-fail" denied the request`; Flux shows it on the Kustomization/HelmRelease).
 - Fix the workload first (drop the capability, use a PVC instead of hostPath).
 - If it really needs it (node agents, VPN sidecars, the media hostPath), add the smallest entry to `policyExclude`
