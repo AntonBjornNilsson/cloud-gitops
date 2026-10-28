@@ -1,0 +1,215 @@
+---
+# Matter Server (matter.js) for Home Assistant's Matter integration, e.g. for
+# the IKEA DIRIGERA hub as a Matter bridge. Matter needs IPv6 link-local
+# multicast on the devices' L2 network, so the server runs with hostNetwork on
+# a node in that VLAN (not the media or GPU node).
+#
+# Its WebSocket API has no auth, so it does not listen on the node's IP: it
+# binds a unix socket in a node-local directory, and matter-server-proxy (pod
+# network, same node) forwards the matter-server Service to it. Only Home
+# Assistant may reach that proxy. HA connects to
+# ws://matter-server.homeassistant.svc.cluster.local:5580/ws
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: matter-server-data
+  namespace: homeassistant
+  labels:
+    # Fabric credentials: losing them means commissioning every device again
+    backup.longhorn.io/enabled: "true"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matter-server
+  namespace: homeassistant
+spec:
+  # RWO volume and one socket path: never run two pods
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: matter-server
+  template:
+    metadata:
+      labels:
+        app: matter-server
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values:
+                      - ${media_node}
+                      - ${gpu_node}
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        # The server runs as 1000 and creates its socket here
+        - name: socket-dir
+          image: busybox:1.37
+          command: ["chown", "1000:1000", "/run/matter-server"]
+          volumeMounts:
+            - name: socket
+              mountPath: /run/matter-server
+          resources:
+            requests:
+              cpu: 1m
+              memory: 4Mi
+            limits:
+              memory: 16Mi
+      containers:
+        - name: matter-server
+          image: ghcr.io/matter-js/matterjs-server:1.5.5
+          env:
+            - name: LISTEN_ADDRESS
+              value: /run/matter-server/ws.sock
+            - name: MATTER_LOG_FORMAT
+              value: plain
+          startupProbe:
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "-m", "5", "--unix-socket", "/run/matter-server/ws.sock", "http://localhost/health"]
+            periodSeconds: 10
+            # First start loads the CSA DCL certificate data
+            failureThreshold: 90
+          livenessProbe:
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "-m", "5", "--unix-socket", "/run/matter-server/ws.sock", "http://localhost/health"]
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: socket
+              mountPath: /run/matter-server
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: matter-server-data
+        - name: socket
+          hostPath:
+            path: /run/matter-server
+            type: DirectoryOrCreate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matter-server-proxy
+  namespace: homeassistant
+spec:
+  selector:
+    matchLabels:
+      app: matter-server-proxy
+  template:
+    metadata:
+      labels:
+        app: matter-server-proxy
+    spec:
+      # Same node as the server: the socket is node-local
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: matter-server
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+      containers:
+        - name: socat
+          image: alpine/socat:1.8.1.3
+          args:
+            - TCP-LISTEN:5580,fork,reuseaddr
+            - UNIX-CONNECT:/run/matter-server/ws.sock
+          ports:
+            - name: ws
+              containerPort: 5580
+          readinessProbe:
+            exec:
+              command: ["test", "-S", "/run/matter-server/ws.sock"]
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: ws
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: socket
+              mountPath: /run/matter-server
+      volumes:
+        - name: socket
+          hostPath:
+            path: /run/matter-server
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: matter-server
+  namespace: homeassistant
+spec:
+  selector:
+    app: matter-server-proxy
+  ports:
+    - name: ws
+      port: 5580
+      targetPort: 5580
+---
+# matter-server itself runs with hostNetwork, which Cilium endpoint policies
+# do not cover; its API is only reachable through this proxy.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: matter-server-proxy
+  namespace: homeassistant
+spec:
+  endpointSelector:
+    matchLabels:
+      app: matter-server-proxy
+  ingress:
+    # Matter integration in Home Assistant
+    - fromEndpoints:
+        - matchLabels:
+            app: homeassistant
+      toPorts:
+        - ports:
+            - port: "5580"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  # Talks to the server over the unix socket only: no network egress
+  enableDefaultDeny:
+    egress: true
