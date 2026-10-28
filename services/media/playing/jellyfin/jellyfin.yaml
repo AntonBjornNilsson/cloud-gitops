@@ -63,6 +63,22 @@ spec:
               - op: add
                 path: /metadata/labels/enable-oauth
                 value: "false"
+          # Cap the node-local cache; going over evicts the pod, which also empties it.
+          - target:
+              kind: Deployment
+              name: jellyfin
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: jellyfin
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: cache
+                        emptyDir:
+                          sizeLimit: 25Gi
   values:
     replicaCount: 1
     image:
@@ -152,6 +168,22 @@ spec:
         volumeMounts:
           - name: config
             mountPath: /config
+      # Delete transcode segments once they are SegmentKeepSeconds behind the playhead,
+      # and throttle ffmpeg instead of transcoding the whole file ahead. Without this a
+      # single movie leaves GBs of segments that only the daily cleanup task (files older
+      # than a day) removes, and a few evening streams filled the cache.
+      - name: transcode-cleanup
+        image: docker.io/jellyfin/jellyfin:12.1
+        command:
+          - sh
+          - -c
+          - |
+            test -f /config/config/encoding.xml || exit 0
+            sed -i -E 's#<(EnableThrottling|EnableSegmentDeletion)>false<#<\1>true<#' /config/config/encoding.xml
+            grep -oE '<(EnableThrottling|EnableSegmentDeletion)>[a-z]*' /config/config/encoding.xml
+        volumeMounts:
+          - name: config
+            mountPath: /config
 
     persistence:
       config:
@@ -161,9 +193,10 @@ spec:
         enabled: true
         type: hostPath
         hostPath: "/mnt/hdd"
+      # Not enabled = node-local emptyDir: temporary by design, wiped on every restart
+      # and never replicated by Longhorn. Images and metadata re-download on demand.
       cache:
-        enabled: true
-        accessMode: ReadWriteMany
+        enabled: false
 
     nodeSelector:
       kubernetes.io/hostname: ${media_node}
