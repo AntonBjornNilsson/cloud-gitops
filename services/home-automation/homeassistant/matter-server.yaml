@@ -55,11 +55,22 @@ spec:
                       - ${gpu_node}
       securityContext:
         fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
-        # The server runs as 1000 and creates its socket here
+        # The server runs as 1000 and creates its socket here. kubelet creates the
+        # hostPath as root, so this one step needs root with CHOWN (allowlisted in
+        # the Kyverno restricted policies); everything else runs as 1000.
         - name: socket-dir
           image: busybox:1.37
           command: ["chown", "1000:1000", "/run/matter-server"]
+          securityContext:
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN"]
           volumeMounts:
             - name: socket
               mountPath: /run/matter-server
@@ -72,6 +83,13 @@ spec:
       containers:
         - name: matter-server
           image: ghcr.io/matter-js/matterjs-server:1.5.5
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: LISTEN_ADDRESS
               value: /run/matter-server/ws.sock
@@ -135,6 +153,8 @@ spec:
         runAsUser: 1000
         runAsGroup: 1000
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: socat
           image: alpine/socat:1.8.1.3

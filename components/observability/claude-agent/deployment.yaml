@@ -54,9 +54,15 @@ spec:
         runAsGroup: 1000
         fsGroup: 1000
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: agent
           image: ghcr.io/${ghcr_repo}/claude-agent:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           imagePullPolicy: Always
           command: ["node", "/app/src/server.ts"]
           env:
@@ -144,6 +150,10 @@ spec:
             initialDelaySeconds: 5
         - name: publisher
           image: ghcr.io/${ghcr_repo}/claude-agent:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           imagePullPolicy: Always
           command: ["node", "/app/src/publisher.ts"]
           env:

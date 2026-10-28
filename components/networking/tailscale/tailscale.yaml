@@ -44,6 +44,17 @@ spec:
       clientId: ${tailscale_client_id}
       clientSecret: ${tailscale_client_secret}
     operatorConfig:
+      # The image defaults to root; the operator needs no local privileges
+      podSecurityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
       hostname: k8s-operator
       resources:
         requests:

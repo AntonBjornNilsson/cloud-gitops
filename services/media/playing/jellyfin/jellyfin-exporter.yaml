@@ -26,9 +26,19 @@ spec:
         app: jellyfin-exporter
         homelab/media-exporter: "true"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: exporter
           image: docker.io/rebelcore/jellyfin-exporter:v1.5.3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           args:
             - --collector.storage
             - --collector.tasks

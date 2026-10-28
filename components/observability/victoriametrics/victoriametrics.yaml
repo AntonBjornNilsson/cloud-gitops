@@ -192,6 +192,14 @@ spec:
               replacement: kubelet
 
     prometheus-node-exporter:
+      # Merged into the chart defaults (65534, read-only root)
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
       extraArgs:
         - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
         - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|erofs|sysfs|tracefs)$
@@ -379,6 +387,10 @@ spec:
           memory: 384Mi
 
     victoria-metrics-operator:
+      # Merged into the chart defaults (non-root, drop ALL)
+      podSecurityContext:
+        seccompProfile:
+          type: RuntimeDefault
       resources:
         requests:
           cpu: 10m

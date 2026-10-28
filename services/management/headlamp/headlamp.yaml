@@ -64,6 +64,10 @@ spec:
     # (emptyDir, so they are re-downloaded on every pod start).
     pluginsManager:
       enabled: true
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
       version: "0.1.1"
       env:
         - name: HOME
@@ -91,6 +95,14 @@ spec:
           maxConcurrent: 2
     # pluginctl's --watch misses ConfigMap updates (atomic symlink swap), so
     # copy the plugin list into a pod annotation to roll the pod on changes.
+    # Merged into the chart defaults (non-root 100:101)
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
     podAnnotations:
       headlamp/plugin-config: *plugin-config
     resources:

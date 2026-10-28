@@ -78,10 +78,19 @@ spec:
       securityContext:
         # postgres user in the timescaledb-ha image
         fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: db
           # Pinned like upstream: a PostgreSQL major bump needs a dump/restore
           image: timescale/timescaledb-ha:pg18.4-ts2.29.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           args:
             - postgres
             - -c
@@ -164,9 +173,18 @@ spec:
       securityContext:
         # redis group in the image; its entrypoint does not chown /data
         fsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: redis
           image: redis:8-alpine
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           args: ["redis-server", "--appendonly", "yes"]
           ports:
             - containerPort: 6379
@@ -220,10 +238,19 @@ spec:
       securityContext:
         # The image runs as UID 1001 and ignores PUID/PGID
         fsGroup: 1001
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 65533
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         # The volume hides the image's /data; Tracearr needs both directories to exist
         - name: mkdirs
           image: ghcr.io/connorgallopo/tracearr:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["mkdir", "-p", "/data/backup", "/data/tracearr/image-cache"]
           resources:
             requests:
@@ -238,6 +265,10 @@ spec:
       containers:
         - name: tracearr
           image: ghcr.io/connorgallopo/tracearr:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: NODE_ENV
               value: production

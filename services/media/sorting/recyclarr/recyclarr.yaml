@@ -85,9 +85,19 @@ spec:
             app: recyclarr
         spec:
           restartPolicy: OnFailure
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: recyclarr
               image: ghcr.io/recyclarr/recyclarr:8.8.0
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
               # Any argument makes the entrypoint run the CLI once instead of its own cron
               args: ["sync"]
               env:

@@ -34,6 +34,8 @@ spec:
     # Unprivileged ICMP (ping sockets) for the internet latency/loss probes;
     # a NET_RAW capability is not effective for a non-root process.
     podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
       sysctls:
         - name: net.ipv4.ping_group_range
           value: "0 2147483647"

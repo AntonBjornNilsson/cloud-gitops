@@ -34,6 +34,10 @@ spec:
       interval: 12h
   timeout: 5m
   values:
+    # Container securityContext (non-root, drop ALL) is the chart default
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
     resources:
       requests:
         cpu: 20m

@@ -107,6 +107,13 @@ spec:
       storageClassName: longhorn
       storageSize: 5Gi
       server:
+        podSecurityContext:
+          seccompProfile:
+            type: RuntimeDefault
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
         resources:
           requests:
             cpu: 10m
@@ -114,6 +121,21 @@ spec:
           limits:
             cpu: "1"
             memory: 1Gi
+    # Scan job pods (ClientServer mode: the client only needs /tmp, an emptyDir)
+    trivyOperator:
+      scanJobPodTemplatePodSecurityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+    # Operator container is already non-root/drop ALL by chart default
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 10000
+      runAsGroup: 10000
+      seccompProfile:
+        type: RuntimeDefault
     # Don't install the (inactive) CIS/NSA/PSS ClusterComplianceReports.
     compliance:
       specs: []

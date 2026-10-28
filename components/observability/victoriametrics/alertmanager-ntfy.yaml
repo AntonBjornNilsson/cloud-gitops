@@ -64,9 +64,19 @@ spec:
         # Roll the pod when the config changes
         config-version: "4"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: alertmanager-ntfy
           image: ghcr.io/alexbakker/alertmanager-ntfy:1.2.1
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           args:
             - --configs=/etc/alertmanager-ntfy/config.yml
           ports:

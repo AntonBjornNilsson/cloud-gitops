@@ -17,9 +17,19 @@ spec:
         app: qbittorrent-exporter
         homelab/media-exporter: "true"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: exporter
           image: ghcr.io/martabal/qbittorrent-exporter:v2.0.3
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             # No credentials: the pod CIDR is in qBittorrent's WebUI auth whitelist
             - name: QBITTORRENT_BASE_URL
