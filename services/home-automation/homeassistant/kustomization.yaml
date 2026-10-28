@@ -7,3 +7,4 @@ configMapGenerator:
     namespace: homeassistant
     files:
       - config/configuration.yaml
+      - config/http-store.py

@@ -50,6 +50,19 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+        - name: http-store
+          image: ghcr.io/home-assistant/home-assistant:2026.10.4
+          command: ["python3", "/scripts/http-store.py"]
+          env:
+            - name: TRUSTED_PROXIES
+              value: "${pod_cidr}"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: configuration
+              mountPath: /scripts/http-store.py
+              subPath: http-store.py
+              readOnly: true
       containers:
         - name: homeassistant
           image: ghcr.io/home-assistant/home-assistant:2026.10.4
