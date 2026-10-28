@@ -82,7 +82,7 @@ spec:
               set_pref 'WebUI\HostHeaderValidation' false
               set_pref 'WebUI\LocalHostAuth' false
               set_pref 'WebUI\AuthSubnetWhitelistEnabled' true
-              set_pref 'WebUI\AuthSubnetWhitelist' '127.0.0.1/32, 10.244.0.0/16'
+              set_pref 'WebUI\AuthSubnetWhitelist' '127.0.0.1/32, ${pod_cidr}'
               chown -R 1000:1000 /config
           resources:
             requests:
@@ -127,7 +127,7 @@ spec:
               value: "/tmp/gluetun/forwarded_port"
             # Cluster traffic (DNS, Radarr/Sonarr callbacks) bypasses the tunnel
             - name: FIREWALL_OUTBOUND_SUBNETS
-              value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+              value: "${pod_cidr},10.96.0.0/12,192.168.0.0/16"
             # Web UI / API for Traefik, Radarr, Sonarr, Prowlarr and the kubelet
             - name: FIREWALL_INPUT_PORTS
               value: "8080"

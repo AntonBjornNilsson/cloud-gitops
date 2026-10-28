@@ -219,7 +219,7 @@ spec:
             - name: SERVER_REGIONS
               value: "${dispatcharr_pia_region}"
             - name: FIREWALL_OUTBOUND_SUBNETS
-              value: "10.244.0.0/16,10.96.0.0/12,192.168.0.0/16"
+              value: "${pod_cidr},10.96.0.0/12,192.168.0.0/16"
             # 9192: Prometheus exporter plugin (scraped by VictoriaMetrics)
             - name: FIREWALL_INPUT_PORTS
               value: "9191,9192"

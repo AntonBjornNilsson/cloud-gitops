@@ -47,7 +47,7 @@ spec:
     crds: CreateReplace
   values:
     # GitHub configuration URL - Update this with your repo/org
-    githubConfigUrl: "https://github.com/AntonBjornNilsson/cloud-gitops"
+    githubConfigUrl: "https://github.com/${github_repo}"
 
     # GitHub credentials - reference secret from cloud-gitops-secrets
     githubConfigSecret:

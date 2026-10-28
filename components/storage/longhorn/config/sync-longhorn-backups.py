@@ -18,7 +18,7 @@ import subprocess
 from datetime import datetime, timezone
 
 TARGET_FILE_PATH = "components/storage/longhorn/config/restore/volumes.yaml"
-GITHUB_REPO = os.environ.get("GITHUB_REPO", "AntonBjornNilsson/cloud-gitops")
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "")
 GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
@@ -293,6 +293,9 @@ def main():
     # GitOps sync mode (via GitHub API)
     if not GITHUB_TOKEN:
         print("[-] GITHUB_TOKEN is not set. Use --write-local for local updates or provide GITHUB_TOKEN.")
+        sys.exit(1)
+    if not GITHUB_REPO:
+        print("[-] GITHUB_REPO is not set (owner/repo).")
         sys.exit(1)
 
     print(f"[*] Checking existing GitOps manifest at {TARGET_FILE_PATH} in {GITHUB_REPO} ({GITHUB_BRANCH})...")
