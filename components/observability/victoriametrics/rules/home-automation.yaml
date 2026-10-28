@@ -1,0 +1,27 @@
+---
+# Home Assistant. Pod and Ingress health are covered by the workload and probe rules.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: home-automation
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: homeassistant
+      rules:
+        - alert: HomeAssistantMetricsDown
+          expr: absent(up{namespace="homeassistant"} == 1)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Home Assistant metrics are not being scraped"
+            description: "/api/prometheus has not answered for 15 minutes. If the pod is Ready, the long-lived access token (homeassistant_token in the secrets repo) was probably revoked or expired: create a new one in the HA UI."
+        - alert: HomeAssistantEntitiesUnavailable
+          expr: count(homeassistant_entity_available == 0) > 0
+          for: 1h
+          labels:
+            severity: info
+          annotations:
+            summary: "{{ $value }} Home Assistant entities unavailable for an hour"
+            description: "Devices are offline or an integration failed to load. Check Settings -> Devices & services in Home Assistant."

@@ -158,6 +158,9 @@ metadata:
     gethomepage.dev/icon: "home-assistant.png"
     # Homepage looks for app.kubernetes.io/name=<ingress> by default
     gethomepage.dev/pod-selector: "app=homeassistant"
+    gethomepage.dev/widget.type: "homeassistant"
+    gethomepage.dev/widget.url: "http://homeassistant.homeassistant.svc.cluster.local:8123"
+    gethomepage.dev/widget.key: "{{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}"
 spec:
   ingressClassName: traefik
   rules:
@@ -186,6 +189,22 @@ spec:
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8123"
+              protocol: TCP
+    # Dashboard widget API calls from Homepage
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: homepage
+      toPorts:
+        - ports:
+            - port: "8123"
+              protocol: TCP
+    # Metrics scraping (/api/prometheus) from VictoriaMetrics
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
       toPorts:
         - ports:
             - port: "8123"

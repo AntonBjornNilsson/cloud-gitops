@@ -1,0 +1,31 @@
+---
+# Home Assistant entity states (prometheus: in its configuration.yaml). The
+# endpoint needs a long-lived access token (homeassistant_token, created in the
+# HA UI under Profile -> Security).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: homeassistant-token
+  namespace: victoriametrics
+type: Opaque
+stringData:
+  token: "${homeassistant_token}"
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: homeassistant
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - homeassistant
+  selector:
+    matchLabels:
+      app: homeassistant
+  podMetricsEndpoints:
+    - port: http
+      path: /api/prometheus
+      bearerTokenSecret:
+        name: homeassistant-token
+        key: token

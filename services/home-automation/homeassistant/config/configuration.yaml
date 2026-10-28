@@ -6,3 +6,6 @@ default_config:
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
+
+# Entity states for VictoriaMetrics (/api/prometheus, needs a long-lived token)
+prometheus:
