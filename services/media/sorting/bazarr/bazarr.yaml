@@ -41,9 +41,19 @@ spec:
       tolerations:
         - key: "node-role.kubernetes.io/control-plane"
           effect: "NoSchedule"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: bazarr
           image: lscr.io/linuxserver/bazarr:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: PUID
               value: "1000"
@@ -81,11 +91,16 @@ spec:
               cpu: 2
               memory: 1Gi
           volumeMounts:
+            - name: run
+              mountPath: /run
             - name: config
               mountPath: /config
             - name: data
               mountPath: /data
       volumes:
+        # Running as non-root, s6-overlay needs a writable /run
+        - name: run
+          emptyDir: {}
         - name: config
           persistentVolumeClaim:
             claimName: bazarr-config

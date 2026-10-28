@@ -38,11 +38,23 @@ spec:
     spec:
       # Indexer traffic goes out through the VPN. gluetun is a native sidecar, so Prowlarr only
       # starts once the tunnel is up; its kill switch blocks egress until then.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
           restartPolicy: Always
+          # Root with NET_ADMIN for the tunnel and kill switch (allowlisted in the Kyverno
+          # restricted policies); every other container in the pod runs as 1000.
           securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
             capabilities:
               add:
                 - NET_ADMIN
@@ -95,6 +107,10 @@ spec:
         # challenge, so FlareSolverr must leave through the same VPN as Prowlarr.
         - name: flaresolverr
           image: ghcr.io/flaresolverr/flaresolverr:v3.5.2
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: TZ
               value: "Europe/Stockholm"
@@ -118,6 +134,10 @@ spec:
               memory: 2Gi
         - name: prowlarr
           image: lscr.io/linuxserver/prowlarr:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           env:
             - name: PUID
               value: "1000"
@@ -161,9 +181,14 @@ spec:
               cpu: 1
               memory: 512Mi
           volumeMounts:
+            - name: run
+              mountPath: /run
             - name: config
               mountPath: /config
       volumes:
+        # Running as non-root, s6-overlay needs a writable /run
+        - name: run
+          emptyDir: {}
         - name: config
           persistentVolumeClaim:
             claimName: prowlarr-config
