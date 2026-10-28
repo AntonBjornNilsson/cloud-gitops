@@ -35,6 +35,11 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
    New secrets must be added to `cloud-gitops-secrets` by the user — tell them which key to add.
    Never write hardcoded domain/credential fallbacks in scripts (`os.environ.get("X", "")`, not a real URL).
 4. **Every Namespace** gets `annotations: kustomize.toolkit.fluxcd.io/prune: disabled` (Kyverno also enforces it).
+5. **Every container has CPU and memory requests *and* limits**: app containers, init containers, sidecars,
+   CronJobs, and the pods charts and operators create (see "Resources" below). Never add a workload without them.
+6. **This skill and the claude-agent's instructions go together.** The agent follows this skill but also has its
+   own instructions in `components/observability/claude-agent/app/` (`rules.md`, `health.md`, `updates.md`).
+   When you add or change a convention here, check whether those files need the same change.
 
 ## Layout
 
@@ -151,6 +156,31 @@ Every workload has a CiliumNetworkPolicy. Pattern: ingress from `traefik` namesp
 `fromEntities: [host, remote-node, health]` for probes, `fromEndpoints: [{}]` intra-ns;
 egress to kube-dns port 53, explicit peer namespaces, `toEntities: [world]` only if needed.
 When two apps talk, update **both** sides' policies. Dropped traffic -> check Hubble.
+
+## Resources (requests and limits)
+
+Every container sets `resources.requests.{cpu,memory}` and `resources.limits.{cpu,memory}`. Size them from
+real usage in VictoriaMetrics (7 days or more, so daily jobs and peaks are included):
+```
+max_over_time(container_memory_working_set_bytes{namespace="<ns>",container="<c>"}[7d])
+quantile_over_time(0.5, container_memory_working_set_bytes{namespace="<ns>",container="<c>"}[7d])
+quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{namespace="<ns>",container="<c>"}[5m])[7d:5m])
+```
+- **memory request** = typical usage (p50), rounded up: the scheduler packs nodes by requests, so a request far
+  below real usage overloads a node (node pressure/eviction instead of a clean per-container OOM).
+- **memory limit** = about 2x the observed peak, never below 1.5x the peak.
+- **cpu request** = the p95 rate (at least `1m`-`10m` for idle sidecars).
+- **cpu limit** = generous, several times the observed peak (CPU limits throttle, they don't kill): `100m`-`200m`
+  for small sidecars/exporters, `500m`-`1` for ordinary apps, `2`-`4` for transcoding, VPN, databases under load.
+- New app with no history: copy a similar sibling's values, then re-check after a week.
+- Where to set them: raw manifests on each container; HelmReleases via the chart's values (check the key with
+  `helm get values <release> -n <ns> -a -o json`; a wrong key is silently ignored); containers the chart has no
+  value for via `postRenderers` patches (see longhorn, metallb, headlamp); operator CRs via their spec
+  (VictoriaMetrics `resources` + `configReloaderResources`, Grafana `deployment.spec`, Tailscale `ProxyClass`).
+- Exceptions, not configurable from this repo: k0s-managed kube-system pods (coredns, metrics-server,
+  konnectivity-agent) and pods Longhorn creates itself (instance-manager, share-manager, engine-image, CSI
+  sidecars).
+- After an OOMKill, raise the limit from the data above; don't remove it.
 
 ## Storage & backups (Longhorn)
 
