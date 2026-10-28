@@ -36,11 +36,19 @@ spec:
       labels:
         app: homeassistant
     spec:
+      # Runs as root: the image's s6 init and Home Assistant's runtime installs of
+      # integration requirements need it (allowlisted in the Kyverno restricted
+      # policies). No privilege escalation, default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         # configuration.yaml includes these; Home Assistant only creates them
         # together with a default configuration.yaml, which Git provides instead
         - name: include-files
           image: ghcr.io/home-assistant/home-assistant:2026.10.4
+          securityContext:
+            allowPrivilegeEscalation: false
           command:
             - sh
             - -c
@@ -59,6 +67,8 @@ spec:
               mountPath: /config
         - name: http-store
           image: ghcr.io/home-assistant/home-assistant:2026.10.4
+          securityContext:
+            allowPrivilegeEscalation: false
           command: ["python3", "/scripts/http-store.py"]
           env:
             - name: TRUSTED_PROXIES
@@ -80,6 +90,8 @@ spec:
       containers:
         - name: homeassistant
           image: ghcr.io/home-assistant/home-assistant:2026.10.4
+          securityContext:
+            allowPrivilegeEscalation: false
           env:
             - name: TZ
               value: "Europe/Stockholm"

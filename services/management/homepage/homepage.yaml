@@ -47,6 +47,23 @@ spec:
       repository: ghcr.io/gethomepage/homepage
       tag: v2.5.0
     enableRbac: true
+    # The image defaults to root; as any other user its entrypoint skips the chown
+    # and runs node directly. Next.js writes its cache under /app/.next/cache.
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    persistence:
+      next-cache:
+        enabled: true
+        type: emptyDir
+        mountPath: /app/.next/cache
     resources:
       requests:
         cpu: 5m
