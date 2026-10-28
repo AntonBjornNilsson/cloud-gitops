@@ -45,6 +45,23 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
+        - name: run-dir
+          image: lscr.io/linuxserver/prowlarr:latest
+          command: ["mkdir", "-p", "/emptydir/run"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - name: run
+              mountPath: /emptydir
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
           restartPolicy: Always
@@ -183,10 +200,12 @@ spec:
           volumeMounts:
             - name: run
               mountPath: /run
+              subPath: run
             - name: config
               mountPath: /config
       volumes:
-        # Running as non-root, s6-overlay needs a writable /run
+        # Running as non-root, s6-overlay needs a /run owned by its user: an emptyDir is
+        # root-owned, so the run-dir init container creates a subdirectory as 1000
         - name: run
           emptyDir: {}
         - name: config
