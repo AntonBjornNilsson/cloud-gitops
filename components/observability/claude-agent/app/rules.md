@@ -37,6 +37,8 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 - Never write setup-specific information (hostnames, IPs, node names, account names, secrets) into the repo; use
   the Flux postBuild substitution variables described in the skill.
 - Validate edits with `kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null`.
+- If a workload or update is denied by a Pod Security policy (Kyverno baseline), do not widen `policyExclude` in
+  `components/security/kyverno/config/kyverno-policies.yaml` yourself: report it, saying what the workload needs and why.
 - Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs or Flux Kustomizations.
 
 ## Memory

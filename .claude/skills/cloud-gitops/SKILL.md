@@ -164,6 +164,19 @@ To unpublish: remove the HTTPRoute and its Access application (cfgate withdraws 
 from the Ingress annotation. Never re-add a `*.${domain}` record in Cloudflare: it makes every LAN-only name resolve
 publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes before bumping it.
 
+## Pod Security (Kyverno baseline)
+
+The `kyverno-policies` chart (`components/security/kyverno/config/kyverno-policies.yaml`) enforces the Pod Security
+Standards **baseline** profile: no privileged containers, added capabilities, hostPath, host namespaces/ports,
+custom SELinux/AppArmor/seccomp/sysctls. A violating Pod or controller is denied at admission
+(`admission webhook "validate.kyverno.svc-fail" denied the request`; Flux shows it on the Kustomization/HelmRelease).
+- Fix the workload first (drop the capability, use a PVC instead of hostPath).
+- If it really needs it (node agents, VPN sidecars, the media hostPath), add the smallest entry to `policyExclude`
+  for that policy: namespace + name prefix (`names: ["<app>*"]`, covers Pods and controllers), with a comment on why.
+  Whole-namespace entries only for operator-created node infrastructure (Cilium, Longhorn, MetalLB).
+- Check results: `kubectl --context=<admin> get policyreports -A` (pod results refresh on the hourly background scan);
+  test a manifest with `kubectl apply --dry-run=server`.
+
 ## Network policy (Cilium)
 
 Every workload has a CiliumNetworkPolicy. Pattern: ingress from `traefik` namespace on the app port,
