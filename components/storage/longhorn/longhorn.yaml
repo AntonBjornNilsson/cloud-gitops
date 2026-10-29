@@ -35,7 +35,8 @@ spec:
   timeout: 15m
   values:
     persistence:
-      # defaultClassReplicaCount: 1
+      # Two storage nodes: a replica on each (a third has nowhere to go)
+      defaultClassReplicaCount: 2
       # Keep the volume when its PVC is deleted (also enforced on every Longhorn PV by
       # Kyverno add-pvc-annotations/retain-longhorn-pv)
       reclaimPolicy: Retain
@@ -46,7 +47,8 @@ spec:
     #   resizerReplicaCount: 1
     #   snapshotterReplicaCount: 1
     defaultSettings:
-      # defaultReplicaCount: 1
+      # Same for volumes created in the Longhorn UI
+      defaultReplicaCount: '{"v1":"2","v2":"2"}'
       # Volumes are thin-provisioned and mostly empty; at 100% the full size
       # of every volume counts against each disk, so new replicas could not be
       # scheduled on node-sized disks. storageMinimalAvailablePercentage still
