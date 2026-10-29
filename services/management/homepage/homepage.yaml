@@ -159,6 +159,10 @@ spec:
         # Group order and shape; groups come from gethomepage.dev/group
         # Ingress annotations, plus services/bookmarks below
         layout:
+          - Home:
+              style: row
+              columns: 2
+              icon: mdi-home-outline
           - Media:
               style: row
               columns: 4
@@ -236,8 +240,28 @@ spec:
             showSearchSuggestions: true
       kubernetes:
         mode: cluster
-      # Merged with the auto-discovered Observability group
+      # Merged with the auto-discovered groups
       services:
+        - Home:
+            # Home Assistant templates over every cover (blind) and battery
+            # sensor, so no entity IDs are listed here
+            - Blinds:
+                icon: mdi-blinds-horizontal
+                description: Covers in Home Assistant
+                href: https://homeassistant.${domain}
+                widget:
+                  type: homeassistant
+                  url: http://homeassistant.homeassistant.svc.cluster.local:8123
+                  key: "{{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}"
+                  custom:
+                    - label: Open
+                      template: "{{ states.cover | selectattr('attributes.current_position', 'defined') | selectattr('attributes.current_position', 'gt', 0) | list | count }}"
+                    - label: Closed
+                      template: "{{ states.cover | selectattr('attributes.current_position', 'defined') | selectattr('attributes.current_position', 'eq', 0) | list | count }}"
+                    - label: Avg position
+                      template: "{% set p = states.cover | map(attribute='attributes.current_position') | select('number') | list %}{{ ((p | sum) / (p | count)) | round(0) | int if p else '-' }}%"
+                    - label: Lowest battery
+                      template: "{{ states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', 'eq', 'battery') | map(attribute='state') | map('float', none) | reject('none') | min | int }}%"
         - Observability:
             - Cluster Health:
                 icon: victoriametrics.png
