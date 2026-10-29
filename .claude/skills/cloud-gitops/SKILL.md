@@ -210,6 +210,9 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
 - Node infrastructure created by operators (Cilium/kube-system, Longhorn, MetalLB): whole namespace. Longhorn also
   starts short-lived helper pods (hostPID kubelet detection), so its namespace is excluded from every policy it can hit.
 - gluetun VPN sidecars (dispatcharr-web, prowlarr, qbittorrent): root with NET_ADMIN; the rest of the pod runs as 1000.
+- Tailscale proxies (`ts-*`): tailscaled runs unprivileged with NET_ADMIN (ProxyClass `resources`) on the node's
+  `/dev/net/tun`, which the Kyverno mutate policy `tailscale-proxy-tun` mounts (ProxyClass can't add volumes). The
+  operator's `sysctler` init container stays privileged: it sets ip_forward and a Connector always gets it.
 - Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
   unifi app, dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
 - hostPath (`disallow-host-path` + `restrict-volume-types`): media library apps, matter-server, node-exporter,
