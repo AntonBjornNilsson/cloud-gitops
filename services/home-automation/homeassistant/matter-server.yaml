@@ -52,7 +52,6 @@ spec:
                     operator: NotIn
                     values:
                       - ${media_node}
-                      - ${gpu_node}
       securityContext:
         fsGroup: 1000
         fsGroupChangePolicy: OnRootMismatch
