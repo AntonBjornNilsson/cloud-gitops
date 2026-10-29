@@ -1,5 +1,5 @@
-# Pod Security Standards as Kyverno ClusterPolicies: baseline profile enforced,
-# restricted profile audited.
+# Pod Security Standards as Kyverno ClusterPolicies: restricted profile (which
+# includes baseline) enforced.
 # Workloads that legitimately need more (CNI, CSI, GPU, node agents, host
 # networking) are allowlisted per policy in policyExclude below. Violations
 # show up in PolicyReports (kubectl get policyreports -A) and in admission errors.
@@ -31,15 +31,6 @@ spec:
     # restricted = the baseline policies plus the restricted-only ones below
     podSecurityStandard: restricted
     validationFailureAction: Enforce
-    # Restricted-only policies report (PolicyReports) without blocking. Workloads are
-    # hardened and the exceptions allowlisted below, so these can move to Enforce.
-    validationFailureActionByPolicy:
-      disallow-capabilities-strict: Audit
-      disallow-privilege-escalation: Audit
-      require-run-as-non-root-user: Audit
-      require-run-as-nonroot: Audit
-      restrict-seccomp-strict: Audit
-      restrict-volume-types: Audit
     background: true
     # Allowlist, per policy. Each entry is the smallest scope that covers the
     # need: whole namespace for node-level infrastructure whose pods are
