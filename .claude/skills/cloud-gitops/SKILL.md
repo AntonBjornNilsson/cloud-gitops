@@ -211,7 +211,7 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
   starts short-lived helper pods (hostPID kubelet detection), so its namespace is excluded from every policy it can hit.
 - gluetun VPN sidecars (dispatcharr-web, prowlarr, qbittorrent): root with NET_ADMIN; the rest of the pod runs as 1000.
 - Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
-  unifi app, dispatcharr web/celery (su), the echo demo; ollama and vlagent (root but all capabilities dropped).
+  unifi app, dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
 - hostPath (`disallow-host-path` + `restrict-volume-types`): media library apps, matter-server, node-exporter,
   smartctl-exporter, vlagent.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results

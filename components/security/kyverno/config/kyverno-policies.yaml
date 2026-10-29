@@ -145,17 +145,14 @@ spec:
           - resources:
               namespaces: [qbittorrent]
               names: ["qbittorrent*"]
-          # Images that need root with the default capabilities (s6 init / su / nginx
-          # workers); matter-server only for the init container's chown
+          # Images that need root with the default capabilities (s6 init / su);
+          # matter-server only for the init container's chown
           - resources:
               namespaces: [homeassistant]
               names: ["homeassistant*", "matter-server*"]
           - resources:
               namespaces: [unifi]
               names: ["unifi*"]
-          - resources:
-              namespaces: [nginx-echo-namespace]
-              names: ["nginx-deployment*"]
       disallow-privilege-escalation:
         any:
           - resources:
@@ -208,9 +205,6 @@ spec:
           - resources:
               namespaces: [unifi]
               names: ["unifi*"]
-          - resources:
-              namespaces: [nginx-echo-namespace]
-              names: ["nginx-deployment*"]
           # GPU device nodes belong to a per-node render gid; root keeps no capabilities
           - resources:
               namespaces: [ollama]

@@ -22,42 +22,30 @@ spec:
       labels:
         app: nginx-echo
     spec:
-      # Root: the echoserver image's nginx cannot read its own modules as any other
-      # user (allowlisted in the Kyverno restricted policies)
+      # Echoes the request (path, headers, client IP, hostname) as JSON
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: nginx-echo
-          image: registry.k8s.io/e2e-test-images/echoserver:2.5
+          image: ghcr.io/mendhak/http-https-echo:43
           securityContext:
             allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
-          env:
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
           resources:
             requests:
               cpu: 5m
-              memory: 16Mi
+              memory: 32Mi
             limits:
-              cpu: 100m
-              memory: 64Mi
+              cpu: 200m
+              memory: 96Mi
 
 ---
 kind: Service
