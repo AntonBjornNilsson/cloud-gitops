@@ -47,7 +47,7 @@ spec:
                 "y": 0
              },
              "id": 1,
-             "title": "Status (20 services)",
+             "title": "Status (18 services)",
              "type": "row"
           },
           {
@@ -98,7 +98,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count(probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"} == 1) / count(probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "count(probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"} == 1) / count(probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "legendFormat": ""
                 }
              ],
@@ -148,7 +148,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count(min by (namespace) (probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}) == 0) or vector(0)",
+                   "expr": "count(min by (namespace) (probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}) == 0) or vector(0)",
                    "legendFormat": ""
                 }
              ],
@@ -199,7 +199,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count((kube_pod_status_ready{condition=\"false\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"} == 1) * on(namespace, pod) group_left() (kube_pod_status_phase{phase=~\"Running|Pending\"} == 1)) or vector(0)",
+                   "expr": "count((kube_pod_status_ready{condition=\"false\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"} == 1) * on(namespace, pod) group_left() (kube_pod_status_phase{phase=~\"Running|Pending\"} == 1)) or vector(0)",
                    "legendFormat": ""
                 }
              ],
@@ -254,7 +254,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[24h])) or vector(0)",
+                   "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[24h])) or vector(0)",
                    "legendFormat": ""
                 }
              ],
@@ -305,7 +305,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count(ALERTS{alertstate=\"firing\", severity=~\"warning|critical\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}) or vector(0)",
+                   "expr": "count(ALERTS{alertstate=\"firing\", severity=~\"warning|critical\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}) or vector(0)",
                    "legendFormat": ""
                 }
              ],
@@ -351,7 +351,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum(rate(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\"}[$__rate_interval]))",
+                   "expr": "sum(rate(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\"}[$__rate_interval]))",
                    "legendFormat": ""
                 }
              ],
@@ -398,7 +398,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[$__rate_interval]))",
+                   "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[$__rate_interval]))",
                    "legendFormat": ""
                 }
              ],
@@ -444,7 +444,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum(container_memory_working_set_bytes{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "sum(container_memory_working_set_bytes{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "legendFormat": ""
                 }
              ],
@@ -901,7 +901,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "label_replace(label_replace(vector(1), \"namespace\", \"ollama\", \"\", \"\"), \"category\", \"AI\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"open-webui\", \"\", \"\"), \"category\", \"AI\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"nginx-echo-namespace\", \"\", \"\"), \"category\", \"Demo\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"qbittorrent\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"prowlarr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"jellyseerr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"dispatcharr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"cleanuparr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"radarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"sonarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"bazarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"recyclarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"jellyfin\", \"\", \"\"), \"category\", \"Media · Playback\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"tracearr\", \"\", \"\"), \"category\", \"Media · Playback\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"homeassistant\", \"\", \"\"), \"category\", \"Home automation\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"headlamp\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"homepage\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"ntfy\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"unifi\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"vaultwarden\", \"\", \"\"), \"category\", \"Security\", \"\", \"\")",
+                   "expr": "label_replace(label_replace(vector(1), \"namespace\", \"nginx-echo-namespace\", \"\", \"\"), \"category\", \"Demo\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"qbittorrent\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"prowlarr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"jellyseerr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"dispatcharr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"cleanuparr\", \"\", \"\"), \"category\", \"Media · Downloads\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"radarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"sonarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"bazarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"recyclarr\", \"\", \"\"), \"category\", \"Media · Library\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"jellyfin\", \"\", \"\"), \"category\", \"Media · Playback\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"tracearr\", \"\", \"\"), \"category\", \"Media · Playback\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"homeassistant\", \"\", \"\"), \"category\", \"Home automation\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"headlamp\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"homepage\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"ntfy\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"unifi\", \"\", \"\"), \"category\", \"Management\", \"\", \"\") or label_replace(label_replace(vector(1), \"namespace\", \"vaultwarden\", \"\", \"\"), \"category\", \"Security\", \"\", \"\")",
                    "format": "table",
                    "instant": true,
                    "refId": "A"
@@ -911,7 +911,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "min by (namespace) (probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "min by (namespace) (probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "B"
@@ -921,7 +921,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "max by (namespace) (avg_over_time(probe_duration_seconds{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[5m]))",
+                   "expr": "max by (namespace) (avg_over_time(probe_duration_seconds{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[5m]))",
                    "format": "table",
                    "instant": true,
                    "refId": "C"
@@ -931,7 +931,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "avg by (namespace) (avg_over_time(probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[24h]))",
+                   "expr": "avg by (namespace) (avg_over_time(probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[24h]))",
                    "format": "table",
                    "instant": true,
                    "refId": "D"
@@ -941,7 +941,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[5m]))",
+                   "expr": "sum by (namespace) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[5m]))",
                    "format": "table",
                    "instant": true,
                    "refId": "E"
@@ -951,7 +951,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\", code=~\"5..\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[5m]))",
+                   "expr": "sum by (namespace) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\", code=~\"5..\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[5m]))",
                    "format": "table",
                    "instant": true,
                    "refId": "F"
@@ -961,7 +961,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[5m]))",
+                   "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[5m]))",
                    "format": "table",
                    "instant": true,
                    "refId": "G"
@@ -971,7 +971,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "H"
@@ -981,7 +981,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[24h]))",
+                   "expr": "sum by (namespace) (increase(kube_pod_container_status_restarts_total{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[24h]))",
                    "format": "table",
                    "instant": true,
                    "refId": "I"
@@ -991,7 +991,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "max by (namespace) (kubelet_volume_stats_used_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"} / kubelet_volume_stats_capacity_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "max by (namespace) (kubelet_volume_stats_used_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"} / kubelet_volume_stats_capacity_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "J"
@@ -1001,7 +1001,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count by (namespace) (ALERTS{alertstate=\"firing\", severity=~\"warning|critical\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "count by (namespace) (ALERTS{alertstate=\"firing\", severity=~\"warning|critical\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "K"
@@ -1585,7 +1585,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "min by (namespace) (probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "min by (namespace) (probe_success{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "legendFormat": "{{namespace}}"
                 }
              ],
@@ -1636,7 +1636,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "max by (namespace) (probe_duration_seconds{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "max by (namespace) (probe_duration_seconds{probe_group=\"ingress\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "legendFormat": "{{namespace}}"
                 }
              ],
@@ -1690,7 +1690,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[$__rate_interval])) > 0",
+                   "expr": "sum by (namespace) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[$__rate_interval])) > 0",
                    "legendFormat": "{{namespace}}"
                 }
              ],
@@ -1741,7 +1741,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace, code) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\", code=~\"5..\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[$__rate_interval])) > 0",
+                   "expr": "sum by (namespace, code) (rate(label_replace(traefik_service_requests_total{exported_service=~\"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\", code=~\"5..\"}, \"namespace\", \"$1\", \"exported_service\", \"(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)-.*\")[$__rate_interval])) > 0",
                    "legendFormat": "{{namespace}} {{code}}"
                 }
              ],
@@ -1795,7 +1795,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[$__rate_interval]))",
+                   "expr": "sum by (namespace) (rate(container_cpu_usage_seconds_total{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[$__rate_interval]))",
                    "legendFormat": "{{namespace}}"
                 }
              ],
@@ -1849,7 +1849,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "legendFormat": "{{namespace}}"
                 }
              ],
@@ -1901,7 +1901,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (namespace, container) (increase(kube_pod_container_status_restarts_total{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}[$__rate_interval])) > 0",
+                   "expr": "sum by (namespace, container) (increase(kube_pod_container_status_restarts_total{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}[$__rate_interval])) > 0",
                    "legendFormat": "{{namespace}}/{{container}}"
                 }
              ],
@@ -1958,7 +1958,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sort_desc(max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"} / kubelet_volume_stats_capacity_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"}))",
+                   "expr": "sort_desc(max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"} / kubelet_volume_stats_capacity_bytes{namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"}))",
                    "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}"
                 }
              ],
@@ -2031,7 +2031,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sort_desc(ALERTS{alertstate=\"firing\", severity=~\"warning|critical\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy\"})",
+                   "expr": "sort_desc(ALERTS{alertstate=\"firing\", severity=~\"warning|critical\", namespace=~\"nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy\"})",
                    "format": "table",
                    "instant": true,
                    "refId": "A"
@@ -2094,7 +2094,7 @@ spec:
                       "uid": "VictoriaLogs"
                    },
                    "editorMode": "code",
-                   "expr": "kubernetes.pod_namespace:~\"^(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|open-webui|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|ollama|radarr|sonarr|bazarr|unifi|ntfy)$\" (error OR warn OR warning OR exception OR fail OR failed OR traceback) -\"level=info\" | sort by (_time desc) | limit 300",
+                   "expr": "kubernetes.pod_namespace:~\"^(nginx-echo-namespace|homeassistant|qbittorrent|dispatcharr|vaultwarden|jellyseerr|cleanuparr|recyclarr|prowlarr|jellyfin|tracearr|headlamp|homepage|radarr|sonarr|bazarr|unifi|ntfy)$\" (error OR warn OR warning OR exception OR fail OR failed OR traceback) -\"level=info\" | sort by (_time desc) | limit 300",
                    "queryType": "range",
                    "refId": "A"
                 }

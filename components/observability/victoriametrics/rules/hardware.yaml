@@ -27,16 +27,17 @@ spec:
           annotations:
             summary: "{{ $labels.chip }}/{{ $labels.sensor }} on {{ $labels.instance }} raised its critical temperature alarm"
 
-    - name: gpu
-      rules:
-        - alert: GPUNotAllocatable
-          expr: (sum(kube_node_status_allocatable{resource="amd_com_gpu"}) or vector(0)) < 1
-          for: 15m
-          labels:
-            severity: warning
-          annotations:
-            summary: "No AMD GPU is advertised to Kubernetes"
-            description: "The amdgpu device plugin is down or the GPU disappeared; GPU workloads (Ollama, Jellyfin transcoding) cannot schedule."
+    # No GPU node in the cluster (hardware/amd-gpu is disabled); uncomment with it.
+    # - name: gpu
+    #   rules:
+    #     - alert: GPUNotAllocatable
+    #       expr: (sum(kube_node_status_allocatable{resource="amd_com_gpu"}) or vector(0)) < 1
+    #       for: 15m
+    #       labels:
+    #         severity: warning
+    #       annotations:
+    #         summary: "No AMD GPU is advertised to Kubernetes"
+    #         description: "The amdgpu device plugin is down or the GPU disappeared; GPU workloads (Ollama, Jellyfin transcoding) cannot schedule."
 
     # S.M.A.R.T. (smartctl-exporter)
     - name: disks
