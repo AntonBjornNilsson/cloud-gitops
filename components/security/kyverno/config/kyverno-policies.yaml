@@ -42,6 +42,11 @@ spec:
         any:
           - resources:
               namespaces: [kube-system, longhorn-system, metallb]
+          # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
+          # (mounted by the tailscale-proxy-tun policy)
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
           # gluetun VPN sidecar needs NET_ADMIN for its tunnel and firewall
           - resources:
               namespaces: [dispatcharr]
@@ -69,6 +74,11 @@ spec:
         any:
           - resources:
               namespaces: [kube-system, longhorn-system]
+          # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
+          # (mounted by the tailscale-proxy-tun policy)
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
           - resources:
               namespaces: [victoriametrics]
               names:
@@ -106,7 +116,7 @@ spec:
           - resources:
               namespaces: [node-sysctls]
               names: ["node-sysctls*"]
-          # Tailscale proxies (operator-created ts-* StatefulSets)
+          # Tailscale proxies: the operator's sysctler init container (sets ip_forward)
           - resources:
               namespaces: [tailscale]
               names: ["ts-*"]
@@ -224,6 +234,11 @@ spec:
           # hostPath: same workloads as disallow-host-path above
           - resources:
               namespaces: [kube-system, longhorn-system]
+          # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
+          # (mounted by the tailscale-proxy-tun policy)
+          - resources:
+              namespaces: [tailscale]
+              names: ["ts-*"]
           - resources:
               namespaces: [victoriametrics]
               names:

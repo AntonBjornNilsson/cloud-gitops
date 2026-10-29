@@ -5,4 +5,5 @@ resources:
   - ingress-authelia.yaml
   - pvc.yaml
   - protect-namespaces.yaml
+  - tailscale-proxy-tun.yaml
   - kyverno-policies.yaml

@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: tailscale-proxy-tun
+  annotations:
+    # Pods only: the operator owns the proxy StatefulSets and would fight a
+    # mutated template
+    pod-policies.kyverno.io/autogen-controllers: none
+spec:
+  background: false
+  rules:
+  # The Tailscale proxies run unprivileged (NET_ADMIN, ProxyClass "resources" in
+  # components/networking/tailscale/config/), so tailscaled can't create
+  # /dev/net/tun itself. The ProxyClass can't add volumes, so the node's device
+  # is mounted here at Pod creation (the runtime allows tun, as for gluetun).
+  - name: mount-dev-net-tun
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - tailscale
+          names:
+          - "ts-*"
+          operations:
+          - CREATE
+    mutate:
+      patchStrategicMerge:
+        spec:
+          containers:
+          - (name): tailscale
+            volumeMounts:
+            - name: dev-net-tun
+              mountPath: /dev/net/tun
+          volumes:
+          - name: dev-net-tun
+            hostPath:
+              path: /dev/net/tun
+              type: CharDevice
