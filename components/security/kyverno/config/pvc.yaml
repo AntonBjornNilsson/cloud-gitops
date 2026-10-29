@@ -6,6 +6,9 @@ spec:
   validationFailureAction: Audit
   background: true
   rules:
+  # Keeps Flux from pruning PVCs. The Helm annotation does NOT stop a Helm
+  # uninstall from deleting a chart's PVC (Helm only reads it from the rendered
+  # chart, not the live object); the Retain rules below are what keep the data.
   - name: add-helm-resource-policy
     match:
       resources:
@@ -89,3 +92,43 @@ spec:
           labels:
             +(recurring-job.longhorn.io/source): enabled
             +(recurring-job-group.longhorn.io/backup): enabled
+  # Longhorn volumes outlive their PVC: a deleted PVC (Helm uninstall when a
+  # service is disabled, a removed manifest) leaves the PV Released and the
+  # Longhorn volume intact instead of deleting the data. Deleting a volume for
+  # good is a manual step (Longhorn UI, then the PV).
+  - name: retain-longhorn-pv
+    match:
+      any:
+      - resources:
+          kinds:
+          - PersistentVolume
+    preconditions:
+      all:
+      - key: "{{ request.object.spec.csi.driver || '' }}"
+        operator: Equals
+        value: driver.longhorn.io
+    mutate:
+      patchStrategicMerge:
+        spec:
+          persistentVolumeReclaimPolicy: Retain
+  # Same for PVs that already exist when the policy changes.
+  - name: retain-longhorn-pv-existing
+    match:
+      any:
+      - resources:
+          kinds:
+          - PersistentVolume
+    preconditions:
+      all:
+      - key: "{{ request.object.spec.csi.driver || '' }}"
+        operator: Equals
+        value: driver.longhorn.io
+    mutate:
+      mutateExistingOnPolicyUpdate: true
+      targets:
+      - apiVersion: v1
+        kind: PersistentVolume
+        name: "{{ request.object.metadata.name }}"
+      patchStrategicMerge:
+        spec:
+          persistentVolumeReclaimPolicy: Retain

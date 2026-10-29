@@ -36,7 +36,9 @@ spec:
   values:
     persistence:
       # defaultClassReplicaCount: 1
-      reclaimPolicy: Delete
+      # Keep the volume when its PVC is deleted (also enforced on every Longhorn PV by
+      # Kyverno add-pvc-annotations/retain-longhorn-pv)
+      reclaimPolicy: Retain
       migratable: true
     # csi:
     #   attacherReplicaCount: 1

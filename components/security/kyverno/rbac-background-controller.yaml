@@ -1,5 +1,6 @@
 # Lets the Kyverno background controller apply mutate-existing rules to PVCs
-# (add-pvc-annotations / enable-longhorn-pvc-backup-existing).
+# and PVs (add-pvc-annotations: enable-longhorn-pvc-backup-existing,
+# retain-longhorn-pv-existing).
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -9,4 +10,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
     verbs: ["get", "list", "watch", "update", "patch"]
