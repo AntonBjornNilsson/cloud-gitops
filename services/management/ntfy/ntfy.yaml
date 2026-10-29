@@ -32,7 +32,6 @@ stringData:
     # Alertmanager retries keeps the bucket empty and every notify fails with 429.
     visitor-request-limit-burst: 300
     visitor-request-limit-replenish: "1s"
-    upstream-base-url: "https://ntfy.sh"
     # Prometheus metrics on a separate port (not reachable via the Ingress)
     metrics-listen-http: ":9090"
     auth-file: "/var/lib/ntfy/user.db"
@@ -91,7 +90,7 @@ spec:
         app: ntfy
       annotations:
         # Bump to restart ntfy after changing server.yml
-        config-version: "7"
+        config-version: "8"
     spec:
       securityContext:
         runAsNonRoot: true
