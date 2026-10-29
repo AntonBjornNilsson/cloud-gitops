@@ -63,8 +63,10 @@ spec:
               names: ["qbittorrent*"]
       disallow-host-namespaces:
         any:
+          # Longhorn starts short-lived node helper pods on demand (e.g. the CSI
+          # deployer's hostPID kubelet detection pod)
           - resources:
-              namespaces: [kube-system, metallb]
+              namespaces: [kube-system, longhorn-system, metallb]
           - resources:
               namespaces: [victoriametrics]
               names: ["victoriametrics-prometheus-node-exporter*"]
@@ -98,8 +100,10 @@ spec:
                 - sonarr
       disallow-host-ports:
         any:
+          # Longhorn starts short-lived node helper pods on demand (e.g. the CSI
+          # deployer's hostPID kubelet detection pod)
           - resources:
-              namespaces: [kube-system, metallb]
+              namespaces: [kube-system, longhorn-system, metallb]
           - resources:
               namespaces: [victoriametrics]
               names: ["victoriametrics-prometheus-node-exporter*"]
