@@ -17,6 +17,16 @@ spec:
           annotations:
             summary: "Home Assistant metrics are not being scraped"
             description: "/api/prometheus has not answered for 15 minutes. If the pod is Ready, the long-lived access token (homeassistant_token in the secrets repo) was probably revoked or expired: create a new one in the HA UI."
+        # Sent to the home-assistant ntfy topic, not homelab-alerts (see
+        # alertmanager-ntfy.yaml); one notification per device, daily reminder.
+        - alert: HomeAssistantBatteryLow
+          expr: homeassistant_sensor_battery_percent < 25
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.friendly_name }} at {{ $value }}%"
+            description: "Battery of {{ $labels.entity }} is below 25%. Charge or replace it."
         - alert: HomeAssistantEntitiesUnavailable
           expr: count(homeassistant_entity_available == 0) > 0
           for: 1h

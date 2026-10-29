@@ -22,6 +22,11 @@ spec:
       - matchers: ['alertname=~"ImageCriticalVulnerabilities|ImageExposedSecrets"']
         receiver: ntfy
         repeat_interval: 168h
+      # Household notifications (home-assistant ntfy topic): one per device
+      - matchers: ['alertname="HomeAssistantBatteryLow"']
+        receiver: ntfy
+        group_by: [alertname, entity]
+        repeat_interval: 24h
       - matchers: ['severity="critical"']
         receiver: ntfy
         repeat_interval: 4h

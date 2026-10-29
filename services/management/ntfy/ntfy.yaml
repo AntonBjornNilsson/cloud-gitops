@@ -43,6 +43,8 @@ stringData:
       - "alertmanager:${ntfy_alertmanager_password_hash}:user"
     auth-access:
       - "alertmanager:homelab-alerts:wo"
+      # Household alerts from Alertmanager (low batteries in Home Assistant)
+      - "alertmanager:home-assistant:wo"
       # claude-agent reports, sent by the claude-agent service with the same token
       - "alertmanager:claude-agent:wo"
       # Seerr request/issue notifications (token set in Seerr's ntfy agent settings)
@@ -89,7 +91,7 @@ spec:
         app: ntfy
       annotations:
         # Bump to restart ntfy after changing server.yml
-        config-version: "6"
+        config-version: "7"
     spec:
       securityContext:
         runAsNonRoot: true

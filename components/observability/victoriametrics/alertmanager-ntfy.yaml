@@ -6,18 +6,20 @@ metadata:
 type: Opaque
 stringData:
   # Alertmanager posts to /hook (see alertmanager.config in victoriametrics.yaml).
-  # Subscribe to the "homelab-alerts" topic on the ntfy server to receive alerts.
+  # Subscribe to the "homelab-alerts" topic on the ntfy server to receive alerts;
+  # household alerts (low batteries) go to "home-assistant" instead.
   config.yml: |
     http:
       addr: :8080
     ntfy:
       baseurl: http://ntfy.ntfy.svc.cluster.local:80
-      # Write-only token for the homelab-alerts topic (see ntfy server.yml)
+      # Write-only token for the alert topics (see ntfy server.yml)
       auth:
         token: "${ntfy_alertmanager_token}"
       notification:
         # ntfy topics only allow [-_A-Za-z0-9]
-        topic: homelab-alerts
+        topic: |
+          labels.alertname == "HomeAssistantBatteryLow" ? "home-assistant" : "homelab-alerts"
         # critical -> urgent (5), warning -> high (4), info -> low (2),
         # resolved -> low (2)
         priority: |
@@ -62,7 +64,7 @@ spec:
         app: alertmanager-ntfy
       annotations:
         # Roll the pod when the config changes
-        config-version: "4"
+        config-version: "5"
     spec:
       securityContext:
         runAsNonRoot: true
