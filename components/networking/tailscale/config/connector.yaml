@@ -20,7 +20,20 @@ metadata:
 spec:
   statefulSet:
     pod:
+      # Seccomp for tailscaled; privileged containers (the init below) ignore it
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      # Unprivileged tailscaled: NET_ADMIN for routes and the firewall (plus the
+      # runtime's default capabilities iptables uses); /dev/net/tun is mounted by
+      # the Kyverno policy tailscale-proxy-tun. The operator's sysctler init container
+      # stays privileged: it only sets ip_forward, which needs a writable /proc/sys.
       tailscaleContainer:
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+              - NET_ADMIN
         resources:
           requests:
             cpu: 10m
