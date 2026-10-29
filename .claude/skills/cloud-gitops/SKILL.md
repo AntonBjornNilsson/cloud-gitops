@@ -164,22 +164,60 @@ To unpublish: remove the HTTPRoute and its Access application (cfgate withdraws 
 from the Ingress annotation. Never re-add a `*.${domain}` record in Cloudflare: it makes every LAN-only name resolve
 publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes before bumping it.
 
-## Pod Security (Kyverno baseline)
+## Pod Security (Kyverno)
 
 The `kyverno-policies` chart (`components/security/kyverno/config/kyverno-policies.yaml`) enforces the Pod Security
 Standards **baseline** profile: no privileged containers, added capabilities, hostPath, host namespaces/ports,
-custom SELinux/AppArmor/seccomp/sysctls. The **restricted** profile's extra policies (`disallow-capabilities-strict`,
-`disallow-privilege-escalation`, `require-run-as-non-root-user`, `require-run-as-nonroot`, `restrict-seccomp-strict`,
-`restrict-volume-types`) only audit (`validationFailureActionByPolicy: Audit`): write new workloads to pass them
-(`runAsNonRoot`, `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]`, `seccompProfile: RuntimeDefault`).
-A violating Pod or controller is denied at admission
-(`admission webhook "validate.kyverno.svc-fail" denied the request`; Flux shows it on the Kustomization/HelmRelease).
-- Fix the workload first (drop the capability, use a PVC instead of hostPath).
-- If it really needs it (node agents, VPN sidecars, the media hostPath), add the smallest entry to `policyExclude`
-  for that policy: namespace + name prefix (`names: ["<app>*"]`, covers Pods and controllers), with a comment on why.
-  Whole-namespace entries only for operator-created node infrastructure (Cilium, Longhorn, MetalLB).
-- Check results: `kubectl --context=<admin> get policyreports -A` (pod results refresh on the hourly background scan);
-  test a manifest with `kubectl apply --dry-run=server`.
+custom SELinux/AppArmor/seccomp/sysctls. A violating Pod or controller is denied at admission
+(`admission webhook "validate.kyverno.svc-fail" denied the request`; Flux shows it on the Kustomization/HelmRelease,
+operators log it, and alert `KyvernoAdmissionDenied` fires).
+The **restricted** profile's extra policies (`disallow-capabilities-strict`, `disallow-privilege-escalation`,
+`require-run-as-non-root-user`, `require-run-as-nonroot`, `restrict-seccomp-strict`, `restrict-volume-types`) only
+audit for now (`validationFailureActionByPolicy: Audit`), but every workload passes them or is allowlisted, so
+**new workloads must pass them too**. Standard block (copy from any service, e.g. `services/media/sorting/sonarr/sonarr.yaml`):
+```yaml
+spec:                         # pod
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000           # numeric: kubelet can't verify a named image user (e.g. "nobody")
+    runAsGroup: 1000
+    fsGroup: 1000             # only with a volume; + fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+  containers:                 # every container, init container and sidecar
+    - securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+```
+Patterns that made root images work non-root (check the live pod's `/proc/1/status` and logs after a change):
+- **Root-owned data on an existing PVC**: `fsGroup` + `fsGroupChangePolicy: OnRootMismatch` makes it group-writable
+  once. Not for postgres/mongo: their data is already owned by the DB user (999); set that uid and no fsGroup.
+- **Ports below 1024**: pod sysctl `net.ipv4.ip_unprivileged_port_start: "0"` (namespaced, allowed by baseline);
+  keeps Service ports and probes unchanged (adguard 53/80, ntfy and vaultwarden 80).
+- **Binaries with file capabilities** (`exec ...: operation not permitted`): no-new-privileges blocks them for
+  non-root; an init container copies the binary into an emptyDir (the copy has no capability) (adguard-home).
+- **linuxserver images** (if the README lists "Non-Root Operation"): run as 1000:1000; PUID/PGID are then ignored.
+  s6 needs a `/run` owned by that user: a `run-dir` init container makes a subdirectory in an emptyDir, mounted
+  with `subPath: run` (see sonarr). unifi does not support it and stays root.
+- **App writes into its image** (open-webui static dir, Next.js cache): emptyDir over that path, seeded by an init
+  container if the app expects existing files.
+- **Helm values**: some charts put defaults in the template, not in values; setting the key replaces them (headlamp's
+  `pluginsManager.securityContext` dropped its user 100). Render with `helm template` or check the live pod.
+- **Pods an operator creates**: VictoriaMetrics CRs `useStrictSecurity: true`; trivy scan jobs
+  `trivyOperator.scanJobPodTemplatePodSecurityContext`; check each chart for its pod/container keys.
+
+Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with the reason in a comment):
+- Node infrastructure created by operators (Cilium/kube-system, Longhorn, MetalLB): whole namespace. Longhorn also
+  starts short-lived helper pods (hostPID kubelet detection), so its namespace is excluded from every policy it can hit.
+- gluetun VPN sidecars (dispatcharr-web, prowlarr, qbittorrent): root with NET_ADMIN; the rest of the pod runs as 1000.
+- Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
+  unifi app, dispatcharr web/celery (su), the echo demo; ollama and vlagent (root but all capabilities dropped).
+- hostPath (`disallow-host-path` + `restrict-volume-types`): media library apps, matter-server, node-exporter,
+  smartctl-exporter, vlagent.
+To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
+with `kubectl --context=<admin> get policyreports -A`; test a manifest with `kubectl apply --dry-run=server`. A result
+for an unchanged resource is not re-evaluated when a policy starts excluding it: delete that PolicyReport to refresh it.
 
 ## Network policy (Cilium)
 
