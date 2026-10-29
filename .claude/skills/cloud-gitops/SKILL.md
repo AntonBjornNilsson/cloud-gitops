@@ -167,14 +167,13 @@ publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes
 ## Pod Security (Kyverno)
 
 The `kyverno-policies` chart (`components/security/kyverno/config/kyverno-policies.yaml`) enforces the Pod Security
-Standards **baseline** profile: no privileged containers, added capabilities, hostPath, host namespaces/ports,
-custom SELinux/AppArmor/seccomp/sysctls. A violating Pod or controller is denied at admission
+Standards **restricted** profile, which includes baseline: no privileged containers, added capabilities, hostPath or
+other non-PVC/ConfigMap/Secret/emptyDir volume types, host namespaces/ports, custom SELinux/AppArmor/sysctls; and every
+container non-root, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`, seccomp `RuntimeDefault`.
+A violating Pod or controller is denied at admission
 (`admission webhook "validate.kyverno.svc-fail" denied the request`; Flux shows it on the Kustomization/HelmRelease,
-operators log it, and alert `KyvernoAdmissionDenied` fires).
-The **restricted** profile's extra policies (`disallow-capabilities-strict`, `disallow-privilege-escalation`,
-`require-run-as-non-root-user`, `require-run-as-nonroot`, `restrict-seccomp-strict`, `restrict-volume-types`) only
-audit for now (`validationFailureActionByPolicy: Audit`), but every workload passes them or is allowlisted, so
-**new workloads must pass them too**. Standard block (copy from any service, e.g. `services/media/sorting/sonarr/sonarr.yaml`):
+operators log it, and alert `KyvernoAdmissionDenied` fires). Standard block (copy from any service, e.g.
+`services/media/sorting/sonarr/sonarr.yaml`):
 ```yaml
 spec:                         # pod
   securityContext:
