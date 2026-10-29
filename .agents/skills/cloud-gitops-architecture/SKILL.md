@@ -281,7 +281,13 @@ To prevent namespaces and persistent volumes from being deleted during Flux garb
    ```
 2. **ClusterPolicy Enforcement**:
    - Kyverno ClusterPolicy `protect-namespaces` automatically mutates all namespaces to ensure `kustomize.toolkit.fluxcd.io/prune: disabled` is present.
-   - ClusterPolicy `add-pvc-annotations` ensures both `helm.sh/resource-policy: keep` and `kustomize.toolkit.fluxcd.io/prune: disabled` are added to all PVCs.
+   - ClusterPolicy `add-pvc-annotations` adds `kustomize.toolkit.fluxcd.io/prune: disabled` (and `helm.sh/resource-policy: keep`) to all PVCs.
+     The Helm annotation does **not** stop a Helm uninstall from deleting a chart-created PVC: Helm only reads it from the
+     rendered chart, not the live object. Disabling a HelmRelease-based service uninstalls the release and deletes its PVC.
+3. **Volumes outlive their PVC**: every Longhorn PV has reclaim policy `Retain` (StorageClass `persistence.reclaimPolicy`
+   in the Longhorn HelmRelease, and Kyverno `add-pvc-annotations` rules `retain-longhorn-pv[-existing]` for all PVs).
+   A deleted PVC leaves the PV `Released` and the Longhorn volume detached with its data. To reuse it, create a PVC
+   with `volumeName: <pv>` after clearing the PV's `claimRef`; to delete it for good, delete the volume in Longhorn.
 
 ---
 

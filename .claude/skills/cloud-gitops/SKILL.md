@@ -255,6 +255,10 @@ quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{namespace="<ns>"
 
 ## Storage & backups (Longhorn)
 
+- Every Longhorn PV is `Retain`: deleting a PVC (a disabled service, a removed manifest, a Helm uninstall) leaves the
+  volume and its data in Longhorn, detached; deleting data for good is a manual delete in Longhorn. Disabling a
+  HelmRelease-based service deletes its chart-created PVC (the live `helm.sh/resource-policy: keep` annotation does not
+  stop that), so the volume is what survives. Clean up volumes you really don't need.
 - PVCs are NOT backed up by default. Opt in with label or annotation `backup.longhorn.io/enabled: "true"`.
   Kyverno turns that into the Longhorn `backup` recurring-job group. Never schedule backups on the `default` group (Longhorn auto-adds every unlabeled volume to it).
 - Daily backup 02:00 to S3; CronJob `longhorn-backup-sync` at 03:00 commits updates to
