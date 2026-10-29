@@ -28,7 +28,10 @@ spec:
             summary: "{{ $labels.friendly_name }} at {{ $value }}%"
             description: "Battery of {{ $labels.entity }} is below 25%. Charge or replace it."
         - alert: HomeAssistantEntitiesUnavailable
-          expr: count(homeassistant_entity_available == 0) > 0
+          # Only entities that were available this week: some are always "unknown"
+          # (backup sensors, TTS, button events before the first press), which the
+          # prometheus integration also reports as unavailable
+          expr: count(homeassistant_entity_available == 0 and max_over_time(homeassistant_entity_available[7d]) == 1) > 0
           for: 1h
           labels:
             severity: info

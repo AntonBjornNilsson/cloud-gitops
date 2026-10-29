@@ -82,7 +82,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
-             "description": "Entities whose device is offline or whose integration failed to load.",
+             "description": "Entities that were available this week but are not now: device offline or integration failed to load.",
              "fieldConfig": {
                 "defaults": {
                    "color": {
@@ -121,7 +121,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count(homeassistant_entity_available == 0) or vector(0)",
+                   "expr": "count(homeassistant_entity_available == 0 and max_over_time(homeassistant_entity_available[7d]) == 1) or vector(0)",
                    "legendFormat": ""
                 }
              ],
@@ -468,7 +468,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
-             "description": "Entities currently reported as unavailable.",
+             "description": "Entities that were available this week but are not now. Entities that are always \"unknown\" (backup sensors, TTS, button events before the first press) are left out.",
              "fieldConfig": {
                 "defaults": {
                    "noValue": "-"
@@ -489,7 +489,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "homeassistant_entity_available == 0",
+                   "expr": "homeassistant_entity_available == 0 and max_over_time(homeassistant_entity_available[7d]) == 1",
                    "format": "table",
                    "instant": true,
                    "refId": "A"

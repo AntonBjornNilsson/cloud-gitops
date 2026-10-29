@@ -12,6 +12,9 @@ local q = m.q;
 
 local ns = '{namespace="homeassistant"}';
 local battery = [{ color: 'red', value: null }, { color: 'orange', value: 20 }, { color: 'green', value: 40 }];
+// Always-"unknown" entities are reported as unavailable too; count only those
+// that were available at some point this week.
+local wentDown = 'homeassistant_entity_available == 0 and max_over_time(homeassistant_entity_available[7d]) == 1';
 local issues = [{ color: 'green', value: null }, { color: 'orange', value: 1 }];
 
 dashboard.new('Home Assistant')
@@ -27,8 +30,8 @@ dashboard.new('Home Assistant')
   // --- Overview ---------------------------------------------------------------
   m.row('Overview', 0),
   m.stat('Entities', 'count(homeassistant_entity_available)', 0, 1),
-  m.stat('Unavailable', 'count(homeassistant_entity_available == 0) or vector(0)', 3, 1,
-         thresholds=issues, graph=true, desc='Entities whose device is offline or whose integration failed to load.'),
+  m.stat('Unavailable', 'count(%s) or vector(0)' % wentDown, 3, 1,
+         thresholds=issues, graph=true, desc='Entities that were available this week but are not now: device offline or integration failed to load.'),
   m.stat('Blinds open', 'count(homeassistant_cover_position > 0) or vector(0)', 6, 1,
          desc='Covers (blinds) not fully closed.'),
   m.stat('Switches on', 'count(homeassistant_switch_state == 1) or vector(0)', 9, 1, noValue='-'),
@@ -39,10 +42,10 @@ dashboard.new('Home Assistant')
          thresholds=[{ color: 'orange', value: null }, { color: 'green', value: 3600 }]),
   m.stat('Memory', 'max(process_resident_memory_bytes%s)' % ns, 21, 1, unit='bytes', graph=true),
   m.barGauge('Entities by domain', [q('sort_desc(count by (domain) (homeassistant_entity_available))', '{{domain}}')], 0, 5, 8, 9),
-  m.labelTable('Unavailable entities', 'homeassistant_entity_available == 0', 8, 5, 16, 9,
+  m.labelTable('Unavailable entities', wentDown, 8, 5, 16, 9,
                rename={ friendly_name: 'Name', entity: 'Entity', domain: 'Domain' },
                exclude={ Value: true },
-               desc='Entities currently reported as unavailable.'),
+               desc='Entities that were available this week but are not now. Entities that are always "unknown" (backup sensors, TTS, button events before the first press) are left out.'),
 
   // --- Climate ------------------------------------------------------------------
   m.row('Climate', 14),
