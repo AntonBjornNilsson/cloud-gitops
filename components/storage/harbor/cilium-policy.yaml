@@ -1,0 +1,53 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: harbor
+  namespace: harbor
+spec:
+  endpointSelector: {}
+  ingress:
+    # UI, API and registry (/v2/) from Traefik: core and portal both listen on 8080
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Metrics (core, registry, jobservice, exporter)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "8001"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Intra-namespace communication (core, registry, jobservice, db, redis, config job)
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Upstream registries for the proxy cache projects (Docker Hub, GHCR, Quay,
+    # registry.k8s.io); their blob CDNs vary, so HTTPS to the world
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}

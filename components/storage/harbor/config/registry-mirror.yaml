@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: registry-mirror
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+---
+# Points containerd on every node at Harbor's proxy-cache projects, so every image
+# from these registries is pulled through Harbor without changing any image name.
+# Upstream stays the "server": if Harbor is down or lacks the image, containerd
+# falls back to pulling from the registry directly.
+#
+# k0s merges CRI drop-ins from /etc/k0s/containerd.d into its containerd config
+# (check /run/k0s/containerd-cri.toml for config_path). The hosts.toml files are
+# read on every pull, so only the first rollout needs containerd to pick up config_path.
+# The drop-in uses the containerd 1.7 (version = 2) format: k0s releases that ship
+# containerd 2 refuse to start with it, so convert it to version 3 before that upgrade.
+#
+# MIRRORS: "<registry>=<harbor proxy project>=<upstream endpoint>", must match
+# PROXIES in app/configure.py.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: registry-mirror
+  namespace: registry-mirror
+spec:
+  selector:
+    matchLabels:
+      app: registry-mirror
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+  template:
+    metadata:
+      labels:
+        app: registry-mirror
+    spec:
+      priorityClassName: system-node-critical
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 1
+      tolerations:
+        - operator: Exists
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: write
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              # Bare $vars only: Flux postBuild substitution rewrites the braced form
+              set -eu
+              dir=/k0s-containerd.d
+              # Write a file only when it changed, so k0s doesn't reload containerd needlessly
+              put() { if ! cmp -s "$2" "$1" 2>/dev/null; then mkdir -p "$(dirname "$1")"; cp "$2" "$1"; echo "wrote $1"; fi; }
+              sync() {
+                tmp=$(mktemp -d)
+                printf '%s\n' 'version = 2' '' \
+                  '[plugins."io.containerd.grpc.v1.cri".registry]' \
+                  "  config_path = \"/etc/k0s/containerd.d/certs.d\"" > "$tmp/drop-in"
+                put "$dir/registry-mirrors.toml" "$tmp/drop-in"
+                keep=""
+                for m in $MIRRORS; do
+                  reg=$(echo "$m" | cut -d= -f1)
+                  project=$(echo "$m" | cut -d= -f2)
+                  upstream=$(echo "$m" | cut -d= -f3)
+                  printf '%s\n' "server = \"$upstream\"" '' \
+                    "[host.\"https://$HARBOR_HOST/v2/$project\"]" \
+                    '  capabilities = ["pull", "resolve"]' \
+                    '  override_path = true' > "$tmp/hosts"
+                  put "$dir/certs.d/$reg/hosts.toml" "$tmp/hosts"
+                  keep="$keep $reg"
+                done
+                # Drop mirrors removed from MIRRORS
+                for d in "$dir"/certs.d/*/; do
+                  [ -d "$d" ] || continue
+                  reg=$(basename "$d")
+                  case " $keep " in *" $reg "*) ;; *) rm -rf "$d"; echo "removed $reg";; esac
+                done
+                rm -rf "$tmp"
+              }
+              sync
+              while sleep 300; do sync; done
+          env:
+            - name: HARBOR_HOST
+              value: harbor.${domain}
+            - name: MIRRORS
+              value: >-
+                docker.io=dockerhub=https://registry-1.docker.io
+                ghcr.io=ghcr=https://ghcr.io
+                quay.io=quay=https://quay.io
+                registry.k8s.io=k8s=https://registry.k8s.io
+          securityContext:
+            # Root to write the root-owned /etc/k0s/containerd.d; no capabilities needed
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 1m
+              memory: 4Mi
+            limits:
+              cpu: 50m
+              memory: 16Mi
+          volumeMounts:
+            - name: containerd-d
+              mountPath: /k0s-containerd.d
+      volumes:
+        - name: containerd-d
+          hostPath:
+            path: /etc/k0s/containerd.d
+            type: Directory
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: registry-mirror
+  namespace: registry-mirror
+spec:
+  # No network needed: default-deny both directions
+  endpointSelector: {}
+  ingress:
+    - {}
+  egress:
+    - {}

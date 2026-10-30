@@ -72,6 +72,10 @@ spec:
               names: ["matter-server*"]
       disallow-host-path:
         any:
+          # Writes the containerd registry mirror config (Harbor) on every node
+          - resources:
+              namespaces: [registry-mirror]
+              names: ["registry-mirror*"]
           - resources:
               namespaces: [kube-system, longhorn-system]
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
@@ -175,6 +179,10 @@ spec:
               names: ["smartctl-exporter*"]
       require-run-as-non-root-user:
         any:
+          # Writes the containerd registry mirror config (Harbor) on every node
+          - resources:
+              namespaces: [registry-mirror]
+              names: ["registry-mirror*"]
           - resources:
               namespaces: [kube-system, longhorn-system]
           # Explicit runAsUser 0: SMART reads, node log reader, chown init, gluetun
@@ -192,6 +200,10 @@ spec:
               names: ["qbittorrent*"]
       require-run-as-nonroot:
         any:
+          # Writes the containerd registry mirror config (Harbor) on every node
+          - resources:
+              namespaces: [registry-mirror]
+              names: ["registry-mirror*"]
           - resources:
               namespaces: [kube-system, longhorn-system, metallb, node-sysctls]
           - resources:
@@ -231,6 +243,10 @@ spec:
               names: ["smartctl-exporter*"]
       restrict-volume-types:
         any:
+          # Writes the containerd registry mirror config (Harbor) on every node
+          - resources:
+              namespaces: [registry-mirror]
+              names: ["registry-mirror*"]
           # hostPath: same workloads as disallow-host-path above
           - resources:
               namespaces: [kube-system, longhorn-system]

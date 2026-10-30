@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harbor
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: harbor
+  namespace: harbor
+spec:
+  interval: 24h
+  url: https://helm.goharbor.io
+---
+# Kept in Secrets (not chart values) so they are stable across upgrades:
+# secretKey encrypts the registry credentials Harbor stores in its database.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: harbor-admin
+  namespace: harbor
+type: Opaque
+stringData:
+  HARBOR_ADMIN_PASSWORD: ${harbor_admin_password}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: harbor-secret-key
+  namespace: harbor
+type: Opaque
+stringData:
+  secretKey: ${harbor_secret_key}
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: harbor
+  namespace: harbor
+spec:
+  interval: 12h
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+    remediation:
+      retries: 3
+  timeout: 10m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+    remediation:
+      retries: 3
+  chart:
+    spec:
+      chart: harbor
+      version: "1.19.x"
+      sourceRef:
+        kind: HelmRepository
+        name: harbor
+  values:
+    expose:
+      type: ingress
+      # TLS is added by Kyverno (wildcard cert) like every other Ingress
+      tls:
+        enabled: false
+      ingress:
+        hosts:
+          core: harbor.${domain}
+        className: traefik
+        labels:
+          # docker/containerd clients can't do the Authelia login; Harbor authenticates itself
+          enable-oauth: "false"
+    externalURL: https://harbor.${domain}
+
+    existingSecretAdminPassword: harbor-admin
+    existingSecretSecretKey: harbor-secret-key
+
+    persistence:
+      enabled: true
+      persistentVolumeClaim:
+        # Proxy cache + own images. Longhorn for now; moves to the NAS later
+        registry:
+          size: 30Gi
+        jobservice:
+          jobLog:
+            size: 1Gi
+        database:
+          size: 2Gi
+          annotations:
+            backup.longhorn.io/enabled: "true"
+        redis:
+          size: 1Gi
+      imageChartStorage:
+        type: filesystem
+
+    # trivy-operator already scans every running image
+    trivy:
+      enabled: false
+
+    metrics:
+      enabled: true
+
+    portal:
+      resources:
+        requests:
+          cpu: 5m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+    core:
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: "1"
+          memory: 512Mi
+    jobservice:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+    registry:
+      registry:
+        resources:
+          requests:
+            cpu: 20m
+            memory: 64Mi
+          limits:
+            cpu: "1"
+            memory: 512Mi
+      controller:
+        resources:
+          requests:
+            cpu: 5m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+    database:
+      type: internal
+      internal:
+        password: ${harbor_db_password}
+        resources:
+          requests:
+            cpu: 20m
+            memory: 128Mi
+          limits:
+            cpu: "1"
+            # shm (shmSizeLimit 512Mi) is memory-backed and counts against this
+            memory: 1Gi
+        initContainer:
+          migrator:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+          permissions:
+            resources:
+              requests:
+                cpu: 1m
+                memory: 8Mi
+              limits:
+                cpu: 100m
+                memory: 64Mi
+    redis:
+      type: internal
+      internal:
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+    exporter:
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 200m
+          memory: 128Mi

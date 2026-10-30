@@ -28,4 +28,5 @@ resources:
   - security/trivy-operator/system-trivy-operator.yaml
 
   # Storage
+  # - storage/harbor/system-harbor.yaml  # planned, see storage/harbor/README.md
   - storage/longhorn/system-longhorn.yaml

@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: harbor-config
+  namespace: harbor
+type: Opaque
+stringData:
+  # Optional: Docker Hub account for the higher authenticated pull limit
+  DOCKERHUB_USERNAME: "${harbor_dockerhub_username}"
+  DOCKERHUB_TOKEN: "${harbor_dockerhub_token}"
+  # Secret of robot$homelab+push (8+ chars with upper, lower and a digit)
+  PUSH_ROBOT_SECRET: "${harbor_push_robot_secret}"
+---
+# Applies app/configure.py: proxy-cache projects, the homelab project, the push
+# robot and the GC schedule. Runs every 30 min so UI edits to these are put back;
+# right after the first deploy, start it by hand:
+#   kubectl -n harbor create job --from=cronjob/harbor-config harbor-config-init
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: harbor-config
+  namespace: harbor
+spec:
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 900
+      template:
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: configure
+              image: python:3.13-alpine
+              command: ["python3", "/app/configure.py"]
+              env:
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+                - name: HARBOR_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: harbor-admin
+                      key: HARBOR_ADMIN_PASSWORD
+              envFrom:
+                - secretRef:
+                    name: harbor-config
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+          volumes:
+            - name: app
+              configMap:
+                name: harbor-config-app
