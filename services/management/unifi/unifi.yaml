@@ -5,47 +5,13 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-# unifi_mongo_password: alphanumeric only (it ends up in a MongoDB URI), e.g. `openssl rand -hex 24`.
-# Used for both the MongoDB root user and the controller's own user.
-apiVersion: v1
-kind: Secret
-metadata:
-  name: unifi-mongo
-  namespace: unifi
-type: Opaque
-stringData:
-  password: "${unifi_mongo_password}"
----
-# Runs once, on the first start of an empty MongoDB volume: creates the controller's user.
-# The ${...} below are shell variables, so Flux must not substitute them.
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: unifi-mongo-init
-  namespace: unifi
-  annotations:
-    kustomize.toolkit.fluxcd.io/substitute: disabled
-data:
-  init-mongo.sh: |
-    #!/bin/bash
-    mongosh <<EOF
-    use ${MONGO_AUTHSOURCE}
-    db.auth("${MONGO_INITDB_ROOT_USERNAME}", "${MONGO_INITDB_ROOT_PASSWORD}")
-    db.createUser({
-      user: "${MONGO_USER}",
-      pwd: "${MONGO_PASS}",
-      roles: [
-        { db: "${MONGO_DBNAME}", role: "dbOwner" },
-        { db: "${MONGO_DBNAME}_stat", role: "dbOwner" },
-        { db: "${MONGO_DBNAME}_audit", role: "dbOwner" }
-      ]
-    })
-    EOF
----
+# UniFi OS Server, community image built from Ubiquiti's installer
+# (https://github.com/lemker/unifi-os-server). Everything (Network app, MongoDB,
+# Postgres, RabbitMQ, nginx) runs as systemd services in one container.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: unifi-config
+  name: unifi-os
   namespace: unifi
   labels:
     backup.longhorn.io/enabled: "true"
@@ -54,21 +20,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: unifi-mongo
-  namespace: unifi
-  labels:
-    backup.longhorn.io/enabled: "true"
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
+      storage: 20Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -76,7 +28,7 @@ metadata:
   name: unifi
   namespace: unifi
 spec:
-  # MongoDB on RWO volumes: never run two pods
+  # RWO volume: never run two pods
   strategy:
     type: Recreate
   selector:
@@ -87,154 +39,130 @@ spec:
       labels:
         app: unifi
     spec:
+      # Stops systemd services cleanly (STOPSIGNAL SIGRTMIN+3)
+      terminationGracePeriodSeconds: 120
+      # Services inside reach the host's port 11084 via host.docker.internal;
+      # here that's the pod itself
+      hostAliases:
+        - ip: 127.0.0.1
+          hostnames: ["host.docker.internal"]
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: unifi
-          image: lscr.io/linuxserver/unifi-network-application:latest
-          # Root: this linuxserver image does not support non-root operation; s6 drops the
-          # app to PUID itself (allowlisted in the Kyverno restricted policies)
+          image: ghcr.io/lemker/unifi-os-server:v1.8.0
+          # Privileged: systemd as PID 1 needs a writable cgroup tree and mounts
+          # (allowlisted in the Kyverno policies)
           securityContext:
-            allowPrivilegeEscalation: false
+            privileged: true
           env:
-            - name: PUID
-              value: "1000"
-            - name: PGID
-              value: "1000"
             - name: TZ
               value: "Europe/Stockholm"
-            # MONGO_* are only read on first start, to write /config/data/system.properties
-            - name: MONGO_HOST
-              value: localhost
-            - name: MONGO_PORT
-              value: "27017"
-            - name: MONGO_DBNAME
-              value: unifi
-            - name: MONGO_AUTHSOURCE
-              value: admin
-            - name: MONGO_USER
-              value: unifi
-            - name: MONGO_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: unifi-mongo
-                  key: password
-            - name: MEM_LIMIT
-              value: "1024"
-            - name: MEM_STARTUP
-              value: "512"
+            # Inform address handed to devices: the LoadBalancer IP below
+            - name: UOS_SYSTEM_IP
+              value: "${unifi_lb_ip}"
           ports:
             - name: https
-              containerPort: 8443
+              containerPort: 443
+            - name: http
+              containerPort: 80
             - name: inform
               containerPort: 8080
             - name: stun
               containerPort: 3478
               protocol: UDP
             - name: discovery
-              containerPort: 10001
+              containerPort: 10003
+              protocol: UDP
+            - name: syslog
+              containerPort: 5514
               protocol: UDP
             - name: speedtest
               containerPort: 6789
           startupProbe:
             httpGet:
-              path: /status
-              port: https
-              scheme: HTTPS
+              path: /api/ping
+              port: http
             periodSeconds: 10
-            failureThreshold: 60
+            failureThreshold: 90
           livenessProbe:
             httpGet:
-              path: /status
-              port: https
-              scheme: HTTPS
+              path: /api/ping
+              port: http
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /status
-              port: https
-              scheme: HTTPS
+              path: /api/ping
+              port: http
             periodSeconds: 10
             timeoutSeconds: 5
           resources:
             requests:
-              cpu: 100m
-              memory: 896Mi
-            limits:
-              cpu: 1
+              cpu: 200m
               memory: 2Gi
-          volumeMounts:
-            - name: config
-              mountPath: /config
-        - name: mongo
-          image: docker.io/mongo:8.0
-          # The data is already owned by the image's mongodb user (999)
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 999
-            runAsGroup: 999
-            allowPrivilegeEscalation: false
-          env:
-            - name: MONGO_INITDB_ROOT_USERNAME
-              value: root
-            - name: MONGO_INITDB_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: unifi-mongo
-                  key: password
-            - name: MONGO_DBNAME
-              value: unifi
-            - name: MONGO_AUTHSOURCE
-              value: admin
-            - name: MONGO_USER
-              value: unifi
-            - name: MONGO_PASS
-              valueFrom:
-                secretKeyRef:
-                  name: unifi-mongo
-                  key: password
-          ports:
-            - name: mongo
-              containerPort: 27017
-          readinessProbe:
-            tcpSocket:
-              port: mongo
-            periodSeconds: 10
-          livenessProbe:
-            tcpSocket:
-              port: mongo
-            periodSeconds: 30
-            failureThreshold: 5
-          resources:
-            requests:
-              cpu: 50m
-              memory: 256Mi
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 2
+              memory: 4Gi
           volumeMounts:
-            - name: mongo
-              mountPath: /data/db
-            - name: mongo-init
-              mountPath: /docker-entrypoint-initdb.d/init-mongo.sh
-              subPath: init-mongo.sh
-              readOnly: true
+            - name: data
+              mountPath: /persistent
+              subPath: persistent
+            - name: data
+              mountPath: /var/log
+              subPath: log
+            - name: data
+              mountPath: /data
+              subPath: data
+            - name: data
+              mountPath: /srv
+              subPath: srv
+            - name: data
+              mountPath: /var/lib/unifi
+              subPath: unifi
+            - name: data
+              mountPath: /var/lib/mongodb
+              subPath: mongodb
+            - name: data
+              mountPath: /etc/rabbitmq/ssl
+              subPath: rabbitmq
+            - name: run
+              mountPath: /run
+            - name: run-lock
+              mountPath: /run/lock
+            - name: tmp
+              mountPath: /tmp
+            - name: journal
+              mountPath: /var/lib/journal
+            - name: unifi-tmp
+              mountPath: /var/opt/unifi/tmp
       volumes:
-        - name: config
+        - name: data
           persistentVolumeClaim:
-            claimName: unifi-config
-        - name: mongo
-          persistentVolumeClaim:
-            claimName: unifi-mongo
-        - name: mongo-init
-          configMap:
-            name: unifi-mongo-init
-            defaultMode: 0755
+            claimName: unifi-os
+        - name: run
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+        - name: run-lock
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 1Gi
+        - name: journal
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+        - name: unifi-tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
 ---
-# Web UI, through Traefik. The controller only serves HTTPS with its own self-signed cert.
+# Web UI, through Traefik. UniFi OS only serves HTTPS with its own self-signed cert.
 apiVersion: traefik.io/v1alpha1
 kind: ServersTransport
 metadata:
@@ -256,11 +184,10 @@ spec:
     app: unifi
   ports:
     - name: https
-      port: 8443
-      targetPort: 8443
+      port: 443
+      targetPort: 443
 ---
-# Device traffic on a fixed LAN IP. Set the controller's "Inform Host" override to this IP
-# so adopted devices keep finding it.
+# Device traffic on a fixed LAN IP; UOS_SYSTEM_IP above makes it the inform address.
 apiVersion: v1
 kind: Service
 metadata:
@@ -282,8 +209,12 @@ spec:
       targetPort: 3478
       protocol: UDP
     - name: discovery
-      port: 10001
-      targetPort: 10001
+      port: 10003
+      targetPort: 10003
+      protocol: UDP
+    - name: syslog
+      port: 5514
+      targetPort: 5514
       protocol: UDP
     - name: speedtest
       port: 6789
@@ -314,7 +245,7 @@ spec:
               service:
                 name: unifi
                 port:
-                  number: 8443
+                  number: 443
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -332,9 +263,9 @@ spec:
             io.kubernetes.pod.namespace: traefik
       toPorts:
         - ports:
-            - port: "8443"
+            - port: "443"
               protocol: TCP
-    # UniFi devices via the MetalLB IP (inform, STUN, discovery, speed test)
+    # UniFi devices via the MetalLB IP (inform, STUN, discovery, syslog, speed test)
     - fromEntities:
         - world
         - cluster
@@ -346,7 +277,9 @@ spec:
               protocol: TCP
             - port: "3478"
               protocol: UDP
-            - port: "10001"
+            - port: "10003"
+              protocol: UDP
+            - port: "5514"
               protocol: UDP
             - port: "6789"
               protocol: TCP

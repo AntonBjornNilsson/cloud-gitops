@@ -198,7 +198,7 @@ Patterns that made root images work non-root (check the live pod's `/proc/1/stat
   non-root; an init container copies the binary into an emptyDir (the copy has no capability) (adguard-home).
 - **linuxserver images** (if the README lists "Non-Root Operation"): run as 1000:1000; PUID/PGID are then ignored.
   s6 needs a `/run` owned by that user: a `run-dir` init container makes a subdirectory in an emptyDir, mounted
-  with `subPath: run` (see sonarr). unifi does not support it and stays root.
+  with `subPath: run` (see sonarr).
 - **App writes into its image** (open-webui static dir, Next.js cache): emptyDir over that path, seeded by an init
   container if the app expects existing files.
 - **Helm values**: some charts put defaults in the template, not in values; setting the key replaces them (headlamp's
@@ -214,7 +214,8 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
   `/dev/net/tun`, which the Kyverno mutate policy `tailscale-proxy-tun` mounts (ProxyClass can't add volumes). The
   operator's `sysctler` init container stays privileged: it sets ip_forward and a Connector always gets it.
 - Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
-  unifi app, dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
+  dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
+- Privileged: UniFi OS Server (systemd as PID 1 runs its own MongoDB/Postgres/RabbitMQ).
 - hostPath (`disallow-host-path` + `restrict-volume-types`): media library apps, matter-server, node-exporter,
   smartctl-exporter, vlagent.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
