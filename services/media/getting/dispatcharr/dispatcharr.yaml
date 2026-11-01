@@ -72,7 +72,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: db
-          image: postgres:17.11
+          image: postgres:18.4
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
