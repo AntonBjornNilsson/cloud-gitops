@@ -14,7 +14,7 @@ spec:
     spec:
       chart: kyverno-policies
       # Keep in step with the kyverno chart version
-      version: "3.7.2"
+      version: "3.9.2"
       sourceRef:
         kind: HelmRepository
         name: kyverno-repo
