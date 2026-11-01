@@ -45,7 +45,7 @@ spec:
     # HOMEPAGE_AUTH_*/OIDC env below) and the Jellyfin 10.12 widget API
     image:
       repository: ghcr.io/gethomepage/homepage
-      tag: v2.5.0
+      tag: v2.7.0
     enableRbac: true
     # The image defaults to root; as any other user its entrypoint skips the chown
     # and runs node directly. Next.js writes its cache under /app/.next/cache.
