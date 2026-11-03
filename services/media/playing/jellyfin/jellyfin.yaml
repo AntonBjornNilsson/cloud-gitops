@@ -171,7 +171,7 @@ spec:
     # rewrite it on every start so Git stays the source of truth.
     extraInitContainers:
       - name: known-proxies
-        image: docker.io/jellyfin/jellyfin:12.1
+        image: docker.io/jellyfin/jellyfin:12.4
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -195,7 +195,7 @@ spec:
       # single movie leaves GBs of segments that only the daily cleanup task (files older
       # than a day) removes, and a few evening streams filled the cache.
       - name: transcode-cleanup
-        image: docker.io/jellyfin/jellyfin:12.1
+        image: docker.io/jellyfin/jellyfin:12.4
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
