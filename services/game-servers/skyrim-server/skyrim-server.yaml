@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: skyrim-server
-          image: tiltedphoques/st-reborn-server:latest
+          image: tiltedphoques/st-reborn-server:latest@sha256:7a7f9a41bab7820b43af043a3ecec4d24c5f5b7d2704814d7f0e27d6f1a42016
           imagePullPolicy: Always
           ports:
             - containerPort: 10578

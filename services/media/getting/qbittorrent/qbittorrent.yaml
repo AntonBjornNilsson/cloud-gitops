@@ -49,7 +49,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: run-dir
-          image: lscr.io/linuxserver/qbittorrent:latest
+          image: lscr.io/linuxserver/qbittorrent:latest@sha256:05c1454f9a32967affc1f34f67f8cc0cc57dd805dca45489fe797095a6286556
           command: ["mkdir", "-p", "/emptydir/run"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -66,7 +66,7 @@ spec:
             - name: run
               mountPath: /emptydir
         - name: init-qbittorrent-config
-          image: busybox:latest
+          image: busybox:latest@sha256:a46257e06c82ad85242d0d38077d0a52d9896389ca60a1a59d3463db586e5fa4
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -195,7 +195,7 @@ spec:
               mountPath: /dev/net/tun
       containers:
         - name: qbittorrent
-          image: lscr.io/linuxserver/qbittorrent:latest
+          image: lscr.io/linuxserver/qbittorrent:latest@sha256:05c1454f9a32967affc1f34f67f8cc0cc57dd805dca45489fe797095a6286556
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -243,7 +243,7 @@ spec:
             - name: data
               mountPath: /data
         - name: port-forward-sync
-          image: curlimages/curl:latest
+          image: curlimages/curl:latest@sha256:3fb7e13e5d179a845c97d78204f3f1064d1907037f26a3ebf91710571151fd93
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

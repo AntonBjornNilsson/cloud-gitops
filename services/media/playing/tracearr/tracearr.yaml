@@ -246,7 +246,7 @@ spec:
       initContainers:
         # The volume hides the image's /data; Tracearr needs both directories to exist
         - name: mkdirs
-          image: ghcr.io/connorgallopo/tracearr:latest
+          image: ghcr.io/connorgallopo/tracearr:latest@sha256:bf8c9e3ea2f2c70247f312e1bfcf7b2b5d66f366b24e301a4dddf692e933b389
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -264,7 +264,7 @@ spec:
               mountPath: /data
       containers:
         - name: tracearr
-          image: ghcr.io/connorgallopo/tracearr:latest
+          image: ghcr.io/connorgallopo/tracearr:latest@sha256:bf8c9e3ea2f2c70247f312e1bfcf7b2b5d66f366b24e301a4dddf692e933b389
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
