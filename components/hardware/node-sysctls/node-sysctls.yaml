@@ -39,7 +39,7 @@ spec:
         - operator: Exists
       containers:
         - name: sysctl
-          image: busybox:1.37
+          image: busybox:1.38
           command:
             - sh
             - -c
