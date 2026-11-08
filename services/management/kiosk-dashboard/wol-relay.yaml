@@ -1,0 +1,64 @@
+# The dashboard asks for a magic packet by adding an entry to this ConfigMap;
+# the relay on each node sends it. No port is opened and Kubernetes RBAC decides
+# who may ask. The entries are not in Git: Flux does not manage the data field.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wol-requests
+  namespace: kiosk-dashboard
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wol-relay
+  namespace: kiosk-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: wol-relay
+  namespace: kiosk-dashboard
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["wol-requests"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: wol-relay
+  namespace: kiosk-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: wol-relay
+subjects:
+  - kind: ServiceAccount
+    name: wol-relay
+    namespace: kiosk-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kiosk-dashboard-wol
+  namespace: kiosk-dashboard
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["wol-requests"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kiosk-dashboard-wol
+  namespace: kiosk-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kiosk-dashboard-wol
+subjects:
+  - kind: ServiceAccount
+    name: kiosk-dashboard
+    namespace: kiosk-dashboard
