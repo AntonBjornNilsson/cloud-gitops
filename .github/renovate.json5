@@ -2,7 +2,7 @@
 // `validate` check gates them like any other PR. After merge Flux deploys the
 // change and trivy-operator rescans the new images, so the
 // ImageCriticalVulnerabilities alert clears (or keeps firing) on its own.
-// Overview and approvals: the "Dependency Dashboard" issue.
+// Overview: the "Dependency Dashboard" issue; nothing there needs ticking.
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended", ":dependencyDashboard"],
@@ -13,10 +13,15 @@
   semanticCommitType: "chore",
   semanticCommitScope: "deps",
   labels: ["dependencies"],
-  prConcurrentLimit: 10,
+  // No limits: an update over a limit waits for a tick on the dashboard
+  prConcurrentLimit: 0,
   prHourlyLimit: 0,
   // Let fresh releases settle (yanked/broken releases, image re-tags)
   minimumReleaseAge: "3 days",
+  // Only Docker Hub and most Helm repositories report release dates. Without this, an
+  // update from any other registry (ghcr.io, lscr.io) waits for a tick forever; with
+  // it, those skip the soak time.
+  minimumReleaseAgeBehaviour: "timestamp-optional",
   // The Longhorn backup-sync bot pushes to main daily; only rebase on conflicts
   rebaseWhen: "conflicted",
   ignorePaths: [
