@@ -39,6 +39,23 @@ spec:
     grafana:
       enabled: false
 
+    # Post-upgrade hook: its pod is denied by the restricted Pod Security policies
+    # (and the upgrade fails) without these. The image defaults to root.
+    syncJob:
+      podSecurityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containerSecurityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+        limits: {cpu: 500m, memory: 256Mi}
+
     # Upstream dashboards (Kubernetes views, node-exporter full, VM/VL internals)
     # are fetched by the chart's sync job and created as GrafanaDashboard CRs.
     # On a fresh bootstrap the job may run before the grafana-operator CRDs
