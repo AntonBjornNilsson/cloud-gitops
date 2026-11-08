@@ -229,6 +229,9 @@ spec:
           - domain: "grafana.${domain}"
             subject: ["group:grafana-read", "group:grafana-edit"]
             policy: one_factor
+          - domain: ["ayeheyo.${domain}"]
+            subject: "group:ayeheyo"
+            policy: one_factor
           - domain: ["bazarr.${domain}"]
             subject: "group:bazarr"
             policy: one_factor

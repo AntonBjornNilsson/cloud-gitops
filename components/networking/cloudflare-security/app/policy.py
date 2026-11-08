@@ -15,6 +15,7 @@ import os
 DOMAIN = os.environ["DOMAIN"]
 AUTH = f"auth.{DOMAIN}"
 STREAM = f"stream.{DOMAIN}"
+AYEHEYO = f"ayeheyo.{DOMAIN}"
 WEBHOOK = f"flux-webhook.{DOMAIN}"
 
 # EU + EEA (ISO 3166-1 alpha-2)
@@ -52,7 +53,7 @@ def custom_rules(github_hooks):
         {
             "description": "Login hosts: EU/EEA only (machine OIDC endpoints exempt)",
             "expression": (
-                f"http.host in {q([AUTH, STREAM])}"
+                f"http.host in {q([AUTH, STREAM, AYEHEYO])}"
                 f" and not ip.src.country in {q(ALLOWED_COUNTRIES)}"
                 f" and not {OIDC_MACHINE}"
             ),

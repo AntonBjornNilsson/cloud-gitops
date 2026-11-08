@@ -31,6 +31,7 @@ resources:
   - home-automation/homeassistant
 
   # Management
+  # - management/ayeheyo  # needs ghcr_pull_auth, ayeheyo_image, ayeheyo_ics_link
   - management/headlamp
   - management/homepage
   - management/kiosk-dashboard

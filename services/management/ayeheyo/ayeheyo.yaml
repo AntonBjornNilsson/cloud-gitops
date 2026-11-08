@@ -1,0 +1,172 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ayeheyo
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+# The image repository is private.
+# ghcr_pull_auth = base64("<github user>:<PAT with read:packages>")
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ghcr-pull
+  namespace: ayeheyo
+type: kubernetes.io/dockerconfigjson
+stringData:
+  .dockerconfigjson: '{"auths":{"ghcr.io":{"auth":"${ghcr_pull_auth}"}}}'
+---
+# Whoever has this link can read the whole calendar. It is mounted as a file so
+# it stays out of the pod spec, environment and process listings.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ayeheyo-ics
+  namespace: ayeheyo
+type: Opaque
+stringData:
+  ics-link: "${ayeheyo_ics_link}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ayeheyo
+  namespace: ayeheyo
+  labels:
+    app: ayeheyo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ayeheyo
+  template:
+    metadata:
+      labels:
+        app: ayeheyo
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ayeheyo
+          image: ${ayeheyo_image}:sha-df762ab
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          volumeMounts:
+            - name: ics-link
+              mountPath: /run/secrets/ayeheyo
+              readOnly: true
+          resources:
+            requests:
+              cpu: 5m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: ics-link
+          secret:
+            secretName: ayeheyo-ics
+            defaultMode: 0440
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ayeheyo
+  namespace: ayeheyo
+  labels:
+    app: ayeheyo
+spec:
+  selector:
+    app: ayeheyo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ayeheyo
+  namespace: ayeheyo
+  annotations:
+    # Reachable through the Cloudflare tunnel (cfgate routes.yaml, access.yaml)
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure,public
+spec:
+  rules:
+    - host: ayeheyo.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ayeheyo
+                port:
+                  number: 80
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ayeheyo
+  namespace: ayeheyo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: ayeheyo
+  ingress:
+    # HTTP ingress from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # The calendar feed, https only so the link never travels in clear text
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

@@ -57,6 +57,31 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
+  # Calendar
+  name: ayeheyo
+  namespace: cfgate-system
+  annotations:
+    # Selects the CloudflareDNS resource (dns.yaml) that publishes this hostname
+    homelab/dns-zone: "domain"
+    cfgate.io/origin-protocol: "https"
+    cfgate.io/origin-ssl-verify: "true"
+    cfgate.io/origin-server-name: "ayeheyo.${domain}"
+    # Fail closed: 503 instead of forwarding if the Access app (access.yaml) is not Ready
+    cfgate.io/access-required: cfgate-system/ayeheyo
+spec:
+  parentRefs:
+    - name: cloudflare-tunnel
+  hostnames:
+    - ayeheyo.${domain}
+  rules:
+    - backendRefs:
+        - name: traefik-public
+          namespace: traefik
+          port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
   # GitHub push webhooks for the Flux receiver
   name: flux-webhook
   namespace: cfgate-system

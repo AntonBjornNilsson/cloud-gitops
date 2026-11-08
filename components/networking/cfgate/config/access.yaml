@@ -86,6 +86,24 @@ spec:
 apiVersion: cfgate.io/v1alpha1
 kind: CloudflareAccessApplication
 metadata:
+  name: ayeheyo
+  namespace: cfgate-system
+spec:
+  targetRef:
+    kind: HTTPRoute
+    name: ayeheyo
+  application:
+    name: ayeheyo
+    # Google login only, without the Access method picker
+    allowedIdps: ["${cloudflare_google_idp_id}"]
+    autoRedirectToIdentity: true
+  policyRefs:
+    - name: allow-admin
+    - name: allow-users
+---
+apiVersion: cfgate.io/v1alpha1
+kind: CloudflareAccessApplication
+metadata:
   name: flux-webhook
   namespace: cfgate-system
 spec:
