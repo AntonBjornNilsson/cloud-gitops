@@ -153,7 +153,7 @@ spec:
             periodSeconds: 10
         # AdGuard has no users (Authelia guards the UI), so any credentials work.
         - name: exporter
-          image: ghcr.io/henrywhitaker3/adguard-exporter:v1.2.1
+          image: ghcr.io/henrywhitaker3/adguard-exporter:v1.2.3
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
