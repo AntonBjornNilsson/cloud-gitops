@@ -25,7 +25,7 @@ spec:
   chart:
     spec:
       chart: traefik
-      version: "42.2.0"
+      version: "42.3.1"
       sourceRef:
         kind: HelmRepository
         name: traefik
@@ -83,7 +83,8 @@ spec:
       # ClusterIP Service "traefik-public" for the tunnel origin
       additionalServices:
         public:
-          type: ClusterIP
+          spec:
+            type: ClusterIP
     # Keep the legacy router/service names that alert rules and dashboards match
     # on. Set as an argument: the chart only renders safeNaming when it is true.
     additionalArguments:
