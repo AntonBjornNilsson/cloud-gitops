@@ -28,6 +28,10 @@ spec:
     remediation:
       retries: 3
   values:
+    # Chart 3.9 defaults to CEL ValidatingPolicies, which ignore policyExclude: every
+    # exception below would be lost and those workloads denied. Keep the legacy kind
+    # until the exceptions are migrated (vpolExclude).
+    policyType: ClusterPolicy
     # restricted = the baseline policies plus the restricted-only ones below
     podSecurityStandard: restricted
     validationFailureAction: Enforce
