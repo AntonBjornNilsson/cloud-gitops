@@ -69,6 +69,14 @@ spec:
       backupTargetCredentialSecret: longhorn-backup-target-secret
       pollInterval: 500
 
+    # New in 1.13. Two storage nodes: a third replica has nowhere useful to go. Sized like
+    # longhorn-manager until there is usage history.
+    longhornGlobalManager:
+      replicas: 2
+      resources:
+        requests: {cpu: 50m, memory: 384Mi}
+        limits: {cpu: 2, memory: 1Gi}
+
     longhornManager:
       tolerations:
       - key: "GPU"
