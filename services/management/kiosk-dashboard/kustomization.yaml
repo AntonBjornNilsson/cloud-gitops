@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - kiosk-dashboard.yaml
   - wol-relay.yaml
+  - wol-relay-daemonset.yaml
