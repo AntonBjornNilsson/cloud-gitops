@@ -49,7 +49,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: run-dir
-          image: lscr.io/linuxserver/radarr:latest
+          image: lscr.io/linuxserver/radarr:latest@sha256:ade5937813c6ae415b29db729386e53fea3ecf067a019849bafbe2d2a6ec02ba
           command: ["mkdir", "-p", "/emptydir/run"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -67,7 +67,7 @@ spec:
               mountPath: /emptydir
       containers:
         - name: radarr
-          image: lscr.io/linuxserver/radarr:latest
+          image: lscr.io/linuxserver/radarr:latest@sha256:ade5937813c6ae415b29db729386e53fea3ecf067a019849bafbe2d2a6ec02ba
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

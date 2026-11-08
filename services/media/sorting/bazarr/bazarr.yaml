@@ -49,7 +49,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: run-dir
-          image: lscr.io/linuxserver/bazarr:latest
+          image: lscr.io/linuxserver/bazarr:latest@sha256:7ef0e58216900dbce30b123e0eb65f5cb30e36f126de9474acdd2022fb069c54
           command: ["mkdir", "-p", "/emptydir/run"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -67,7 +67,7 @@ spec:
               mountPath: /emptydir
       containers:
         - name: bazarr
-          image: lscr.io/linuxserver/bazarr:latest
+          image: lscr.io/linuxserver/bazarr:latest@sha256:7ef0e58216900dbce30b123e0eb65f5cb30e36f126de9474acdd2022fb069c54
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
