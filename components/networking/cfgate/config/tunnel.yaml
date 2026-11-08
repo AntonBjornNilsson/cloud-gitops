@@ -24,7 +24,7 @@ spec:
   cloudflared:
     replicas: 2
     # Upstream image instead of cfgate's default fork (only needed for h2c origins)
-    image: cloudflare/cloudflared:2026.10.4
+    image: cloudflare/cloudflared:2026.10.7
     resources:
       requests:
         cpu: 20m
