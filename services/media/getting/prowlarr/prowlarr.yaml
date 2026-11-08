@@ -46,7 +46,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: run-dir
-          image: lscr.io/linuxserver/prowlarr:latest
+          image: lscr.io/linuxserver/prowlarr:latest@sha256:431d7efebcef466e56adaa40a7a2fa2b0e85159a037b8bf465eaadbf0cf5bedf
           command: ["mkdir", "-p", "/emptydir/run"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -150,7 +150,7 @@ spec:
               cpu: 2
               memory: 2Gi
         - name: prowlarr
-          image: lscr.io/linuxserver/prowlarr:latest
+          image: lscr.io/linuxserver/prowlarr:latest@sha256:431d7efebcef466e56adaa40a7a2fa2b0e85159a037b8bf465eaadbf0cf5bedf
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
