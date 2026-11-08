@@ -17,6 +17,7 @@ configMapGenerator:
     files:
       - app/server.ts
       - app/agent.ts
+      - app/chartcheck.ts
       - app/publisher.ts
       - app/policy.ts
       - app/questions.ts

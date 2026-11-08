@@ -294,7 +294,8 @@ quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{namespace="<ns>"
   in `image/` built by `.github/workflows/claude-agent-image.yaml`; `app/updater.ts` restarts the Deployment onto a new
   `:latest` digest once the service is idle).
   - Runs one session at a time: scheduled health reviews and weekly version updates (`SCHEDULES`, UTC cron; the
-    updates run merges the open Renovate PRs it judges safe from their release notes, `app/updates.md`) and tasks started from the web UI
+    updates run merges the open Renovate PRs it judges safe from their release notes and a pre-render of each chart bump
+    made by `app/chartcheck.ts` before Claude starts, `app/updates.md`) and tasks started from the web UI
     at `claude-agent.${domain}` (Authelia): live transcript with reasoning, messages into a running session, continue a
     session, model/effort per run, token usage and claude.ai plan limits (`/usage`).
   - Claude Code auto-memory is pinned to one directory on the service's PVC (`MEMORY_DIR`, default `/data/memory`),
@@ -321,6 +322,11 @@ quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{namespace="<ns>"
   stores' majors). That run is zero-touch: applied without the ntfy question, then a health review 30 min later.
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
   Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
+- Before a chart bump, `helm template` old and new with the repo's values and check more than the diff: object kinds
+  (kyverno-policies 3.9+ needs `policyType: ClusterPolicy`, CEL policies ignore `policyExclude`), changed defaults, CRD stored
+  versions, and every pod template against the restricted profile, Helm hook Jobs included. A hook only runs during an
+  upgrade, so a denied one fails that upgrade and blocks every Kustomization behind it. The agent's `app/chartcheck.ts`
+  does this for its `updates` runs.
 
 ## Workflow for any change
 

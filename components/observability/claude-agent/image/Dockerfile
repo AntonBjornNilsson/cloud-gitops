@@ -1,5 +1,5 @@
 # Runtime image for the claude-agent service: Node with the Claude Agent SDK (which ships the Claude
-# Code binary), kubectl, flux and git. The service code is not baked in; it comes from the
+# Code binary), kubectl, flux, git and helm (only app/chartcheck.ts runs it). The service code is not baked in; it comes from the
 # claude-agent-app ConfigMap (../app) mounted at /app/src and runs directly via Node's type stripping.
 # Built and pushed by .github/workflows/claude-agent-image.yaml, which passes the latest versions.
 FROM node:26-bookworm-slim
@@ -7,6 +7,7 @@ FROM node:26-bookworm-slim
 ARG AGENT_SDK_VERSION=0.3.296
 ARG KUBECTL_VERSION=v1.37.1
 ARG FLUX_VERSION=2.9.6
+ARG HELM_VERSION=v4.3.0
 ARG TARGETARCH=amd64
 
 RUN apt-get update \
@@ -16,7 +17,9 @@ RUN apt-get update \
 RUN curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
  && chmod +x /usr/local/bin/kubectl \
  && curl -fsSL "https://github.com/fluxcd/flux2/releases/download/v${FLUX_VERSION}/flux_${FLUX_VERSION}_linux_${TARGETARCH}.tar.gz" \
-    | tar -xz -C /usr/local/bin flux
+    | tar -xz -C /usr/local/bin flux \
+ && curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${TARGETARCH}.tar.gz" \
+    | tar -xz -C /usr/local/bin --strip-components=1 "linux-${TARGETARCH}/helm"
 
 WORKDIR /app
 COPY package.json ./

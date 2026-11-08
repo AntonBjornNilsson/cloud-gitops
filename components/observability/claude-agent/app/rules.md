@@ -40,7 +40,9 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 - If a workload or update is denied by a Pod Security policy (Kyverno), do not widen `policyExclude` in
   `components/security/kyverno/config/kyverno-policies.yaml` yourself: report it, saying what the workload needs and why.
   The restricted profile is enforced too: never remove or loosen a securityContext (runAsNonRoot, dropped capabilities,
-  seccomp) to make a new version start; if an update fails with permission errors under them, report it.
+  seccomp) to make a new version start; if an update fails with permission errors under them, report it. Adding a
+  missing securityContext or limits through chart values is fine, Helm hook Jobs included. Keep `policyType: ClusterPolicy`
+  in that same file: CEL policies ignore `policyExclude`, so changing it would drop every exception.
 - Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs or Flux Kustomizations.
 
 ## Memory
