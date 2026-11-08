@@ -65,7 +65,7 @@ spec:
         # Git owns the config (see config/AdGuardHome.yaml); AdGuard rewrites
         # the file at runtime, so it is copied onto the volume on every start.
         - name: seed-config
-          image: adguard/adguardhome:v0.107.79
+          image: adguard/adguardhome:v0.107.80
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -96,7 +96,7 @@ spec:
               mountPath: /adguard-bin
       containers:
         - name: adguard-home
-          image: adguard/adguardhome:v0.107.79
+          image: adguard/adguardhome:v0.107.80
           imagePullPolicy: IfNotPresent
           command: ["/adguard-bin/AdGuardHome"]
           args:
