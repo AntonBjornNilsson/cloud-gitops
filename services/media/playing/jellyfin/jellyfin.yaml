@@ -82,7 +82,7 @@ spec:
   values:
     replicaCount: 1
     image:
-      tag: "12.1"
+      tag: "12.4"
     # Never run two pods at once: the RWO config volume must detach first.
     # Not Recreate: the live rollingUpdate defaults would make the patch invalid.
     deploymentStrategy:
