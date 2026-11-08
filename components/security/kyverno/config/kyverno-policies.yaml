@@ -70,10 +70,6 @@ spec:
           - resources:
               namespaces: [homeassistant]
               names: ["matter-server*"]
-          # Wake-on-LAN magic packets are L2 broadcasts: they must leave from the node's own network
-          - resources:
-              namespaces: [kiosk-dashboard]
-              names: ["wol-relay*"]
       disallow-host-path:
         any:
           # Writes the containerd registry mirror config (Harbor) on every node
