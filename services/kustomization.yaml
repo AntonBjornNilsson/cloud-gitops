@@ -33,6 +33,7 @@ resources:
   # Management
   - management/headlamp
   - management/homepage
+  - management/kiosk-dashboard
   # - management/github-runners
   - management/ntfy
   - management/unifi

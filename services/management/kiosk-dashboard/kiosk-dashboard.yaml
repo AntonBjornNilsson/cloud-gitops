@@ -1,0 +1,120 @@
+# Identity for a wall-mounted touchscreen dashboard that runs outside the
+# cluster. No workload here: only a ServiceAccount, its token and what it may do.
+#
+# Read: nodes, events, Flux objects, and queries through the API server proxy to
+# VictoriaMetrics and Alertmanager. No access to Secrets.
+# Write: ask Flux to reconcile, delete a stuck pod, add an Alertmanager silence.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kiosk-dashboard
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kiosk-dashboard
+  namespace: kiosk-dashboard
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kiosk-dashboard-token
+  namespace: kiosk-dashboard
+  annotations:
+    kubernetes.io/service-account.name: kiosk-dashboard
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kiosk-dashboard
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "events"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["kustomize.toolkit.fluxcd.io"]
+    resources: ["kustomizations"]
+    verbs: ["get", "list"]
+  - apiGroups: ["helm.toolkit.fluxcd.io"]
+    resources: ["helmreleases"]
+    verbs: ["get", "list"]
+  - apiGroups: ["source.toolkit.fluxcd.io"]
+    resources: ["gitrepositories"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kiosk-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kiosk-dashboard
+subjects:
+  - kind: ServiceAccount
+    name: kiosk-dashboard
+    namespace: kiosk-dashboard
+---
+# Reconcile requests are an annotation, so this is patch on the Flux objects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kiosk-dashboard-reconcile
+  namespace: flux-system
+rules:
+  - apiGroups: ["kustomize.toolkit.fluxcd.io"]
+    resources: ["kustomizations"]
+    verbs: ["patch"]
+  - apiGroups: ["source.toolkit.fluxcd.io"]
+    resources: ["gitrepositories"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kiosk-dashboard-reconcile
+  namespace: flux-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kiosk-dashboard-reconcile
+subjects:
+  - kind: ServiceAccount
+    name: kiosk-dashboard
+    namespace: kiosk-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kiosk-dashboard-metrics
+  namespace: victoriametrics
+rules:
+  - apiGroups: [""]
+    resources: ["services/proxy"]
+    resourceNames: ["vmsingle-vm-k8s-stack:8428"]
+    verbs: ["get"]
+  # create is the POST that adds a silence
+  - apiGroups: [""]
+    resources: ["services/proxy"]
+    resourceNames: ["vmalertmanager-vm-k8s-stack:9093"]
+    verbs: ["get", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kiosk-dashboard-metrics
+  namespace: victoriametrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kiosk-dashboard-metrics
+subjects:
+  - kind: ServiceAccount
+    name: kiosk-dashboard
+    namespace: kiosk-dashboard
