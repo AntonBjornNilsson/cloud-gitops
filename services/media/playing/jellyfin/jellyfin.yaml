@@ -43,7 +43,7 @@ spec:
   chart:
     spec:
       chart: jellyfin
-      version: "3.2.0"
+      version: "3.7.0"
       sourceRef:
         kind: HelmRepository
         name: jellyfin
@@ -222,6 +222,8 @@ spec:
         enabled: true
         type: hostPath
         hostPath: "/mnt/hdd"
+        # Chart 3.7 default is read-only; Jellyfin may save metadata beside the media
+        readOnly: false
       # Not enabled = node-local emptyDir: temporary by design, wiped on every restart
       # and never replicated by Longhorn. Images and metadata re-download on demand.
       cache:
