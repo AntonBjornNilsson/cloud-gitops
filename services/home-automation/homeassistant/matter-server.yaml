@@ -62,7 +62,7 @@ spec:
         # hostPath as root, so this one step needs root with CHOWN (allowlisted in
         # the Kyverno restricted policies); everything else runs as 1000.
         - name: socket-dir
-          image: busybox:1.37
+          image: busybox:1.38
           command: ["chown", "1000:1000", "/run/matter-server"]
           securityContext:
             runAsUser: 0
