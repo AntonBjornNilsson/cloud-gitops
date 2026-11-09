@@ -97,7 +97,10 @@ added as a directory entry in `services/kustomization.yaml`. **No per-service Fl
 (which depends on flux-components, system-traefik, system-cert-manager-config, system-longhorn). Template: `services/media/sorting/sonarr/sonarr.yaml`.
 
 Conventions:
-- Copy node placement (nodeSelector/tolerations), TZ, PUID/PGID and media hostPath from a sibling service; do not invent or document new values.
+- Copy node placement (nodeSelector/tolerations), TZ and PUID/PGID from a sibling service; do not invent or document new values.
+- The media library is the NAS's NFS share: copy the `media-<namespace>` PV + `media` PVC pair from a sibling
+  (e.g. sonarr; one PV per namespace, since a PV binds one PVC and PSS forbids inline `nfs` volumes) and mount
+  claim `media` at `/data`. No node pinning needed.
 - Pin to a node only via substitution (`kubernetes.io/hostname: ${media_node}`, `${gpu_node}`, `${longhorn_node_N}`), never a literal hostname.
 - Single-replica for RWO PVCs (multi-attach is impossible).
 

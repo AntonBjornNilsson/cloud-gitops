@@ -37,6 +37,44 @@ spec:
     requests:
       storage: 5Gi
 ---
+# Media library on the NAS (NFS share of tank/media). One static PV per namespace:
+# a PV binds to a single PVC, and PSS restricted does not allow inline nfs volumes.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-bazarr
+spec:
+  capacity:
+    storage: 13Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: bazarr
+    name: media
+  mountOptions:
+    - nfsvers=4.2
+    - hard
+    - noatime
+  nfs:
+    server: ${nas_host}
+    path: /mnt/tank/media/Shared
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  namespace: bazarr
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: media-bazarr
+  resources:
+    requests:
+      storage: 13Ti
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -54,11 +92,6 @@ spec:
       labels:
         app: bazarr
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: ${media_node}
-      tolerations:
-        - key: "node-role.kubernetes.io/control-plane"
-          effect: "NoSchedule"
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -143,8 +176,8 @@ spec:
           persistentVolumeClaim:
             claimName: bazarr-config-nas
         - name: data
-          hostPath:
-            path: /mnt/hdd/Shared
+          persistentVolumeClaim:
+            claimName: media
 ---
 apiVersion: v1
 kind: Service

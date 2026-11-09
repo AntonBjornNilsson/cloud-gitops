@@ -6,6 +6,44 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Media library on the NAS (NFS share of tank/media). One static PV per namespace:
+# a PV binds to a single PVC, and PSS restricted does not allow inline nfs volumes.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-jellyfin
+spec:
+  capacity:
+    storage: 13Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: jellyfin
+    name: media
+  mountOptions:
+    - nfsvers=4.2
+    - hard
+    - noatime
+  nfs:
+    server: ${nas_host}
+    path: /mnt/tank/media
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  namespace: jellyfin
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: media-jellyfin
+  resources:
+    requests:
+      storage: 13Ti
+---
 # Config on a block (RWO) volume: SQLite locking over the RWX/NFS share made every
 # database read wait behind library-scan writes (~30s per request).
 # Old Longhorn volume, unused since the move to jellyfin-config-local-nas; kept as the rollback
@@ -238,20 +276,14 @@ spec:
         existingClaim: jellyfin-config-local-nas
       media:
         enabled: true
-        type: hostPath
-        hostPath: "/mnt/hdd"
+        type: pvc
+        existingClaim: media
         # Chart 3.7 default is read-only; Jellyfin may save metadata beside the media
         readOnly: false
       # Not enabled = node-local emptyDir: temporary by design, wiped on every restart
       # and never replicated by Longhorn. Images and metadata re-download on demand.
       cache:
         enabled: false
-
-    nodeSelector:
-      kubernetes.io/hostname: ${media_node}
-    tolerations:
-      - key: "node-role.kubernetes.io/control-plane"
-        effect: "NoSchedule"
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
