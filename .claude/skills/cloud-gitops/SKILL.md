@@ -220,8 +220,8 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
 - Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
   dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
 - Privileged: UniFi OS Server (systemd as PID 1 runs its own MongoDB/Postgres/RabbitMQ).
-- hostPath (`disallow-host-path` + `restrict-volume-types`): media library apps, matter-server, node-exporter,
-  smartctl-exporter, vlagent.
+- hostPath (`disallow-host-path` + `restrict-volume-types`): gluetun pods' `/dev/net/tun` (dispatcharr, prowlarr,
+  qbittorrent), matter-server, node-exporter, smartctl-exporter, vlagent.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
 with `kubectl --context=<admin> get policyreports -A`; test a manifest with `kubectl apply --dry-run=server`. A result
 for an unchanged resource is not re-evaluated when a policy starts excluding it: delete that PolicyReport to refresh it.

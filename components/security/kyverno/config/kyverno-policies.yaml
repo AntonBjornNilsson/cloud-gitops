@@ -96,17 +96,12 @@ spec:
           - resources:
               namespaces: [homeassistant]
               names: ["matter-server*"]
-          # Media library on the media node's disk
+          # gluetun VPN sidecars: the node's /dev/net/tun
           - resources:
               namespaces:
-                - bazarr
-                - cleanuparr
                 - dispatcharr
-                - jellyfin
                 - prowlarr
                 - qbittorrent
-                - radarr
-                - sonarr
       disallow-host-ports:
         any:
           # Longhorn starts short-lived node helper pods on demand (e.g. the CSI
@@ -279,11 +274,6 @@ spec:
               names: ["matter-server*"]
           - resources:
               namespaces:
-                - bazarr
-                - cleanuparr
                 - dispatcharr
-                - jellyfin
                 - prowlarr
                 - qbittorrent
-                - radarr
-                - sonarr
