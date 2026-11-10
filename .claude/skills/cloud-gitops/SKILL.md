@@ -41,7 +41,7 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
    | `authelia-substitutions` (`authelia/`) | `authelia_*` |
 
    Every Kustomization lists `flux-substitutions` first, then the area Secrets whose vars it uses
-   (`flux-services` lists network, observability, media and apps). A var whose Secret is missing from the list
+   (`flux-services` lists network, storage, observability, media and apps). A var whose Secret is missing from the list
    becomes an **empty string without an error**: after adding a var or wiring, run
    `scripts/check-substitutions.py --context=<admin>` (or `--secrets-dir <secrets-repo checkout>` to check a
    secrets-repo change before pushing it). Add a var to the Secret of its area; when moving vars between

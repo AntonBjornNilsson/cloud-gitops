@@ -116,6 +116,9 @@ spec:
         value: "${grafana_admin_user}"
       - name: HOMEPAGE_VAR_GRAFANA_PASSWORD
         value: "${grafana_admin_password}"
+      # Read-only TrueNAS user's key (TrueNAS widget)
+      - name: HOMEPAGE_VAR_TRUENAS_API_KEY
+        value: "${homepage_truenas_api_key}"
     ingress:
       main:
         enabled: true
@@ -260,6 +263,19 @@ spec:
                       template: "{{ states.cover | selectattr('attributes.current_position', 'defined') | selectattr('attributes.current_position', 'eq', 0) | list | count }}"
                     - label: Lowest battery
                       template: "{{ states.sensor | selectattr('attributes.device_class', 'defined') | selectattr('attributes.device_class', 'eq', 'battery') | map(attribute='state') | map('float', none) | reject('none') | min | int }}%"
+        - Storage:
+            # Version 2 = TrueNAS's WebSocket API (the REST API is gone in TrueNAS 26);
+            # with a key it always uses wss and accepts the NAS's self-signed certificate
+            - TrueNAS:
+                icon: truenas-scale.png
+                description: NAS for the media library and app volumes
+                href: https://${nas_host}
+                widget:
+                  type: truenas
+                  url: https://${nas_host}
+                  version: 2
+                  key: "{{HOMEPAGE_VAR_TRUENAS_API_KEY}}"
+                  enablePools: true
         - Observability:
             - Cluster Health:
                 icon: victoriametrics.png

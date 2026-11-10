@@ -25,6 +25,8 @@ spec:
       - kind: Secret
         name: network-substitutions
       - kind: Secret
+        name: storage-substitutions
+      - kind: Secret
         name: observability-substitutions
       - kind: Secret
         name: media-substitutions
