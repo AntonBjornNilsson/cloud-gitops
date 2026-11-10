@@ -100,3 +100,19 @@ spec:
                     name: grafana-service
                     port:
                       number: 3000
+---
+# Grafana's data on the NAS (truenas-csi), mounted by the CR's deployment override
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data-nas
+  namespace: grafana
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 5Gi
