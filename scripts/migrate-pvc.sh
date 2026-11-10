@@ -9,7 +9,8 @@
 #   2. flux suspend kustomization <the app's Kustomization, e.g. flux-services>
 #   3. this script: scales every Deployment/StatefulSet that mounts <old-pvc> to 0, copies the data
 #      with a temporary pod (old PVC mounted read-only) and compares checksums.
-#   4. git: point the app at the new PVC, push, flux resume, check the app.
+#   4. git: point the app at the new PVC, push, flux resume, then scale the workloads back up with
+#      the commands this script prints (Flux only restores replicas if the manifest sets them).
 #
 # The copy pod runs as the app's own uid/gid (pod securityContext runAsUser/runAsGroup, else fsGroup).
 # For apps that run as root and have files owned by several users (bundled databases), pass --root:
@@ -61,7 +62,11 @@ if ! $root && [[ -z "$uid" || -z "$gid" ]]; then
 fi
 
 echo "stopping: ${workloads[*]%% *}"
-for w in "${workloads[@]}"; do k scale "${w%% *}" --replicas=0 >/dev/null; done
+restore=()
+for w in "${workloads[@]}"; do
+  restore+=("kubectl --context=$ctx -n $ns scale ${w%% *} --replicas=$(k get "${w%% *}" -o jsonpath='{.spec.replicas}')")
+  k scale "${w%% *}" --replicas=0 >/dev/null
+done
 for w in "${workloads[@]}"; do
   sel=$(k get "${w%% *}" -o jsonpath='{.spec.selector.matchLabels}' | python3 -I -c 'import json,sys; print(",".join(f"{a}={b}" for a,b in json.load(sys.stdin).items()))')
   k wait --for=delete pod -l "$sel" --timeout=300s >/dev/null 2>&1 || true
@@ -126,8 +131,10 @@ k logs "$pod"
 phase=$(k get pod "$pod" -o jsonpath='{.status.phase}')
 if [[ "$phase" == Succeeded ]]; then
   k delete pod "$pod" --wait=false >/dev/null
-  echo "done: $old -> $new. Workloads stay at 0 until the switch to $new is pushed and Flux is resumed."
+  echo "done: $old -> $new. Workloads stay at 0: push the switch to $new, resume Flux, then run:"
+  printf '  %s\n' "${restore[@]}"
 else
-  echo "copy pod is $phase; workloads left at 0, pod $pod kept for inspection" >&2
+  echo "copy pod is $phase; pod $pod kept for inspection. Workloads are at 0; to restart them on $old:" >&2
+  printf '  %s\n' "${restore[@]}" >&2
   exit 1
 fi
