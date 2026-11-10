@@ -3,7 +3,7 @@ Scheduled health review of the cluster.
 1. Investigate the cluster health:
    - Flux Kustomizations, HelmReleases and sources that are not Ready
    - pods crashlooping, pending, OOMKilled or with many recent restarts; failed Jobs
-   - recent Warning events, degraded Longhorn volumes, Pending PVCs, expiring/failed certificates
+   - recent Warning events, degraded Longhorn volumes, truenas-csi controller/node errors, Pending PVCs, expiring/failed certificates
 2. Pick the single most important issue that can be fixed by changing manifests in this repo and make the
    smallest correct edit. Version bumps are the weekly `updates` run's job (Renovate finds them): don't make
    them here. For images with CRITICAL findings, check the open Renovate PRs below: if one bumps it, name it in

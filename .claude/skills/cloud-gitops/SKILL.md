@@ -33,7 +33,7 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
    | `flux-substitutions` (`flux-substitutions/core.yaml`) | shared: `domain`, `auth_domain`, `admin_email`, `github_repo`, node placement, `pod_cidr` |
    | `network-substitutions` (`flux-substitutions/network.yaml`) | MetalLB pools, LoadBalancer IPs, `k8s_api_host`, `tailscale_*` |
    | `observability-substitutions` (`flux-substitutions/observability.yaml`) | Grafana OIDC (`victoriametrics_*`), `ntfy_*`, `grafana_admin_*`, `homeassistant_token` |
-   | `storage-substitutions` (`flux-substitutions/storage.yaml`) | Longhorn S3 backups, backup-sync GitHub token |
+   | `storage-substitutions` (`flux-substitutions/storage.yaml`) | Longhorn S3 backups, backup-sync GitHub token, `nas_host`, `nas_client_network`, `truenas_api_key` |
    | `claude-agent-substitutions` (`flux-substitutions/claude-agent.yaml`) | GitHub App, `ghcr_repo`, Claude token |
    | `media-substitutions` (`flux-substitutions/media.yaml`) | `pia_*`, *arr API keys, dispatcharr, jellyfin, tracearr |
    | `apps-substitutions` (`flux-substitutions/apps.yaml`) | headlamp, open-webui, homepage, weather, vaultwarden, unifi |
@@ -207,7 +207,8 @@ Patterns that made root images work non-root (check the live pod's `/proc/1/stat
   `trivyOperator.scanJobPodTemplatePodSecurityContext`; check each chart for its pod/container keys.
 
 Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with the reason in a comment):
-- Node infrastructure created by operators (Cilium/kube-system, Longhorn, MetalLB): whole namespace. Longhorn also
+- Node infrastructure created by operators or CSI drivers (Cilium/kube-system, Longhorn, truenas-csi, MetalLB): whole
+  namespace. Longhorn also
   starts short-lived helper pods (hostPID kubelet detection), so its namespace is excluded from every policy it can hit.
 - gluetun VPN sidecars (dispatcharr-web, prowlarr, qbittorrent): root with NET_ADMIN; the rest of the pod runs as 1000.
 - Tailscale proxies (`ts-*`): tailscaled runs unprivileged with NET_ADMIN (ProxyClass `resources`) on the node's
@@ -255,6 +256,11 @@ quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{namespace="<ns>"
 - After an OOMKill, raise the limit from the data above; don't remove it.
 
 ## Storage & backups (Longhorn)
+
+Moving to the TrueNAS NAS: `components/storage/truenas-csi` (TrueNAS's official CSI driver, WebSocket API) provides
+`nas-iscsi` (RWO, zvol + ext4: databases/SQLite) and `nas-nfs` (RWX) StorageClasses, both `Retain`, each volume with a
+daily TrueNAS snapshot task kept 14 days; VolumeSnapshotClass `nas-snapshots` (snapshot-controller component).
+Longhorn stays the default StorageClass until every PVC has moved; new PVCs may already use the NAS classes.
 
 - Every Longhorn PV is `Retain`: deleting a PVC (a disabled service, a removed manifest, a Helm uninstall) leaves the
   volume and its data in Longhorn, detached; deleting data for good is a manual delete in Longhorn. Disabling a

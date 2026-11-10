@@ -43,7 +43,7 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
   seccomp) to make a new version start; if an update fails with permission errors under them, report it. Adding a
   missing securityContext or limits through chart values is fine, Helm hook Jobs included. Keep `policyType: ClusterPolicy`
   in that same file: CEL policies ignore `policyExclude`, so changing it would drop every exception.
-- Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs or Flux Kustomizations.
+- Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, TrueNAS datasets/zvols, Secrets, CRDs or Flux Kustomizations.
 
 ## Memory
 - You have persistent auto-memory in the memory directory (on the service's own volume, shared by every run,

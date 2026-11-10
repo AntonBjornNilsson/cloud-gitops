@@ -1,0 +1,36 @@
+# The node plugin runs with hostNetwork (not covered here); this is the controller.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: truenas-csi
+  namespace: truenas-csi
+spec:
+  endpointSelector: {}
+  ingress:
+    # Liveness probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # TrueNAS WebSocket API
+    - toCIDR:
+        - "${nas_host}/32"
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

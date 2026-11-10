@@ -30,3 +30,5 @@ resources:
   # Storage
   # - storage/harbor/system-harbor.yaml  # planned, see storage/harbor/README.md
   - storage/longhorn/system-longhorn.yaml
+  - storage/snapshot-controller/system-snapshot-controller.yaml
+  - storage/truenas-csi/system-truenas-csi.yaml

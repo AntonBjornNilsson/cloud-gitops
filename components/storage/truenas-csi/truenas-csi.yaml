@@ -1,0 +1,171 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: truenas-csi
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+# TrueNAS API key (user menu > API Keys on the NAS). The driver talks to the
+# versioned WebSocket API only, so it survives TrueNAS removing the REST API.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: truenas-csi-api
+  namespace: truenas-csi
+type: Opaque
+stringData:
+  api-key: "${truenas_api_key}"
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: truenas-csi
+  namespace: truenas-csi
+spec:
+  interval: 24h
+  url: https://raw.githubusercontent.com/truenas/truenas-csi/master/charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: truenas-csi
+  namespace: truenas-csi
+spec:
+  interval: 12h
+  chart:
+    spec:
+      chart: truenas-csi
+      version: "1.x"
+      sourceRef:
+        kind: HelmRepository
+        name: truenas-csi
+        namespace: truenas-csi
+      interval: 12h
+  timeout: 10m
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+  # The chart only has resource values for the driver containers; the CSI sidecars
+  # get theirs here.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: truenas-csi-controller
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: truenas-csi-controller
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: csi-provisioner
+                        resources:
+                          requests: {cpu: 5m, memory: 32Mi}
+                          limits: {cpu: 200m, memory: 128Mi}
+                      - name: csi-attacher
+                        resources:
+                          requests: {cpu: 5m, memory: 32Mi}
+                          limits: {cpu: 200m, memory: 128Mi}
+                      - name: csi-snapshotter
+                        resources:
+                          requests: {cpu: 5m, memory: 32Mi}
+                          limits: {cpu: 200m, memory: 128Mi}
+                      - name: csi-resizer
+                        resources:
+                          requests: {cpu: 5m, memory: 32Mi}
+                          limits: {cpu: 200m, memory: 128Mi}
+                      - name: liveness-probe
+                        resources:
+                          requests: {cpu: 1m, memory: 16Mi}
+                          limits: {cpu: 100m, memory: 64Mi}
+          - target:
+              kind: DaemonSet
+              name: truenas-csi-node
+            patch: |
+              apiVersion: apps/v1
+              kind: DaemonSet
+              metadata:
+                name: truenas-csi-node
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: csi-node-driver-registrar
+                        resources:
+                          requests: {cpu: 1m, memory: 16Mi}
+                          limits: {cpu: 100m, memory: 64Mi}
+                      - name: liveness-probe
+                        resources:
+                          requests: {cpu: 1m, memory: 16Mi}
+                          limits: {cpu: 100m, memory: 64Mi}
+  values:
+    truenas:
+      url: "wss://${nas_host}/api/current"
+      defaultPool: tank
+      nfsServer: "${nas_host}"
+      iscsiPortal: "${nas_host}:3260"
+      # TrueNAS's own self-signed certificate
+      insecureSkipTLS: true
+      existingSecret: truenas-csi-api
+      existingSecretKey: api-key
+    kubeletDir: /var/lib/k0s/kubelet
+    controller:
+      resources:
+        requests: {cpu: 10m, memory: 64Mi}
+        limits: {cpu: 500m, memory: 256Mi}
+    node:
+      resources:
+        requests: {cpu: 10m, memory: 64Mi}
+        limits: {cpu: 500m, memory: 256Mi}
+    # Not default yet: Longhorn stays the default StorageClass until every PVC has moved.
+    # Retain like Longhorn: a deleted PVC leaves its dataset/zvol on the NAS.
+    # Each volume gets a daily TrueNAS snapshot task (local undo; offsite is separate).
+    storageClasses:
+      # RWO block volumes (zvol over iSCSI, ext4): safe for SQLite/Postgres
+      - name: nas-iscsi
+        reclaimPolicy: Retain
+        allowVolumeExpansion: true
+        volumeBindingMode: Immediate
+        parameters:
+          protocol: iscsi
+          datasetPath: k8s/iscsi
+          fsType: ext4
+          compression: LZ4
+          sparse: "true"
+          snapshot.schedule: "0 1 * * *"
+          snapshot.retention: "14"
+          snapshot.retentionUnit: DAY
+          snapshot.naming: "auto-%Y-%m-%d_%H-%M"
+      # RWX shared filesystems (NFS dataset)
+      - name: nas-nfs
+        reclaimPolicy: Retain
+        allowVolumeExpansion: true
+        volumeBindingMode: Immediate
+        mountOptions:
+          - nfsvers=4.2
+          - hard
+          - noatime
+        parameters:
+          protocol: nfs
+          datasetPath: k8s/nfs
+          compression: LZ4
+          nfs.networks: "${nas_client_network}"
+          # no_root_squash, so a pod's fsGroup can chown the volume root
+          nfs.rootSquash: "false"
+          snapshot.schedule: "0 1 * * *"
+          snapshot.retention: "14"
+          snapshot.retentionUnit: DAY
+          snapshot.naming: "auto-%Y-%m-%d_%H-%M"
+    volumeSnapshotClass:
+      enabled: true
+      name: nas-snapshots
+      deletionPolicy: Delete
