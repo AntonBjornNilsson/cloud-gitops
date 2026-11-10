@@ -16,11 +16,11 @@ spec:
   # until Longhorn is removed, then drop `storage` and delete that PVC.
   storageDataPath: /victoria-traces-data
   volumes:
-    - name: data-nas
+    - name: data
       persistentVolumeClaim:
         claimName: vtsingle-traces-nas
   volumeMounts:
-    - name: data-nas
+    - name: data
       mountPath: /victoria-traces-data
   storage:
     accessModes:

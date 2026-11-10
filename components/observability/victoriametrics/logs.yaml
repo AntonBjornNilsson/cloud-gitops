@@ -15,11 +15,11 @@ spec:
   # until Longhorn is removed, then drop `storage` and delete that PVC.
   storageDataPath: /victoria-logs-data
   volumes:
-    - name: data-nas
+    - name: data
       persistentVolumeClaim:
         claimName: vlsingle-logs-nas
   volumeMounts:
-    - name: data-nas
+    - name: data
       mountPath: /victoria-logs-data
   storage:
     accessModes:
