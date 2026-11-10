@@ -6,6 +6,8 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Old Longhorn volume, unused since the move to adguard-home-data-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -20,7 +22,7 @@ spec:
     requests:
       storage: 5Gi
 ---
-# On the NAS (truenas-csi); replaces adguard-home-data (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -206,7 +208,7 @@ spec:
           emptyDir: {}
         - name: data
           persistentVolumeClaim:
-            claimName: adguard-home-data
+            claimName: adguard-home-data-nas
 ---
 # LAN DNS on a fixed IP: hand ${adguard_lb_ip} out as DNS server via DHCP.
 # Local traffic policy keeps the client IPs (query log, per-client rate limit).
