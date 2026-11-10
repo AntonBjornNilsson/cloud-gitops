@@ -19,6 +19,8 @@ stringData:
   # Plain secret of the Authelia "vaultwarden" OIDC client
   SSO_CLIENT_SECRET: "${vaultwarden_sso_client_secret}"
 ---
+# Old Longhorn volume, unused since the move to vaultwarden-data-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -36,7 +38,7 @@ spec:
     requests:
       storage: 2Gi
 ---
-# On the NAS (truenas-csi); replaces vaultwarden-data (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -157,7 +159,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: vaultwarden-data
+            claimName: vaultwarden-data-nas
 ---
 apiVersion: v1
 kind: Service

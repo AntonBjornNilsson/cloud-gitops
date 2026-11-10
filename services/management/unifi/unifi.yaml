@@ -8,6 +8,8 @@ metadata:
 # UniFi OS Server, community image built from Ubiquiti's installer
 # (https://github.com/lemker/unifi-os-server). Everything (Network app, MongoDB,
 # Postgres, RabbitMQ, nginx) runs as systemd services in one container.
+# Old Longhorn volume, unused since the move to unifi-os-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -22,7 +24,7 @@ spec:
     requests:
       storage: 20Gi
 ---
-# On the NAS (truenas-csi); replaces unifi-os (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -157,7 +159,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: unifi-os
+            claimName: unifi-os-nas
         - name: run
           emptyDir:
             medium: Memory

@@ -5,6 +5,8 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Old Longhorn volume, unused since the move to homeassistant-config-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -19,7 +21,7 @@ spec:
     requests:
       storage: 10Gi
 ---
-# On the NAS (truenas-csi); replaces homeassistant-config (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -150,7 +152,7 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: homeassistant-config
+            claimName: homeassistant-config-nas
         - name: configuration
           configMap:
             name: homeassistant-config
