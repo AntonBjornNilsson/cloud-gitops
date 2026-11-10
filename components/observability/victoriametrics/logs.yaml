@@ -57,3 +57,19 @@ spec:
     limits:
       cpu: 500m
       memory: 512Mi
+---
+# VictoriaLogs data on the NAS (truenas-csi), mounted at storageDataPath
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vlsingle-logs-nas
+  namespace: victoriametrics
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 20Gi
