@@ -5,6 +5,8 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Old Longhorn volume, unused since the move to jellyseerr-config-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -19,7 +21,7 @@ spec:
     requests:
       storage: 5Gi
 ---
-# On the NAS (truenas-csi); replaces jellyseerr-config (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -109,7 +111,7 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: jellyseerr-config
+            claimName: jellyseerr-config-nas
 ---
 apiVersion: v1
 kind: Service

@@ -5,6 +5,8 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Old Longhorn volume, unused since the move to tracearr-db-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -19,7 +21,7 @@ spec:
     requests:
       storage: 10Gi
 ---
-# On the NAS (truenas-csi); replaces tracearr-db (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -36,6 +38,8 @@ spec:
       storage: 10Gi
 ---
 # Poster cache and Tracearr's own database dumps
+# Old Longhorn volume, unused since the move to tracearr-data-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -48,7 +52,7 @@ spec:
     requests:
       storage: 5Gi
 ---
-# On the NAS (truenas-csi); replaces tracearr-data (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -65,6 +69,8 @@ spec:
       storage: 5Gi
 ---
 # Job queues; upstream runs Redis with AOF persistence
+# Old Longhorn volume, unused since the move to tracearr-redis-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -77,7 +83,7 @@ spec:
     requests:
       storage: 1Gi
 ---
-# On the NAS (truenas-csi); replaces tracearr-redis (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -183,7 +189,7 @@ spec:
       volumes:
         - name: db-data
           persistentVolumeClaim:
-            claimName: tracearr-db
+            claimName: tracearr-db-nas
         # Upstream runs with shm_size 512mb; the container default (64Mi) breaks large imports
         - name: shm
           emptyDir:
@@ -253,7 +259,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: tracearr-redis
+            claimName: tracearr-redis-nas
 ---
 apiVersion: v1
 kind: Service
@@ -383,7 +389,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: tracearr-data
+            claimName: tracearr-data-nas
 ---
 apiVersion: v1
 kind: Service

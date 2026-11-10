@@ -9,6 +9,8 @@
 # network, same node) forwards the matter-server Service to it. Only Home
 # Assistant may reach that proxy. HA connects to
 # ws://matter-server.homeassistant.svc.cluster.local:5580/ws
+# Old Longhorn volume, unused since the move to matter-server-data-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -24,7 +26,7 @@ spec:
     requests:
       storage: 1Gi
 ---
-# On the NAS (truenas-csi); replaces matter-server-data (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -136,7 +138,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: matter-server-data
+            claimName: matter-server-data-nas
         - name: socket
           hostPath:
             path: /run/matter-server

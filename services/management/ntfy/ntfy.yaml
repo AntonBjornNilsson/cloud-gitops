@@ -53,8 +53,8 @@ stringData:
     auth-tokens:
       - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"
 ---
-# Old Longhorn volume, unused since the move to ntfy-data-nas; kept as a fallback
-# until the NAS has offsite backups, then delete it (PVC + Longhorn volume).
+# Old Longhorn volume, unused since the move to ntfy-data-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

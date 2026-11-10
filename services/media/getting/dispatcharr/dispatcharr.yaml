@@ -6,6 +6,8 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Old Longhorn volume, unused since the move to dispatcharr-data-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -22,7 +24,7 @@ spec:
     requests:
       storage: 10Gi
 ---
-# On the NAS (truenas-csi); replaces dispatcharr-data (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -38,6 +40,8 @@ spec:
     requests:
       storage: 10Gi
 ---
+# Old Longhorn volume, unused since the move to dispatcharr-db-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -54,7 +58,7 @@ spec:
     requests:
       storage: 5Gi
 ---
-# On the NAS (truenas-csi); replaces dispatcharr-db (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -156,7 +160,7 @@ spec:
       volumes:
         - name: db-data
           persistentVolumeClaim:
-            claimName: dispatcharr-db
+            claimName: dispatcharr-db-nas
 ---
 apiVersion: v1
 kind: Service
@@ -432,7 +436,7 @@ spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: dispatcharr-data
+            claimName: dispatcharr-data-nas
         - name: tun
           hostPath:
             path: /dev/net/tun
