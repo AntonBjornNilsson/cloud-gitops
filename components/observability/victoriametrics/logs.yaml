@@ -10,9 +10,9 @@ spec:
   # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
   useStrictSecurity: true
   retentionPeriod: "14d"
-  # Data on the NAS PVC vlsingle-logs-nas. With storageDataPath set the operator ignores
-  # `storage`; the PVC it made from it (vlsingle-logs, Longhorn) is the rollback
-  # until Longhorn is removed, then drop `storage` and delete that PVC.
+  # Data on the NAS PVC vlsingle-logs-nas (the operator requires the volume name "data"
+  # and no `storage`). Its old Longhorn volume (vlsingle-logs, Retain) is the rollback
+  # until Longhorn is removed.
   storageDataPath: /victoria-logs-data
   volumes:
     - name: data
@@ -21,12 +21,6 @@ spec:
   volumeMounts:
     - name: data
       mountPath: /victoria-logs-data
-  storage:
-    accessModes:
-      - ReadWriteOnce
-    resources:
-      requests:
-        storage: 20Gi
   resources:
     requests:
       cpu: 50m
