@@ -11,6 +11,17 @@ spec:
   # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
   useStrictSecurity: true
   retentionPeriod: "7d"
+  # Data on the NAS PVC vtsingle-traces-nas. With storageDataPath set the operator ignores
+  # `storage`; the PVC it made from it (vtsingle-traces, Longhorn) is the rollback
+  # until Longhorn is removed, then drop `storage` and delete that PVC.
+  storageDataPath: /victoria-traces-data
+  volumes:
+    - name: data-nas
+      persistentVolumeClaim:
+        claimName: vtsingle-traces-nas
+  volumeMounts:
+    - name: data-nas
+      mountPath: /victoria-traces-data
   storage:
     accessModes:
       - ReadWriteOnce

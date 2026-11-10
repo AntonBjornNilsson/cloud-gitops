@@ -84,6 +84,17 @@ spec:
         # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
         useStrictSecurity: true
         retentionPeriod: "1"
+        # Data on the NAS PVC vmsingle-data-nas. With storageDataPath set the operator ignores
+        # `storage`; the PVC it made from it (vmsingle-vm-k8s-stack, Longhorn) is the rollback
+        # until Longhorn is removed, then drop `storage` and delete that PVC.
+        storageDataPath: /victoria-metrics-data
+        volumes:
+          - name: data-nas
+            persistentVolumeClaim:
+              claimName: vmsingle-data-nas
+        volumeMounts:
+          - name: data-nas
+            mountPath: /victoria-metrics-data
         # Label the default service so Headlamp's Prometheus plugin
         # auto-detects it and queries it through the API server proxy.
         serviceSpec:
