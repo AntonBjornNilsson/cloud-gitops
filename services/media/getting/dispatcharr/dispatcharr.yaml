@@ -22,6 +22,22 @@ spec:
     requests:
       storage: 10Gi
 ---
+# On the NAS (truenas-csi); replaces dispatcharr-data (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dispatcharr-data-nas
+  namespace: dispatcharr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -34,6 +50,22 @@ spec:
     - ReadWriteMany
   storageClassName: longhorn
   volumeName: pvc-b7d8b620-c888-4d74-be8d-eb1234c6dc7a
+  resources:
+    requests:
+      storage: 5Gi
+---
+# On the NAS (truenas-csi); replaces dispatcharr-db (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: dispatcharr-db-nas
+  namespace: dispatcharr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
   resources:
     requests:
       storage: 5Gi

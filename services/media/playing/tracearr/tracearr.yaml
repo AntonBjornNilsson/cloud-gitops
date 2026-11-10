@@ -19,6 +19,22 @@ spec:
     requests:
       storage: 10Gi
 ---
+# On the NAS (truenas-csi); replaces tracearr-db (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-db-nas
+  namespace: tracearr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 10Gi
+---
 # Poster cache and Tracearr's own database dumps
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -32,6 +48,22 @@ spec:
     requests:
       storage: 5Gi
 ---
+# On the NAS (truenas-csi); replaces tracearr-data (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-data-nas
+  namespace: tracearr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 5Gi
+---
 # Job queues; upstream runs Redis with AOF persistence
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -41,6 +73,22 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# On the NAS (truenas-csi); replaces tracearr-redis (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: tracearr-redis-nas
+  namespace: tracearr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
   resources:
     requests:
       storage: 1Gi

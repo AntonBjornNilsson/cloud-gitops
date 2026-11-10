@@ -24,6 +24,22 @@ spec:
     requests:
       storage: 1Gi
 ---
+# On the NAS (truenas-csi); replaces matter-server-data (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: matter-server-data-nas
+  namespace: homeassistant
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
