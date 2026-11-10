@@ -53,6 +53,8 @@ stringData:
     auth-tokens:
       - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"
 ---
+# Old Longhorn volume, unused since the move to ntfy-data-nas; kept as a fallback
+# until the NAS has offsite backups, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -70,7 +72,7 @@ spec:
     requests:
       storage: 5Gi
 ---
-# On the NAS (truenas-csi): replaces the Longhorn ntfy-data above
+# ntfy's data, on the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -165,7 +167,7 @@ spec:
             secretName: ntfy-config
         - name: data
           persistentVolumeClaim:
-            claimName: ntfy-data
+            claimName: ntfy-data-nas
 ---
 apiVersion: v1
 kind: Service
