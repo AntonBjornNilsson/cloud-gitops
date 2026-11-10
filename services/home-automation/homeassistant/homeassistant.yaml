@@ -19,6 +19,22 @@ spec:
     requests:
       storage: 10Gi
 ---
+# On the NAS (truenas-csi); replaces homeassistant-config (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: homeassistant-config-nas
+  namespace: homeassistant
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

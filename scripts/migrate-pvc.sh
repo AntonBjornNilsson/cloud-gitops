@@ -76,12 +76,12 @@ if $root; then
   sec='securityContext: {seccompProfile: {type: RuntimeDefault}}'
   csec='securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"], add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "FSETID"]}}'
   untar='tar xpf - --numeric-owner -C /new'
-  meta='%n %u %g %a'
+  meta='%F %u %g %a %N'
 else
   sec="securityContext: {runAsNonRoot: true, runAsUser: $uid, runAsGroup: $gid, fsGroup: $gid, fsGroupChangePolicy: OnRootMismatch, seccompProfile: {type: RuntimeDefault}}"
   csec='securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: ["ALL"]}}'
   untar='tar xpf - -o -C /new'
-  meta='%n %a'
+  meta='%F %a %N'
 fi
 
 k delete pod "$pod" --ignore-not-found >/dev/null

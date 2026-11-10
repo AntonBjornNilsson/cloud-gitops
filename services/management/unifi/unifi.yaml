@@ -22,6 +22,22 @@ spec:
     requests:
       storage: 20Gi
 ---
+# On the NAS (truenas-csi); replaces unifi-os (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: unifi-os-nas
+  namespace: unifi
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 20Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
