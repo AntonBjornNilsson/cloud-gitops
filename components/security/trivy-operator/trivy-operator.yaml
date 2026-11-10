@@ -104,7 +104,7 @@ spec:
           memory: 1Gi
       # Vulnerability DB + Java DB + layer cache. Cache only: not backed up,
       # losing it just means a re-download.
-      storageClassName: longhorn
+      storageClassName: nas-iscsi
       storageSize: 5Gi
       server:
         podSecurityContext:
