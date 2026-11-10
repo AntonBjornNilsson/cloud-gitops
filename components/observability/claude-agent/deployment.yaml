@@ -29,6 +29,22 @@ spec:
     requests:
       storage: 2Gi
 ---
+# On the NAS (truenas-csi); replaces claude-agent-data (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claude-agent-data-nas
+  namespace: claude-agent
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 2Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
