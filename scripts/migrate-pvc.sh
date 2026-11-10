@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copy a PVC's data into a new PVC (Longhorn -> NAS migration), with the app stopped.
 #
-#   scripts/migrate-pvc.sh --context=<admin> <namespace> <old-pvc> <new-pvc> [--root [--pod-prefix=<name>]]
+#   scripts/migrate-pvc.sh --context=<admin> <namespace> <old-pvc> <new-pvc> [--root [--pod-prefix=<name>]] [--verify-only]
 #
 # Procedure per app (the old PVC is never modified, it stays as the rollback):
 #   1. git: add the new PVC (e.g. <old>-nas, storageClassName nas-iscsi) next to the old one, push,
@@ -17,17 +17,19 @@
 # the pod then runs as root and keeps owners and modes. PSS restricted only lets root pods through
 # under an existing Kyverno name-prefix exception, so the pod is named <pod-prefix>-pvc-copy;
 # --pod-prefix defaults to the namespace (homeassistant*, unifi*), dispatcharr needs dispatcharr-web.
+# --verify-only skips the copy and only compares an existing copy with the old PVC.
 set -euo pipefail
 
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 
-ctx="" root=false prefix=""
+ctx="" root=false prefix="" verify=false
 args=()
 for a in "$@"; do
   case "$a" in
     --context=*) ctx="${a#*=}" ;;
     --root) root=true ;;
     --pod-prefix=*) prefix="${a#*=}" ;;
+    --verify-only) verify=true ;;
     -h|--help) usage ;;
     *) args+=("$a") ;;
   esac
@@ -101,12 +103,14 @@ spec:
         - |
           set -e
           umask 0
-          if [ -n "\$(ls -A /new | grep -vx lost+found)" ]; then echo "target is not empty" >&2; exit 1; fi
-          cd /old && tar cf - --exclude=./lost+found . | $untar
+          if [ "$verify" != true ]; then
+            if [ -n "\$(ls -A /new | grep -vx lost+found)" ]; then echo "target is not empty" >&2; exit 1; fi
+            cd /old && tar cf - --exclude=./lost+found . | $untar
+          fi
           for d in old new; do
             cd /\$d
-            find . -path ./lost+found -prune -o -type f -exec sha256sum {} + | sort -k2 > /tmp/\$d.sum
-            find . -path ./lost+found -prune -o -exec stat -c '$meta' {} + | sort > /tmp/\$d.meta
+            find . -path ./lost+found -prune -o -type f -print0 | xargs -0 -n 100 sha256sum | sort -k2 > /tmp/\$d.sum
+            find . -path ./lost+found -prune -o -print0 | xargs -0 -n 100 stat -c '$meta' | sort > /tmp/\$d.meta
           done
           diff /tmp/old.sum /tmp/new.sum
           diff /tmp/old.meta /tmp/new.meta || echo "(owner/mode differences above)"
@@ -126,7 +130,11 @@ spec:
       persistentVolumeClaim: {claimName: $new}
 EOF
 
-k wait --for=jsonpath='{.status.phase}'=Succeeded "pod/$pod" --timeout=3600s >/dev/null || true
+for _ in $(seq 1 720); do
+  phase=$(k get pod "$pod" -o jsonpath='{.status.phase}')
+  [[ "$phase" == Succeeded || "$phase" == Failed ]] && break
+  sleep 5
+done
 k logs "$pod"
 phase=$(k get pod "$pod" -o jsonpath='{.status.phase}')
 if [[ "$phase" == Succeeded ]]; then
