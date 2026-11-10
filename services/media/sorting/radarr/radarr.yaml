@@ -5,6 +5,8 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Old Longhorn volume, unused since the move to radarr-config-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -19,7 +21,7 @@ spec:
     requests:
       storage: 5Gi
 ---
-# On the NAS (truenas-csi); replaces radarr-config (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -145,7 +147,7 @@ spec:
           emptyDir: {}
         - name: config
           persistentVolumeClaim:
-            claimName: radarr-config
+            claimName: radarr-config-nas
         - name: data
           hostPath:
             path: /mnt/hdd/Shared

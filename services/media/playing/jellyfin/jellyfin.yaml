@@ -8,6 +8,8 @@ metadata:
 ---
 # Config on a block (RWO) volume: SQLite locking over the RWX/NFS share made every
 # database read wait behind library-scan writes (~30s per request).
+# Old Longhorn volume, unused since the move to jellyfin-config-local-nas; kept as the rollback
+# until Longhorn is removed, then delete it (PVC + Longhorn volume).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -24,7 +26,7 @@ spec:
       # Jellyfin refuses to start with under 2GiB free in /config/data
       storage: 10Gi
 ---
-# On the NAS (truenas-csi); replaces jellyfin-config-local (Longhorn)
+# On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -233,7 +235,7 @@ spec:
     persistence:
       config:
         enabled: true
-        existingClaim: jellyfin-config-local
+        existingClaim: jellyfin-config-local-nas
       media:
         enabled: true
         type: hostPath
