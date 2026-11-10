@@ -7,6 +7,9 @@ metadata:
   labels:
     dashboards: "grafana"
 spec:
+  # The operator still creates grafana-pvc (Longhorn), unused since the move to
+  # grafana-data-nas: kept as the rollback until Longhorn is removed, then drop this
+  # block and delete the PVC + Longhorn volume.
   persistentVolumeClaim:
     metadata:
       labels:
@@ -17,7 +20,7 @@ spec:
       resources:
         requests:
           storage: 5Gi
-  # The operator only creates the PVC; mount it in place of the default
+  # Mount the NAS PVC in place of the default
   # emptyDir "grafana-data" volume. Recreate avoids RWO multi-attach on
   # rollout, fsGroup matches the operator's runAsGroup so Grafana can write.
   deployment:
@@ -40,7 +43,7 @@ spec:
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
-                claimName: grafana-pvc
+                claimName: grafana-data-nas
   preferences:
     homeDashboardUid: homelab-overview
   config:
