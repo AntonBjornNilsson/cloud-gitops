@@ -182,14 +182,11 @@ spec:
             - name: second-factors
               mountPath: /etc/authelia-2fa
               readOnly: true
+    # The NAS PVC above. The chart's old PVC "authelia" (Longhorn) was kept by Helm
+    # (resource-policy keep) as the rollback; delete it with Longhorn.
     persistence:
       enabled: true
-      storageClass: longhorn
-      size: 1Gi
-      annotations:
-        backup.longhorn.io/enabled: "true"
-        # In the rendered chart, so Helm keeps this PVC when the chart stops creating it
-        helm.sh/resource-policy: keep
+      existingClaim: authelia-data-nas
     secret:
       additionalSecrets:
         authelia-jwks:
