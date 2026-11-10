@@ -6,6 +6,22 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
+# Authelia's data on the NAS (truenas-csi)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authelia-data-nas
+  namespace: authelia
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
@@ -172,6 +188,8 @@ spec:
       size: 1Gi
       annotations:
         backup.longhorn.io/enabled: "true"
+        # In the rendered chart, so Helm keeps this PVC when the chart stops creating it
+        helm.sh/resource-policy: keep
     secret:
       additionalSecrets:
         authelia-jwks:
