@@ -128,7 +128,6 @@ spec:
               set_pref 'WebUI\LocalHostAuth' false
               set_pref 'WebUI\AuthSubnetWhitelistEnabled' true
               set_pref 'WebUI\AuthSubnetWhitelist' '127.0.0.1/32, ${pod_cidr}'
-              chown -R 1000:1000 /config
           resources:
             requests:
               cpu: 10m
