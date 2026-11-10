@@ -19,6 +19,22 @@ spec:
     requests:
       storage: 5Gi
 ---
+# On the NAS (truenas-csi); replaces bazarr-config (Longhorn)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bazarr-config-nas
+  namespace: bazarr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 5Gi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
