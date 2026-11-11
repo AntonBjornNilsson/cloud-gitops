@@ -45,7 +45,7 @@ spec:
       disallow-capabilities:
         any:
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb]
+              namespaces: [kube-system, truenas-csi, metallb]
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
           # (mounted by the tailscale-proxy-tun policy)
           - resources:
@@ -65,7 +65,7 @@ spec:
         any:
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb]
+              namespaces: [kube-system, truenas-csi, metallb]
           - resources:
               namespaces: [victoriametrics]
               names: ["victoriametrics-prometheus-node-exporter*"]
@@ -80,7 +80,7 @@ spec:
               namespaces: [registry-mirror]
               names: ["registry-mirror*"]
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi]
+              namespaces: [kube-system, truenas-csi]
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
           # (mounted by the tailscale-proxy-tun policy)
           - resources:
@@ -105,14 +105,14 @@ spec:
         any:
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb]
+              namespaces: [kube-system, truenas-csi, metallb]
           - resources:
               namespaces: [victoriametrics]
               names: ["victoriametrics-prometheus-node-exporter*"]
       disallow-privileged-containers:
         any:
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi]
+              namespaces: [kube-system, truenas-csi]
           # Sets kernel sysctls on every node
           - resources:
               namespaces: [node-sysctls]
@@ -143,7 +143,7 @@ spec:
         any:
           # Node infrastructure created by operators (CNI, CSI, BGP/L2, sysctls)
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb, node-sysctls]
+              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
               namespaces: [tailscale]
               names: ["ts-*"]
@@ -172,7 +172,7 @@ spec:
       disallow-privilege-escalation:
         any:
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb, node-sysctls]
+              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
               namespaces: [tailscale]
               names: ["ts-*"]
@@ -190,7 +190,7 @@ spec:
               namespaces: [registry-mirror]
               names: ["registry-mirror*"]
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi]
+              namespaces: [kube-system, truenas-csi]
           # Explicit runAsUser 0: SMART reads, node log reader, chown init, gluetun
           - resources:
               namespaces: [victoriametrics]
@@ -211,7 +211,7 @@ spec:
               namespaces: [registry-mirror]
               names: ["registry-mirror*"]
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb, node-sysctls]
+              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
               namespaces: [tailscale]
               names: ["ts-*"]
@@ -240,7 +240,7 @@ spec:
       restrict-seccomp-strict:
         any:
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi, metallb, node-sysctls]
+              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
               namespaces: [tailscale]
               names: ["ts-*"]
@@ -255,7 +255,7 @@ spec:
               names: ["registry-mirror*"]
           # hostPath: same workloads as disallow-host-path above
           - resources:
-              namespaces: [kube-system, longhorn-system, truenas-csi]
+              namespaces: [kube-system, truenas-csi]
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
           # (mounted by the tailscale-proxy-tun policy)
           - resources:
