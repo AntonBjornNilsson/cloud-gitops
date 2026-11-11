@@ -103,6 +103,10 @@ Conventions:
   claim `media` at `/data`. No node pinning needed.
 - Pin to a node only via substitution (`kubernetes.io/hostname: ${media_node}`, `${gpu_node}`), never a literal hostname.
 - Single-replica for RWO PVCs (multi-attach is impossible).
+- **Every new service or component with a web UI gets a Homepage tile**, in the same change:
+  `services/management/homepage/homepage.yaml` (`services:` list), in the matching group, with `icon`,
+  `description` and `href: https://<app>.${domain}`, plus a `widget` if Homepage has one for the app (its API keys
+  go in `apps-substitutions` as `HOMEPAGE_VAR_*` env). Remove the tile when the service is removed.
 
 ## Ingress, TLS and auth (mostly automatic via Kyverno)
 
