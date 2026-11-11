@@ -5,7 +5,6 @@ resources:
   - backup-jobs.yaml
   - backup-credentials.yaml
   - backup-sync.yaml
-  - restore/
 
 configMapGenerator:
   - name: longhorn-backup-sync-script
