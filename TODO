@@ -53,3 +53,14 @@ Resilience review (2026-10-10)
  - kyverno + longhorn webhooks failurePolicy Fail cover flux-system/longhorn-system/traefik: review exclusions for recovery after full outage
  - Longhorn disk overcommit on workers (200%), check headroom
  - not backed up (re-creatable): logs, traces, jellyfin cache, ollama, trivy
+
+Later (2026-11-11)
+ - Move away from k0s: vanilla kubeadm, Talos Linux (immutable OS, upgrades via API) or RKE2. Plus automated stepping of the Kubernetes version (system-upgrade-controller for RKE2/k3s, tuppr or talosctl for Talos; k0s has autopilot today). Run pluto/kubent first to catch removed APIs
+ - Kured + automated OS updates on nodes (unattended-upgrades, kured drains and reboots one node at a time). Not needed on Talos: OS image upgrades replace it
+ - SOPS + age: understand it before implementing. Flux decrypts natively (decryption.provider: sops on the Kustomization), age private key as a Secret in flux-system, .sops.yaml with creation rules, encrypt only data/stringData
+ - OpenBao (open Vault fork) on an external node + External Secrets Operator in the cluster. Must not depend on the cluster to come back up (unseal, storage)
+ - Dead-man's switch on an external node: Healthchecks or Gatus. Route the Watchdog alert to it, alert via a path that does not go through the cluster
+ - Tetragon (eBPF runtime detection/enforcement, from the Cilium project). Not the same as NeuVector: NeuVector is a full platform (scanning, compliance, admission, L7 firewall, runtime, UI) and overlaps Trivy/Kyverno/Cilium; Tetragon only adds the runtime part. Falco is the closer equivalent
+ - Security framework: Kubescape operator (NSA/CIS/MITRE scans, Headlamp plugin) or kube-bench for CIS node checks. Decide what to keep from trivy-operator
+ - Container image storage: Harbor proxy cache for all upstream registries, Spegel (P2P between nodes) or Zot (light OCI registry) instead of Dragonfly
+ - NetBox (+ netbox-operator for IP claims from CRDs) as source of truth, plus iPXE: netboot.xyz or Matchbox/Tinkerbell for node installs
