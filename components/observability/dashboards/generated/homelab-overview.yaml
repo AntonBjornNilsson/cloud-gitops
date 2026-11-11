@@ -1412,7 +1412,7 @@ spec:
              },
              "fieldConfig": {
                 "defaults": {
-                   "unit": "percentunit"
+                   "unit": "bytes"
                 }
              },
              "gridPos": {
@@ -1443,11 +1443,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes",
-                   "legendFormat": "{{node}}"
+                   "expr": "max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)",
+                   "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}"
                 }
              ],
-             "title": "Longhorn storage per node",
+             "title": "PVC used",
              "type": "timeseries"
           },
           {
@@ -1496,74 +1496,6 @@ spec:
              "type": "timeseries"
           },
           {
-             "datasource": {
-                "type": "datasource",
-                "uid": "-- Mixed --"
-             },
-             "fieldConfig": {
-                "defaults": {
-                   "mappings": [
-                      {
-                         "options": {
-                            "0": {
-                               "text": "unknown"
-                            },
-                            "2": {
-                               "color": "orange",
-                               "text": "degraded"
-                            },
-                            "3": {
-                               "color": "red",
-                               "text": "faulted"
-                            }
-                         },
-                         "type": "value"
-                      }
-                   ]
-                }
-             },
-             "gridPos": {
-                "h": 6,
-                "w": 24,
-                "x": 0,
-                "y": 100
-             },
-             "id": 37,
-             "pluginVersion": "v11.0.0",
-             "targets": [
-                {
-                   "datasource": {
-                      "type": "prometheus",
-                      "uid": "VictoriaMetrics"
-                   },
-                   "expr": "longhorn_volume_robustness != 1",
-                   "format": "table",
-                   "instant": true
-                }
-             ],
-             "title": "Unhealthy Longhorn volumes",
-             "transformations": [
-                {
-                   "id": "organize",
-                   "options": {
-                      "excludeByName": {
-                         "Time": true,
-                         "__name__": true,
-                         "cluster": true,
-                         "container": true,
-                         "endpoint": true,
-                         "instance": true,
-                         "job": true,
-                         "namespace": true,
-                         "pod": true,
-                         "service": true
-                      }
-                   }
-                }
-             ],
-             "type": "table"
-          },
-          {
              "collapsed": false,
              "gridPos": {
                 "h": 1,
@@ -1571,7 +1503,7 @@ spec:
                 "x": 0,
                 "y": 106
              },
-             "id": 38,
+             "id": 37,
              "title": "Logs",
              "type": "row"
           },
@@ -1586,7 +1518,7 @@ spec:
                 "x": 0,
                 "y": 107
              },
-             "id": 39,
+             "id": 38,
              "options": {
                 "legend": {
                    "displayMode": "table",
@@ -1621,7 +1553,7 @@ spec:
                 "x": 0,
                 "y": 115
              },
-             "id": 40,
+             "id": 39,
              "options": {
                 "showTime": true,
                 "wrapLogMessage": true

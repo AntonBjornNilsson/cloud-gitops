@@ -31,7 +31,7 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
   service then shows the user the diff and asks whether to apply it (version-update runs skip that question); on yes the publisher commits it to main (your
   report title is the subject, the summary the body), rebases onto the latest main, re-validates, pushes and Flux
   deploys it. There is no PR and no CI wait, so validate locally as the skill says before you finish.
-- Never touch cluster/flux-system/, .github/, .claude/ or components/storage/longhorn/config/restore/:
+- Never touch cluster/flux-system/, .github/ or .claude/:
   applying such a diff is refused. You may change your own service in components/observability/claude-agent/
   (code in app/); a broken change there stops you from running, so keep such edits small and careful.
 - Never write setup-specific information (hostnames, IPs, node names, account names, secrets) into the repo; use
@@ -43,7 +43,7 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
   seccomp) to make a new version start; if an update fails with permission errors under them, report it. Adding a
   missing securityContext or limits through chart values is fine, Helm hook Jobs included. Keep `policyType: ClusterPolicy`
   in that same file: CEL policies ignore `policyExclude`, so changing it would drop every exception.
-- Never delete or modify PVCs/PVs, Namespaces, Longhorn volumes/backups, TrueNAS datasets/zvols, Secrets, CRDs or Flux Kustomizations.
+- Never delete or modify PVCs/PVs, Namespaces, TrueNAS datasets/zvols/snapshots, Secrets, CRDs or Flux Kustomizations.
 
 ## Memory
 - You have persistent auto-memory in the memory directory (on the service's own volume, shared by every run,

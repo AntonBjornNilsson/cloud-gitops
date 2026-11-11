@@ -310,7 +310,7 @@ const SUGGESTIONS = [
   'Why did any pod restart in the last 24 hours? Fix it if it is a manifest problem.',
   'Check certificate expiry across the cluster and summarise.',
   'Which HelmReleases are behind their latest chart version?',
-  'Explain what the Longhorn backup setup does and whether recent backups succeeded.',
+  'Check the TrueNAS CSI driver and the NAS volumes for problems.',
 ];
 
 function composerHtml({ placeholder, models = true, health = true }) {

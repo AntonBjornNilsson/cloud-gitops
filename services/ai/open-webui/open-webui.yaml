@@ -116,8 +116,7 @@ spec:
           cpu: 500m
           memory: 512Mi
     persistence:
-      labels:
-        backup.longhorn.io/enabled: "true"
+      storageClass: nas-iscsi
 
     ollama:
       enabled: false

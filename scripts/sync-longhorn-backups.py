@@ -1,1 +1,0 @@
-../components/storage/longhorn/config/sync-longhorn-backups.py

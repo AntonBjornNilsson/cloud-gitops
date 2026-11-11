@@ -18,7 +18,7 @@ This guide describes the architectural layout, component vs. service distinction
 > - Allowed temporarily (debugging/unblocking): `kubectl apply/delete/edit/patch/scale/create/rollout restart`, `flux suspend/resume`.
 > - Before finishing: commit and push every hand-applied fix (or revert it), resume anything suspended, and confirm all Flux Kustomizations and HelmReleases are Ready.
 > - Never `helm install / upgrade / uninstall` (Helm releases are managed solely via Flux `HelmRelease` manifests).
-> - Ask the user first before data-losing or hard-to-undo actions (PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs, pruned Flux objects).
+> - Ask the user first before data-losing or hard-to-undo actions (PVCs/PVs, Namespaces, TrueNAS datasets/zvols/snapshots, Secrets, CRDs, pruned Flux objects).
 >
 > ### 2. Kube Context
 > - Use the cluster-admin context, passed per command (`--context=<admin>`); its name is kept in local agent memory, never in this repository. Never switch the current context.
@@ -57,7 +57,7 @@ Everything deployed into the cluster falls strictly into one of two tiers:
 
 | Tier | Purpose | Characteristics | Examples |
 |---|---|---|---|
-| **Components** | **Foundational Infrastructure** | Parts the cluster cannot function without, or should not function without. Enables base networking, storage, security, policy, and monitoring. | Cilium, MetalLB, Traefik, Cert-Manager, Longhorn, VictoriaMetrics, Grafana, Kyverno, Authelia |
+| **Components** | **Foundational Infrastructure** | Parts the cluster cannot function without, or should not function without. Enables base networking, storage, security, policy, and monitoring. | Cilium, MetalLB, Traefik, Cert-Manager, TrueNAS CSI, VictoriaMetrics, Grafana, Kyverno, Authelia |
 | **Services** | **End-User Value** | Applications and workloads that deliver value to the end user. They rely on the foundational infrastructure provided by components. | Jellyfin, Dispatcharr, Radarr, Sonarr, Skyrim Server, Home Assistant, Ollama, Open-WebUI, Vaultwarden |
 
 ---
@@ -102,8 +102,8 @@ cloud-gitops/
 ## 3. Component Architecture & Config Separation
 
 ### Why Config is Separated (`config/` subfolder)
-When an operator or HelmRelease is deployed (e.g. MetalLB, Cert-Manager, Kyverno, Longhorn), it introduces Custom Resource Definitions (CRDs) and validating/mutating webhooks.
-Applying Custom Resources (e.g. `IPAddressPool`, `ClusterIssuer`, `ClusterPolicy`, `RecurringJob`) in the same manifest batch will fail because:
+When an operator or HelmRelease is deployed (e.g. MetalLB, Cert-Manager, Kyverno), it introduces Custom Resource Definitions (CRDs) and validating/mutating webhooks.
+Applying Custom Resources (e.g. `IPAddressPool`, `ClusterIssuer`, `ClusterPolicy`) in the same manifest batch will fail because:
 1. The CRDs are not yet registered with the Kubernetes API server.
 2. The admission webhook pods are not yet running and ready to validate the CRs.
 
@@ -158,21 +158,20 @@ graph TD
     metallb_cfg --> traefik[system-traefik]
     cert_cfg --> traefik
     
-    longhorn[system-longhorn] --> longhorn_cfg[system-longhorn-config]
-    traefik --> longhorn_cfg
+    snap[system-snapshot-controller] --> csi[system-truenas-csi]
     
     traefik --> vm[system-victoriametrics]
     traefik --> grafana[system-grafana]
     vm --> grafana
     
     traefik --> auth
-    longhorn_cfg --> auth
+    csi --> auth
     
     kyverno[system-kyverno] --> kyverno_cfg[system-kyverno-config]
     
     traefik --> services[flux-services]
     cert_cfg --> services
-    longhorn --> services
+    csi --> services
 ```
 
 ### Exact Component Dependencies:
@@ -183,8 +182,8 @@ graph TD
    - `dependsOn: [system-cert-manager, secrets-kustomization]`
 3. **`system-traefik`**:
    - `dependsOn: [system-metallb-config, system-cert-manager-config, system-victoriametrics]`
-4. **`system-longhorn-config`**:
-   - `dependsOn: [system-longhorn, system-traefik]`
+4. **`system-truenas-csi`**:
+   - `dependsOn: [system-snapshot-controller]` (the VolumeSnapshotClass CRD)
 5. **`system-kyverno`**:
    - `dependsOn: [system-victoriametrics]`
 6. **`system-kyverno-config`**:
@@ -194,9 +193,9 @@ graph TD
 8. **`system-grafana`**:
    - `dependsOn: [system-victoriametrics, system-traefik]`
 9. **`system-authelia`**:
-   - `dependsOn: [system-traefik, system-longhorn-config, authelia-config, system-cert-manager-config]`
+   - `dependsOn: [system-traefik, system-truenas-csi, authelia-config, system-cert-manager-config]`
 10. **`flux-services`**:
-    - `dependsOn: [flux-components, system-traefik, system-cert-manager-config, system-longhorn]`
+    - `dependsOn: [flux-components, system-traefik, system-cert-manager-config, system-truenas-csi]`
 
 ---
 
@@ -284,43 +283,21 @@ To prevent namespaces and persistent volumes from being deleted during Flux garb
    - ClusterPolicy `add-pvc-annotations` adds `kustomize.toolkit.fluxcd.io/prune: disabled` (and `helm.sh/resource-policy: keep`) to all PVCs.
      The Helm annotation does **not** stop a Helm uninstall from deleting a chart-created PVC: Helm only reads it from the
      rendered chart, not the live object. Disabling a HelmRelease-based service uninstalls the release and deletes its PVC.
-3. **Volumes outlive their PVC**: every Longhorn PV has reclaim policy `Retain` (StorageClass `persistence.reclaimPolicy`
-   in the Longhorn HelmRelease, and Kyverno `add-pvc-annotations` rules `retain-longhorn-pv[-existing]` for all PVs).
-   A deleted PVC leaves the PV `Released` and the Longhorn volume detached with its data. To reuse it, create a PVC
-   with `volumeName: <pv>` after clearing the PV's `claimRef`; to delete it for good, delete the volume in Longhorn.
+3. **Volumes outlive their PVC**: the NAS StorageClasses (`nas-iscsi`, `nas-nfs`) have reclaim policy `Retain`.
+   A deleted PVC leaves the PV `Released` and the dataset/zvol on the NAS. To reuse it, create a PVC with
+   `volumeName: <pv>` after clearing the PV's `claimRef`; to delete it for good, patch the PV's reclaim policy to
+   `Delete` and delete the PV (the TrueNAS CSI driver removes the dataset).
 
 ---
 
-## 8. PVC Backup Strategy (Opt-in via Label or Annotation)
+## 8. Storage and Backups
 
-By default, PersistentVolumeClaims (PVCs) are **NOT** backed up automatically to avoid consuming backup storage on ephemeral, scratch, or cache volumes (e.g. transcode caches).
+All PVCs live on the TrueNAS NAS through the TrueNAS CSI driver (`components/storage/truenas-csi`): `nas-iscsi` is the
+default StorageClass (RWO zvol + ext4), `nas-nfs` for RWX. Every volume gets a daily TrueNAS snapshot kept 14 days, and
+the media library (NFS share, static PVs `media-<namespace>`) daily snapshots kept 7 days.
 
-### How to Opt a PVC into Daily Backups:
-Add the label or annotation `backup.longhorn.io/enabled: "true"` to the PVC metadata:
+There is **no offsite backup** and the pool has **no redundancy** (stripe of two disks): snapshots undo mistakes but do
+not survive a disk failure. Nothing needs a backup label any more; keep caches on emptyDir where possible.
 
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: my-app-data
-  namespace: my-app
-  labels:
-    backup.longhorn.io/enabled: "true"
-```
-Or via annotations:
-```yaml
-metadata:
-  annotations:
-    backup.longhorn.io/enabled: "true"
-```
-
-### Automation & Flow:
-1. **Kyverno Mutation**: ClusterPolicy `add-pvc-annotations` detects `backup.longhorn.io/enabled: "true"` (or `backup: "true"`) and applies:
-   - `recurring-job.longhorn.io/source: enabled`
-   - `recurring-job-group.longhorn.io/backup: enabled`
-   A second rule (`mutateExistingOnPolicyUpdate`) applies the same labels to PVCs that already exist.
-2. **Longhorn RecurringJob**: the `daily-backup` RecurringJob runs on the `backup` group only (daily at 02:00, to S3).
-   Never put the backup job in the `default` group: Longhorn auto-assigns `default` to every volume without recurring-job labels, so it would back up all volumes (caches, model stores, ...).
-3. **Backup Sync CronJob**: `sync-longhorn-backups.py` only indexes and manifests volumes whose PVCs are explicitly opted into backups, keeping `components/storage/longhorn/config/restore/volumes.yaml` clean and cache-free.
-
-
+The NAS configuration (datasets, shares, iSCSI portal, services, snapshot tasks) is code in the secrets repo
+(`truenas/config.yaml`, applied with `truenas/truenas.py`).

@@ -261,7 +261,7 @@ spec:
         # Chart 3.7 default is read-only; Jellyfin may save metadata beside the media
         readOnly: false
       # Not enabled = node-local emptyDir: temporary by design, wiped on every restart
-      # and never replicated by Longhorn. Images and metadata re-download on demand.
+      # and never backed up. Images and metadata re-download on demand.
       cache:
         enabled: false
 ---

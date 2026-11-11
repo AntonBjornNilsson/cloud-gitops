@@ -16,7 +16,7 @@ const APP_DIR = process.env.GITHUB_APP_DIR ?? '/etc/github-app';
 const PUSH_ATTEMPTS = 3;
 const CHECK = process.env.REQUIRED_CHECK ?? 'validate';
 // The agent may change its own component; like everything else it only lands after a yes on the diff
-const FORBIDDEN = /^(cluster\/flux-system\/|\.github\/|\.claude\/|components\/storage\/longhorn\/config\/restore\/)/;
+const FORBIDDEN = /^(cluster\/flux-system\/|\.github\/|\.claude\/)/;
 
 type Job = { state: 'running' | 'pushed' | 'failed'; message: string; commitUrl?: string };
 const jobs = new Map<string, Job>();

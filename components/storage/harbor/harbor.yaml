@@ -82,7 +82,7 @@ spec:
     persistence:
       enabled: true
       persistentVolumeClaim:
-        # Proxy cache + own images. Longhorn for now; moves to the NAS later
+        # Proxy cache + own images, on the default StorageClass (NAS)
         registry:
           size: 30Gi
         jobservice:
@@ -90,8 +90,6 @@ spec:
             size: 1Gi
         database:
           size: 2Gi
-          annotations:
-            backup.longhorn.io/enabled: "true"
         redis:
           size: 1Gi
       imageChartStorage:

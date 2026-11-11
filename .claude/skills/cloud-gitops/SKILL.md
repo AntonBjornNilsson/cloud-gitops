@@ -1,6 +1,6 @@
 ---
 name: cloud-gitops
-description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, Longhorn backups, Grafana dashboards, the claude-agent service, Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
+description: Working guide for the cloud-gitops homelab repo (Flux v2 + Kustomize on k0s). Use for any task in this repo - adding/enabling/disabling a component or service, editing HelmReleases, ingress/auth, Cilium policies, Kyverno policies, NAS storage (TrueNAS CSI, the TrueNAS config-as-code), Grafana dashboards, the claude-agent service, Ollama, or debugging the cluster. Covers layout, conventions, the admin-context/GitOps-end-state workflow, and validation commands.
 ---
 
 # cloud-gitops working guide
@@ -22,7 +22,7 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
    - anything you suspended is resumed, and `flux get kustomizations -A` / `flux get helmreleases -A` show everything Ready;
    - tell the user which imperative commands you ran and where the matching commit is.
    Never `helm install/upgrade/uninstall` (HelmReleases are Flux-managed). Ask first before anything that loses data or is
-   hard to undo: deleting PVCs/PVs, Namespaces, Longhorn volumes/backups, Secrets, CRDs, or Flux objects with `prune` on.
+   hard to undo: deleting PVCs/PVs, Namespaces, TrueNAS datasets/zvols/snapshots, Secrets, CRDs, or Flux objects with `prune` on.
 2. **Use the admin kube context** (cluster-admin; its name is in local memory, never in the repo) for kubectl/flux:
    pass it per command (`--context=<admin>`), never rely on the current context, never run `kubectl config use-context`.
    Admin rights do not relax rule 1.
@@ -33,7 +33,7 @@ read `.agents/skills/cloud-gitops-architecture/SKILL.md`. This file is the quick
    | `flux-substitutions` (`flux-substitutions/core.yaml`) | shared: `domain`, `auth_domain`, `admin_email`, `github_repo`, node placement, `pod_cidr` |
    | `network-substitutions` (`flux-substitutions/network.yaml`) | MetalLB pools, LoadBalancer IPs, `k8s_api_host`, `tailscale_*` |
    | `observability-substitutions` (`flux-substitutions/observability.yaml`) | Grafana OIDC (`victoriametrics_*`), `ntfy_*`, `grafana_admin_*`, `homeassistant_token` |
-   | `storage-substitutions` (`flux-substitutions/storage.yaml`) | Longhorn S3 backups, backup-sync GitHub token, `nas_host`, `nas_client_network`, `truenas_api_key` |
+   | `storage-substitutions` (`flux-substitutions/storage.yaml`) | `nas_host`, `nas_client_network`, `truenas_api_key` |
    | `claude-agent-substitutions` (`flux-substitutions/claude-agent.yaml`) | GitHub App, `ghcr_repo`, Claude token |
    | `media-substitutions` (`flux-substitutions/media.yaml`) | `pia_*`, *arr API keys, dispatcharr, jellyfin, tracearr |
    | `apps-substitutions` (`flux-substitutions/apps.yaml`) | headlamp, open-webui, homepage, weather, vaultwarden, unifi |
@@ -64,7 +64,7 @@ components/kustomization.yaml    ON/OFF switch for infrastructure (list of syste
 components/<category>/<name>/    hardware | networking | observability | security | storage
 services/kustomization.yaml      ON/OFF switch for user apps (list of directories)
 services/<category>/<name>/      ai | demo | game-servers | home-automation | management | media/{getting,sorting,playing} | security
-scripts/                         flux-all.sh (suspend|resume all), sync-longhorn-backups.py
+scripts/                         flux-all.sh (suspend|resume all), check-substitutions.py, migrate-pvc.sh
 TODO                             user's backlog (">" = done)
 ```
 
@@ -94,14 +94,14 @@ HelmRepository in the same namespace, semver range `version: "3.x"`, `install/up
 
 One directory with `kustomization.yaml` + `<name>.yaml` (Namespace, PVC, Deployment, Service, Ingress, CiliumNetworkPolicy),
 added as a directory entry in `services/kustomization.yaml`. **No per-service Flux Kustomization** — all are reconciled by `flux-services`
-(which depends on flux-components, system-traefik, system-cert-manager-config, system-longhorn). Template: `services/media/sorting/sonarr/sonarr.yaml`.
+(which depends on flux-components, system-traefik, system-cert-manager-config, system-truenas-csi). Template: `services/media/sorting/sonarr/sonarr.yaml`.
 
 Conventions:
 - Copy node placement (nodeSelector/tolerations), TZ and PUID/PGID from a sibling service; do not invent or document new values.
 - The media library is the NAS's NFS share: copy the `media-<namespace>` PV + `media` PVC pair from a sibling
   (e.g. sonarr; one PV per namespace, since a PV binds one PVC and PSS forbids inline `nfs` volumes) and mount
   claim `media` at `/data`. No node pinning needed.
-- Pin to a node only via substitution (`kubernetes.io/hostname: ${media_node}`, `${gpu_node}`, `${longhorn_node_N}`), never a literal hostname.
+- Pin to a node only via substitution (`kubernetes.io/hostname: ${media_node}`, `${gpu_node}`), never a literal hostname.
 - Single-replica for RWO PVCs (multi-attach is impossible).
 
 ## Ingress, TLS and auth (mostly automatic via Kyverno)
@@ -210,9 +210,8 @@ Patterns that made root images work non-root (check the live pod's `/proc/1/stat
   `trivyOperator.scanJobPodTemplatePodSecurityContext`; check each chart for its pod/container keys.
 
 Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with the reason in a comment):
-- Node infrastructure created by operators or CSI drivers (Cilium/kube-system, Longhorn, truenas-csi, MetalLB): whole
-  namespace. Longhorn also
-  starts short-lived helper pods (hostPID kubelet detection), so its namespace is excluded from every policy it can hit.
+- Node infrastructure created by operators or CSI drivers (Cilium/kube-system, truenas-csi, MetalLB): whole namespace.
+  The TrueNAS CSI node plugin is privileged with hostNetwork and host paths.
 - gluetun VPN sidecars (dispatcharr-web, prowlarr, qbittorrent): root with NET_ADMIN; the rest of the pod runs as 1000.
 - Tailscale proxies (`ts-*`): tailscaled runs unprivileged with NET_ADMIN (ProxyClass `resources`) on the node's
   `/dev/net/tun`, which the Kyverno mutate policy `tailscale-proxy-tun` mounts (ProxyClass can't add volumes). The
@@ -251,30 +250,28 @@ quantile_over_time(0.95, rate(container_cpu_usage_seconds_total{namespace="<ns>"
 - New app with no history: copy a similar sibling's values, then re-check after a week.
 - Where to set them: raw manifests on each container; HelmReleases via the chart's values (check the key with
   `helm get values <release> -n <ns> -a -o json`; a wrong key is silently ignored); containers the chart has no
-  value for via `postRenderers` patches (see longhorn, metallb, headlamp); operator CRs via their spec
+  value for via `postRenderers` patches (see truenas-csi, metallb, headlamp); operator CRs via their spec
   (VictoriaMetrics `resources` + `configReloaderResources`, Grafana `deployment.spec`, Tailscale `ProxyClass`).
 - Exceptions, not configurable from this repo: k0s-managed kube-system pods (coredns, metrics-server,
-  konnectivity-agent) and pods Longhorn creates itself (instance-manager, share-manager, engine-image, CSI
-  sidecars).
+  konnectivity-agent).
 - After an OOMKill, raise the limit from the data above; don't remove it.
 
-## Storage & backups (Longhorn)
+## Storage & backups (TrueNAS NAS)
 
-Moving to the TrueNAS NAS: `components/storage/truenas-csi` (TrueNAS's official CSI driver, WebSocket API) provides
-`nas-iscsi` (RWO, zvol + ext4: databases/SQLite) and `nas-nfs` (RWX) StorageClasses, both `Retain`, each volume with a
-daily TrueNAS snapshot task kept 14 days; VolumeSnapshotClass `nas-snapshots` (snapshot-controller component).
-Longhorn stays the default StorageClass until every PVC has moved; new PVCs may already use the NAS classes.
-
-- Every Longhorn PV is `Retain`: deleting a PVC (a disabled service, a removed manifest, a Helm uninstall) leaves the
-  volume and its data in Longhorn, detached; deleting data for good is a manual delete in Longhorn. Disabling a
-  HelmRelease-based service deletes its chart-created PVC (the live `helm.sh/resource-policy: keep` annotation does not
-  stop that), so the volume is what survives. Clean up volumes you really don't need.
-- PVCs are NOT backed up by default. Opt in with label or annotation `backup.longhorn.io/enabled: "true"`.
-  Kyverno turns that into the Longhorn `backup` recurring-job group. Never schedule backups on the `default` group (Longhorn auto-adds every unlabeled volume to it).
-- Daily backup 02:00 to S3; CronJob `longhorn-backup-sync` at 03:00 commits updates to
-  `components/storage/longhorn/config/restore/volumes.yaml` ("chore(longhorn): update latest PVC backup tags ... [skip ci]").
-  **That bot pushes to main daily — `git pull --rebase` before pushing.** Do not hand-edit `volumes.yaml` except to remove entries.
-- DR restore flow: `components/storage/longhorn/config/restore/README.md`.
+All storage is on the TrueNAS NAS (pool `tank`, a stripe of two HDDs: **no redundancy**). There is **no offsite
+backup**; only TrueNAS snapshots on the same disks (undo, not disaster recovery).
+- App volumes: `components/storage/truenas-csi` (TrueNAS's official CSI driver, WebSocket API). StorageClasses
+  `nas-iscsi` (**default**; RWO zvol + ext4: databases/SQLite) and `nas-nfs` (RWX), both `Retain`, each volume with a
+  daily TrueNAS snapshot task kept 14 days; VolumeSnapshotClass `nas-snapshots` (snapshot-controller component).
+  A deleted PVC leaves its PV `Released` and the dataset/zvol on the NAS; to delete for good, patch the PV's
+  reclaim policy to `Delete` and delete the PV (the driver then removes the dataset and its snapshot task).
+- Disabling a HelmRelease-based service deletes its chart-created PVC (the live `helm.sh/resource-policy: keep`
+  annotation does not stop that; it only works when rendered by the chart), so the Retained PV is what survives.
+- Media library: the NFS share of `tank/media`, mounted through one static PV per namespace (`media-<ns>`, PVC `media`,
+  server `${nas_host}`), daily snapshots kept 7 days; Sonarr/Radarr recycle bin `/data/.recycle` (7 days).
+- The NAS itself is configured as code in the secrets repo: `truenas/config.yaml` + `truenas/truenas.py plan|apply`
+  (datasets, shares, iSCSI portal, services, snapshot tasks). Change it there, not in the TrueNAS UI.
+- Moving a PVC's data to a new PVC (stopped app, checksum-verified copy): `scripts/migrate-pvc.sh`.
 
 ## Observability
 
@@ -330,7 +327,6 @@ Longhorn stays the default StorageClass until every PVC has moved; new PVCs may 
   automerge, and the claude-agent's Saturday `updates` run merges the rest it judges safe, majors included (never stateful
   stores' majors). That run is zero-touch: applied without the ntfy question, then a health review 30 min later.
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
-  Longhorn: one minor at a time; don't roll Longhorn together with other upgrades (kubelet pulls images serially, others time out).
 - Before a chart bump, `helm template` old and new with the repo's values and check more than the diff: object kinds
   (kyverno-policies 3.9+ needs `policyType: ClusterPolicy`, CEL policies ignore `policyExclude`), changed defaults, CRD stored
   versions, and every pod template against the restricted profile, Helm hook Jobs included. A hook only runs during an

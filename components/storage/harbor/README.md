@@ -81,11 +81,10 @@ Then run `scripts/check-substitutions.py --context=<admin>`.
 - **containerd 2:** the drop-in uses the containerd 1.7 format (`version = 2`, `io.containerd.grpc.v1.cri`).
   k0s releases that ship containerd 2 refuse to start with it. Convert it to `version = 3` /
   `io.containerd.cri.v1.images` in `registry-mirror.yaml` **before** that k0s upgrade.
-- **Storage:** 30Gi registry PVC on Longhorn for now. Only the database is backed up: cached images can be
-  pulled again, and own images are expected to be rebuildable from Git. On the NAS, the registry
-  belongs on the HDD pool (large, sequential) and the database on the SSD pool.
+- **Storage:** 30Gi registry PVC on the NAS (default StorageClass, daily TrueNAS snapshots; no offsite backup).
+  Cached images can be pulled again, and own images are expected to be rebuildable from Git.
 - **Disabling Harbor:** the mirror config stays on the nodes (pulls still work through the upstream fallback,
   just a little slower). Remove `/etc/k0s/containerd.d/registry-mirrors.toml` and `certs.d/` on each node.
-  Disabling the HelmRelease also deletes its PVCs, but the Longhorn volumes are kept (Retain).
+  Disabling the HelmRelease also deletes its PVCs, but the NAS volumes are kept (Retain).
 - **Login:** Harbor uses local users (admin and robots). Authelia OIDC is possible, but Harbor only switches
   auth mode while it has no local users besides admin; decide that before creating any.

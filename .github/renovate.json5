@@ -7,7 +7,7 @@
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   extends: ["config:recommended", ":dependencyDashboard"],
   timezone: "Europe/Stockholm",
-  // One batch a week, outside the 02:00-03:00 Longhorn backup window
+  // One batch a week
   schedule: ["* 4-10 * * 6"],
   semanticCommits: "enabled",
   semanticCommitType: "chore",
@@ -22,13 +22,11 @@
   // update from any other registry (ghcr.io, lscr.io) waits for a tick forever; with
   // it, those skip the soak time.
   minimumReleaseAgeBehaviour: "timestamp-optional",
-  // The Longhorn backup-sync bot pushes to main daily; only rebase on conflicts
+  // Only rebase on conflicts
   rebaseWhen: "conflicted",
   ignorePaths: [
     ".claude/**",
     ".agents/**",
-    // Bot-maintained restore manifest
-    "components/storage/longhorn/config/restore/**",
   ],
   // HelmRelease/OCIRepository chart versions (with their HelmRepository) and
   // the Flux bootstrap manifests
@@ -84,15 +82,6 @@
       automerge: false,
       minimumReleaseAge: "7 days",
       labels: ["dependencies", "core-infra"],
-    },
-    // Longhorn only supports upgrading from the previous minor: one PR per
-    // minor, merge them in order
-    {
-      matchPackageNames: ["longhorn", "/^longhornio//"],
-      separateMultipleMinor: true,
-      prBodyNotes: [
-        "**Longhorn upgrade checklist**: merge one minor at a time (oldest first); before merging check that no volume is `Faulted` and the latest daily backups completed (`kubectl -n longhorn-system get volumes.longhorn.io,backups.longhorn.io`); read the version's important notes. Engines are live-upgraded afterwards (`concurrentAutomaticEngineUpgradePerNodeLimit`).",
-      ],
     },
     // Majors get PRs without a Dependency Dashboard tick; the claude-agent's
     // weekly updates run decides from the release notes whether to merge them

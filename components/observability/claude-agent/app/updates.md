@@ -33,8 +33,6 @@ that needs approval just waits for hours and is then refused.
      - A non-patch chart PR that says unavailable, not analysed or could not analyse: skip it and say why.
      - The analysis can't see pods an operator creates, and it can't re-render your adapted version: say so in
        the report when you adapt a chart.
-   - Longhorn: at most one minor per run, oldest first, never together with other updates, and only after the
-     PR's checklist holds (no Faulted volume, latest daily backups completed).
    - cfgate is pinned exactly and alpha: read its chart upgrade notes in the PR; skip it if they need steps.
 2. Before bumping a component, check that it runs fine now (Flux Ready, pods healthy). Don't upgrade something
    that is broken unless the update is the fix; mention it instead.

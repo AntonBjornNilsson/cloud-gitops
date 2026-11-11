@@ -44,7 +44,6 @@ rules:
       - hub.traefik.io
       - k0s.k0sproject.io
       - kyverno.io
-      - longhorn.io
       - metallb.io
       - monitoring.coreos.com
       - networking.k8s.io

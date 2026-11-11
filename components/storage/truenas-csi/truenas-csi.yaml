@@ -126,7 +126,7 @@ spec:
       resources:
         requests: {cpu: 10m, memory: 64Mi}
         limits: {cpu: 500m, memory: 256Mi}
-    # Retain like Longhorn: a deleted PVC leaves its dataset/zvol on the NAS.
+    # Retain: a deleted PVC leaves its dataset/zvol on the NAS.
     # Each volume gets a daily TrueNAS snapshot task (local undo; offsite is separate).
     storageClasses:
       # RWO block volumes (zvol over iSCSI, ext4): safe for SQLite/Postgres

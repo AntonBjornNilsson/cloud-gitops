@@ -97,11 +97,11 @@ dashboard.new('Kubernetes Cluster & Services Overview')
   + { gridPos: { x: 12, y: 12, w: 12, h: 8 } }
   + timeSeries.standardOptions.withUnit('reqps'),
 
-  // Row 4: Longhorn Storage Usage
-  timeSeries.new('Longhorn Volume Storage Actual Usage')
+  // Row 4: PVC usage (NAS volumes, kubelet stats)
+  timeSeries.new('PVC used')
   + timeSeries.queryOptions.withTargets([
-    prometheus.new('VictoriaMetrics', 'sum by (volume) (longhorn_volume_actual_size_bytes)')
-    + prometheus.withLegendFormat('{{volume}}'),
+    prometheus.new('VictoriaMetrics', 'max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)')
+    + prometheus.withLegendFormat('{{namespace}}/{{persistentvolumeclaim}}'),
   ])
   + { gridPos: { x: 0, y: 20, w: 24, h: 8 } }
   + timeSeries.standardOptions.withUnit('bytes'),

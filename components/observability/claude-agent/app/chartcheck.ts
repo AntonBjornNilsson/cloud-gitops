@@ -22,7 +22,6 @@ type Job = { hr: Doc; chart: string; from: string; to: string; url: string; oci:
 // Upstream upgrade notes for core charts, from these fixed pages only: the agent has no web access, and PR
 // bodies are thin or cut off for exactly these charts. `app`: the releases are tagged with the app version.
 const NOTES: Record<string, { docs?: (v: string) => string; releases?: string; app?: boolean }> = {
-  longhorn: { docs: (v) => `https://longhorn.io/docs/${v}/important-notes/` },
   kyverno: { releases: 'kyverno/kyverno', app: true },
   'kyverno-policies': { releases: 'kyverno/kyverno', app: true },
   traefik: { releases: 'traefik/traefik-helm-chart' },

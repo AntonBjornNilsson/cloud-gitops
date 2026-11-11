@@ -13,11 +13,11 @@ spec:
   retryInterval: 1m0s
   timeout: 5m0s
   wait: true
-  # LoadBalancer IP pool, the Longhorn volume, and Kyverno's Ingress
+  # LoadBalancer IP pool, the NAS volume (TrueNAS CSI), and Kyverno's Ingress
   # mutations (TLS + Authelia) must exist before the unauthenticated UI does.
   dependsOn:
     - name: system-metallb-config
-    - name: system-longhorn
+    - name: system-truenas-csi
     - name: system-kyverno-config
     - name: system-traefik
   postBuild:

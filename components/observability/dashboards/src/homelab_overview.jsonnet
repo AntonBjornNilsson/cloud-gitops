@@ -154,17 +154,8 @@ dashboard.new('Homelab Overview')
   // --- Storage ----------------------------------------------------------------
   row.new('Storage') + pos(0, 90, 24, 1),
   ts('PVC usage', [q('kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes', '{{namespace}}/{{persistentvolumeclaim}}')], 0, 91, 12, 9, 'percentunit'),
-  ts('Longhorn storage per node', [q('longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes', '{{node}}')], 12, 91, 6, 9, 'percentunit'),
+  ts('PVC used', [q('max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)', '{{namespace}}/{{persistentvolumeclaim}}')], 12, 91, 6, 9, 'bytes'),
   ts('Disk temperature', [q('smartctl_device_temperature{temperature_type="current"}', '{{node}} {{device}}')], 18, 91, 6, 9, 'celsius'),
-  table.new('Unhealthy Longhorn volumes')
-  + table.queryOptions.withTargets([instant('longhorn_volume_robustness != 1')])
-  + table.queryOptions.withTransformations([
-    { id: 'organize', options: { excludeByName: { Time: true, __name__: true, container: true, endpoint: true, instance: true, job: true, namespace: true, pod: true, service: true, cluster: true } } },
-  ])
-  + table.standardOptions.withMappings([
-    { type: 'value', options: { '0': { text: 'unknown' }, '2': { text: 'degraded', color: 'orange' }, '3': { text: 'faulted', color: 'red' } } },
-  ])
-  + pos(0, 100, 24, 6),
 
   // --- Logs -------------------------------------------------------------------
   row.new('Logs') + pos(0, 106, 24, 1),

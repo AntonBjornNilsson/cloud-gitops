@@ -15,7 +15,7 @@ spec:
   url: https://piraeus.io/helm-charts/
 ---
 # CSI VolumeSnapshot CRDs + the cluster-wide snapshot controller. The CSI drivers'
-# csi-snapshotter sidecars (TrueNAS CSI, Longhorn) do the actual snapshots.
+# csi-snapshotter sidecars (TrueNAS CSI) do the actual snapshots.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

@@ -156,9 +156,6 @@ spec:
           searchDescriptions: true
           showSearchSuggestions: true
           provider: duckduckgo
-        providers:
-          longhorn:
-            url: http://longhorn-frontend.longhorn-system.svc.cluster.local
         # Group order and shape; groups come from gethomepage.dev/group
         # Ingress annotations, plus services/bookmarks below
         layout:
@@ -232,11 +229,6 @@ spec:
               cpu: true
               memory: true
               showLabel: true
-        - longhorn:
-            expanded: true
-            total: true
-            labels: true
-            nodes: false
         - search:
             provider: duckduckgo
             target: _blank

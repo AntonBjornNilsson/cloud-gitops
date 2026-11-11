@@ -335,11 +335,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (volume) (longhorn_volume_actual_size_bytes)",
-                   "legendFormat": "{{volume}}"
+                   "expr": "max by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)",
+                   "legendFormat": "{{namespace}}/{{persistentvolumeclaim}}"
                 }
              ],
-             "title": "Longhorn Volume Storage Actual Usage",
+             "title": "PVC used",
              "type": "timeseries"
           }
        ],

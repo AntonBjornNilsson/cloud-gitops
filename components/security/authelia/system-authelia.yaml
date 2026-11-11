@@ -12,7 +12,7 @@ spec:
     name: flux-system
   dependsOn:
     - name: system-traefik
-    - name: system-longhorn-config
+    - name: system-truenas-csi
     - name: authelia-config
     - name: system-cert-manager-config
   retryInterval: 1m0s
