@@ -3,8 +3,9 @@
 // (components/observability/kepler, VMPodScrape kepler).
 // Kepler reads the CPUs' RAPL counters. The "package" zone is the whole CPU
 // socket (cores, cache, memory controller, integrated GPU); "core" is a part
-// of it, so panels use zone="package" only. Disks, fans, PSU losses and the
-// rest of the board are not measured: wall power is higher.
+// of it, so panels use zone="package" (never a sum over zones). Newer Intel
+// CPUs also report "psys" (whole platform), shown in its own panel. Disks,
+// fans and PSU losses are not measured: wall power is higher.
 // Only the active (above idle) part is split over workloads; what is left
 // after the pods is host processes (k0s, kubelet, containerd) and the kernel.
 local grafonnet = import 'grafonnet-v11.0.0/main.libsonnet';
@@ -65,21 +66,27 @@ dashboard.new('Power')
   ], 12, 14, 12, 7, 'watt', min=0, legendRight=false,
     desc='Active power not attributed to a pod: the k0s control plane and etcd, kubelet, containerd, systemd and the kernel.'),
 
+  m.ts('Platform power (psys), where the CPU reports it', [
+    q('sum by (node_name) (kepler_node_cpu_watts{zone="psys"})', '{{node_name}} platform'),
+    q('sum by (node_name) (kepler_node_cpu_watts{zone="package"}) and on (node_name) kepler_node_cpu_watts{zone="psys"}', '{{node_name}} package'),
+  ], 0, 21, 24, 8, 'watt', min=0,
+    desc='psys is the whole platform as the CPU sees it (package plus chipset, memory and other SoC rails), closer to wall power than the package zone. Only newer Intel CPUs report it; nodes without it are left out. Disks, fans and PSU losses are still not included.'),
+
   // --- Workloads --------------------------------------------------------------
-  m.row('Workloads', 21),
+  m.row('Workloads', 29),
   m.ts('CPU power by namespace (top 10)', [
     q('topk(10, sum by (pod_namespace) (%s))' % pods, '{{pod_namespace}}'),
-  ], 0, 22, 12, 9, 'watt', stack=true, min=0),
+  ], 0, 30, 12, 9, 'watt', stack=true, min=0),
   m.barGauge('Energy by namespace (time range)', [
     q(wh('sort_desc(topk(15, sum by (pod_namespace) (increase(kepler_pod_cpu_joules_total{%s}[$__range]))))' % pkg), '{{pod_namespace}}'),
-  ], 12, 22, 12, 9, 'watth',
+  ], 12, 30, 12, 9, 'watth',
     desc='Energy of pods that still exist at the end of the range; deleted pods drop out.'),
   m.ts('CPU power by pod (top 10)', [
     q('topk(10, sum by (pod_namespace, pod_name) (%s))' % pods, '{{pod_namespace}}/{{pod_name}}'),
-  ], 0, 31, 12, 9, 'watt', min=0),
+  ], 0, 39, 12, 9, 'watt', min=0),
   m.labelTable('Top pods now',
                'topk(20, sum by (pod_namespace, pod_name, node_name) (%s))' % pods,
-               12, 31, 12, 9,
+               12, 39, 12, 9,
                rename={ pod_namespace: 'Namespace', pod_name: 'Pod', node_name: 'Node', Value: 'Watts' },
                overrides=[{ matcher: { id: 'byName', options: 'Watts' }, properties: [{ id: 'unit', value: 'watt' }, { id: 'decimals', value: 2 }] }],
                sortBy={ displayName: 'Watts', desc: true }),

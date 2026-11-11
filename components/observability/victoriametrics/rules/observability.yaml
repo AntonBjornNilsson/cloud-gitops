@@ -25,3 +25,39 @@ spec:
           annotations:
             summary: "Alertmanager cannot deliver notifications"
             description: "Alerts are not reaching ntfy. Check the alertmanager-ntfy bridge and ntfy. (You are seeing this either in Grafana or because it recovered.)"
+    - name: power-and-profiling
+      rules:
+        # Kepler (components/observability/kepler). Scrape failures are TargetDown.
+        - alert: NodePowerDataMissing
+          expr: kube_node_info unless on (node) label_copy(count by (node_name) (kepler_node_cpu_watts{zone="package"}), "node_name", "node")
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "No power data from {{ $labels.node }}"
+            description: "Kepler reports no RAPL package power for node {{ $labels.node }}: its pod is not running there or cannot read /sys/class/powercap. The Power dashboard is missing this node."
+        # Pyroscope and its Alloy agents (components/observability/pyroscope)
+        - alert: ProfileIngestionStopped
+          expr: (sum(rate(pyroscope_distributor_profiles_received_total[15m])) or vector(0)) == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pyroscope has not received any profiles for 30 minutes"
+            description: "The alloy-ebpf DaemonSet in namespace pyroscope is not sending profiles, or Pyroscope rejects them. Check the alloy-ebpf logs and the pyroscope-0 pod."
+        - alert: EbpfProfilerStalled
+          expr: sum by (pod) (rate(pyroscope_ebpf_pprofs_total[15m])) == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "eBPF profiler {{ $labels.pod }} produces no profiles"
+            description: "Alloy pod {{ $labels.pod }} (namespace pyroscope) is up but has collected no eBPF profiles for 30 minutes, so its node is missing from Drilldown -> Profiles."
+        - alert: ProfilesDropped
+          expr: sum by (pod) (increase(pyroscope_ebpf_pprofs_dropped_total[30m])) > 0
+          for: 30m
+          labels:
+            severity: info
+          annotations:
+            summary: "eBPF profiler {{ $labels.pod }} is dropping profiles"
+            description: "Alloy pod {{ $labels.pod }} (namespace pyroscope) dropped profiles in the last 30 minutes, usually because Pyroscope is slow or unreachable."

@@ -550,14 +550,74 @@ spec:
              "type": "timeseries"
           },
           {
-             "collapsed": false,
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "psys is the whole platform as the CPU sees it (package plus chipset, memory and other SoC rails), closer to wall power than the package zone. Only newer Intel CPUs report it; nodes without it are left out. Disks, fans and PSU losses are still not included.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "watt"
+                }
+             },
              "gridPos": {
-                "h": 1,
+                "h": 8,
                 "w": 24,
                 "x": 0,
                 "y": 21
              },
              "id": 13,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node_name) (kepler_node_cpu_watts{zone=\"psys\"})",
+                   "legendFormat": "{{node_name}} platform"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node_name) (kepler_node_cpu_watts{zone=\"package\"}) and on (node_name) kepler_node_cpu_watts{zone=\"psys\"}",
+                   "legendFormat": "{{node_name}} package"
+                }
+             ],
+             "title": "Platform power (psys), where the CPU reports it",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 29
+             },
+             "id": 14,
              "title": "Workloads",
              "type": "row"
           },
@@ -584,9 +644,9 @@ spec:
                 "h": 9,
                 "w": 12,
                 "x": 0,
-                "y": 22
+                "y": 30
              },
-             "id": 14,
+             "id": 15,
              "options": {
                 "legend": {
                    "calcs": [
@@ -642,9 +702,9 @@ spec:
                 "h": 9,
                 "w": 12,
                 "x": 12,
-                "y": 22
+                "y": 30
              },
-             "id": 15,
+             "id": 16,
              "options": {
                 "displayMode": "gradient",
                 "orientation": "horizontal",
@@ -684,9 +744,9 @@ spec:
                 "h": 9,
                 "w": 12,
                 "x": 0,
-                "y": 31
+                "y": 39
              },
-             "id": 16,
+             "id": 17,
              "options": {
                 "legend": {
                    "calcs": [
@@ -747,9 +807,9 @@ spec:
                 "h": 9,
                 "w": 12,
                 "x": 12,
-                "y": 31
+                "y": 39
              },
-             "id": 17,
+             "id": 18,
              "options": {
                 "sortBy": [
                    {
