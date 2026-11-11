@@ -15,7 +15,15 @@ spec:
     - name: system-truenas-csi
   retryInterval: 1m0s
   timeout: 5m0s
-  wait: true
+  # Not wait: this Kustomization also creates system-coroot-config, which
+  # depends on it. The health check still holds the config back until the
+  # operator (and its CRD) is installed.
+  wait: false
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: coroot-operator
+      namespace: coroot
   postBuild:
     substituteFrom:
       - kind: Secret
