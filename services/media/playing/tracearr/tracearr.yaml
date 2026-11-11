@@ -5,22 +5,6 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-# Old Longhorn volume, unused since the move to tracearr-db-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: tracearr-db
-  namespace: tracearr
-  labels:
-    backup.longhorn.io/enabled: "true"
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
----
 # On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -37,21 +21,6 @@ spec:
     requests:
       storage: 10Gi
 ---
-# Poster cache and Tracearr's own database dumps
-# Old Longhorn volume, unused since the move to tracearr-data-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: tracearr-data
-  namespace: tracearr
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
----
 # On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -67,21 +36,6 @@ spec:
   resources:
     requests:
       storage: 5Gi
----
-# Job queues; upstream runs Redis with AOF persistence
-# Old Longhorn volume, unused since the move to tracearr-redis-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: tracearr-redis
-  namespace: tracearr
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
 ---
 # On the NAS (truenas-csi)
 apiVersion: v1

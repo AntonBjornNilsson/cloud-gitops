@@ -53,25 +53,6 @@ stringData:
     auth-tokens:
       - "alertmanager:${ntfy_alertmanager_token}:alertmanager-ntfy bridge"
 ---
-# Old Longhorn volume, unused since the move to ntfy-data-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ntfy-data
-  namespace: ntfy
-  labels:
-    backup.longhorn.io/enabled: "true"
-  annotations:
-    kustomize.toolkit.fluxcd.io/prune: disabled
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
-  resources:
-    requests:
-      storage: 5Gi
----
 # ntfy's data, on the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim

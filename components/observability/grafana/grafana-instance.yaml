@@ -7,19 +7,6 @@ metadata:
   labels:
     dashboards: "grafana"
 spec:
-  # The operator still creates grafana-pvc (Longhorn), unused since the move to
-  # grafana-data-nas: kept as the rollback until Longhorn is removed, then drop this
-  # block and delete the PVC + Longhorn volume.
-  persistentVolumeClaim:
-    metadata:
-      labels:
-        backup.longhorn.io/enabled: "true"
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      resources:
-        requests:
-          storage: 5Gi
   # Mount the NAS PVC in place of the default
   # emptyDir "grafana-data" volume. Recreate avoids RWO multi-attach on
   # rollout, fsGroup matches the operator's runAsGroup so Grafana can write.

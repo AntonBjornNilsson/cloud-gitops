@@ -35,6 +35,8 @@ spec:
   timeout: 15m
   values:
     persistence:
+      # The NAS (truenas-csi nas-iscsi) is the default StorageClass now
+      defaultClass: false
       # Two storage nodes: a replica on each (a third has nowhere to go)
       defaultClassReplicaCount: 2
       # Keep the volume when its PVC is deleted (also enforced on every Longhorn PV by
@@ -47,6 +49,8 @@ spec:
     #   resizerReplicaCount: 1
     #   snapshotterReplicaCount: 1
     defaultSettings:
+      # Lets the chart's uninstall job run (Longhorn is being removed)
+      deletingConfirmationFlag: true
       # Same for volumes created in the Longhorn UI
       defaultReplicaCount: '{"v1":"2","v2":"2"}'
       # Volumes are thin-provisioned and mostly empty; at 100% the full size

@@ -85,8 +85,7 @@ spec:
         useStrictSecurity: true
         retentionPeriod: "1"
         # Data on the NAS PVC vmsingle-data-nas (the operator requires the volume name "data"
-        # and no `storage`, so the chart default is cleared). Its old Longhorn volume
-        # (vmsingle-vm-k8s-stack, Retain) is the rollback until Longhorn is removed.
+        # and no `storage`, so the chart default is cleared)
         storage: null
         storageDataPath: /victoria-metrics-data
         volumes:

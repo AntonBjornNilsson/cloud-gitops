@@ -5,22 +5,6 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-# Old Longhorn volume, unused since the move to bazarr-config-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: bazarr-config
-  namespace: bazarr
-  labels:
-    backup.longhorn.io/enabled: "true"
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
----
 # On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim

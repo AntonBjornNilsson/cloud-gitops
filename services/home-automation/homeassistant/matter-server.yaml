@@ -1,31 +1,4 @@
 ---
-# Matter Server (matter.js) for Home Assistant's Matter integration, e.g. for
-# the IKEA DIRIGERA hub as a Matter bridge. Matter needs IPv6 link-local
-# multicast on the devices' L2 network, so the server runs with hostNetwork on
-# a node in that VLAN (not the media or GPU node).
-#
-# Its WebSocket API has no auth, so it does not listen on the node's IP: it
-# binds a unix socket in a node-local directory, and matter-server-proxy (pod
-# network, same node) forwards the matter-server Service to it. Only Home
-# Assistant may reach that proxy. HA connects to
-# ws://matter-server.homeassistant.svc.cluster.local:5580/ws
-# Old Longhorn volume, unused since the move to matter-server-data-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: matter-server-data
-  namespace: homeassistant
-  labels:
-    # Fabric credentials: losing them means commissioning every device again
-    backup.longhorn.io/enabled: "true"
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
----
 # On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim

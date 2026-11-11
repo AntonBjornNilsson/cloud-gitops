@@ -182,8 +182,7 @@ spec:
             - name: second-factors
               mountPath: /etc/authelia-2fa
               readOnly: true
-    # The NAS PVC above. The chart's old PVC "authelia" (Longhorn) was kept by Helm
-    # (resource-policy keep) as the rollback; delete it with Longhorn.
+    # The NAS PVC above
     persistence:
       enabled: true
       existingClaim: authelia-data-nas

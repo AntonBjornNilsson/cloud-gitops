@@ -13,24 +13,6 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-# Run history and Claude session transcripts (for "continue this session")
-# Old Longhorn volume, unused since the move to claude-agent-data-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: claude-agent-data
-  namespace: claude-agent
-  annotations:
-    kustomize.toolkit.fluxcd.io/prune: disabled
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: longhorn
-  resources:
-    requests:
-      storage: 2Gi
----
 # On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim

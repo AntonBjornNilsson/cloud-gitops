@@ -11,8 +11,7 @@ spec:
   useStrictSecurity: true
   retentionPeriod: "14d"
   # Data on the NAS PVC vlsingle-logs-nas (the operator requires the volume name "data"
-  # and no `storage`). Its old Longhorn volume (vlsingle-logs, Retain) is the rollback
-  # until Longhorn is removed.
+  # and no `storage`)
   storageDataPath: /victoria-logs-data
   volumes:
     - name: data

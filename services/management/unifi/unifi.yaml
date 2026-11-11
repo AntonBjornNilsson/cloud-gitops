@@ -5,25 +5,6 @@ metadata:
   annotations:
     kustomize.toolkit.fluxcd.io/prune: disabled
 ---
-# UniFi OS Server, community image built from Ubiquiti's installer
-# (https://github.com/lemker/unifi-os-server). Everything (Network app, MongoDB,
-# Postgres, RabbitMQ, nginx) runs as systemd services in one container.
-# Old Longhorn volume, unused since the move to unifi-os-nas; kept as the rollback
-# until Longhorn is removed, then delete it (PVC + Longhorn volume).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: unifi-os
-  namespace: unifi
-  labels:
-    backup.longhorn.io/enabled: "true"
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
----
 # On the NAS (truenas-csi)
 apiVersion: v1
 kind: PersistentVolumeClaim

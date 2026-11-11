@@ -12,8 +12,7 @@ spec:
   useStrictSecurity: true
   retentionPeriod: "7d"
   # Data on the NAS PVC vtsingle-traces-nas (the operator requires the volume name "data"
-  # and no `storage`). Its old Longhorn volume (vtsingle-traces, Retain) is the rollback
-  # until Longhorn is removed.
+  # and no `storage`)
   storageDataPath: /victoria-traces-data
   volumes:
     - name: data
