@@ -1,0 +1,56 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: coroot
+  namespace: coroot
+spec:
+  endpointSelector: {}
+  ingress:
+    # Web UI from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+          rules:
+            http: [{}]
+    # Intra-namespace: agents -> Coroot, Coroot -> ClickHouse, ClickHouse -> keeper
+    - fromEndpoints:
+        - {}
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # Kubernetes API (operator, cluster-agent)
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
+    # Operator: image version lookups on ghcr.io
+    - toEntities:
+        - world
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

@@ -218,7 +218,8 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
   operator's `sysctler` init container stays privileged: it sets ip_forward and a Connector always gets it.
 - Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
   dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
-- Privileged: UniFi OS Server (systemd as PID 1 runs its own MongoDB/Postgres/RabbitMQ).
+- Privileged: UniFi OS Server (systemd as PID 1 runs its own MongoDB/Postgres/RabbitMQ); Coroot node-agent
+  (eBPF, with hostPID and the node's cgroupfs/tracefs/debugfs; the operator hardcodes its securityContext).
 - hostPath (`disallow-host-path` + `restrict-volume-types`): gluetun pods' `/dev/net/tun` (dispatcharr, prowlarr,
   qbittorrent), matter-server, node-exporter, smartctl-exporter, vlagent.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
@@ -294,6 +295,12 @@ backup**; only TrueNAS snapshots on the same disks (undo, not disaster recovery)
   a `// grafana-folder: <name>` line in the source sets the folder. Community dashboards: `dashboards/upstream.yaml`
   (grafana.com id + revision; still Flux-substituted, so no `${...}` there).
   Trivy drilldowns (`trivy_*.jsonnet`, shared `trivy.libsonnet`) read trivy-operator's per-finding info metrics and use MetricsQL.
+- Coroot (`components/observability/coroot/`, `coroot.${domain}`): a second, self-contained UI for resource usage,
+  service maps, logs, traces and eBPF profiles. Its own agents and ClickHouse (no Prometheus, nothing shared with
+  VictoriaMetrics). Operator HelmRelease + the `Coroot` CR in `config/`; set resources/securityContext per component
+  in the CR. Images are pinned there (`name: ghcr.io/coroot/...`, Renovate customManager); ClickHouse's image comes
+  with the operator chart. Community Edition has no SSO: Authelia forward-auth guards it and Coroot's anonymous role
+  is Admin, so don't give a non-admin Authelia group access to the host.
 - Ollama (`services/ai/ollama/`): don't add `models.pull` to its HelmRelease values (makes Flux reconciliation slow).
 - `components/observability/claude-agent/` (namespace `claude-agent`, Flux Kustomization `system-claude-agent`): always-on
   Agent SDK service (TypeScript and the web UI in `app/`, shipped as a ConfigMap and run by Node's type stripping; image

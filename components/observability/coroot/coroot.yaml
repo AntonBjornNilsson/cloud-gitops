@@ -1,0 +1,67 @@
+# Coroot: eBPF-based observability with automatic service maps, per-app
+# CPU/memory/disk/network, logs, traces and profiles, and right-sizing hints.
+# The operator (this file) runs the Coroot instance defined in config/coroot.yaml.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: coroot
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: coroot
+  namespace: coroot
+spec:
+  interval: 12h
+  url: https://coroot.github.io/helm-charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: coroot-operator
+  namespace: coroot
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: coroot-operator
+      version: "0.10.6"
+      sourceRef:
+        kind: HelmRepository
+        name: coroot
+        namespace: coroot
+      interval: 12h
+  timeout: 5m
+  install:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  upgrade:
+    crds: CreateReplace
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+    remediation:
+      retries: 3
+  values:
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      runAsGroup: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi

@@ -47,6 +47,15 @@
       ],
       datasourceTemplate: "docker",
     },
+    // Coroot CR: images pinned as `name: ghcr.io/coroot/<app>:<version>`
+    {
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)components/observability/coroot/.+\\.ya?ml$/"],
+      matchStrings: [
+        "name: (?<depName>ghcr\\.io/coroot/[a-z0-9-]+):(?<currentValue>[^\\s\"]+)",
+      ],
+      datasourceTemplate: "docker",
+    },
   ],
   packageRules: [
     // `:latest` images can't get version bumps; pin them to a digest

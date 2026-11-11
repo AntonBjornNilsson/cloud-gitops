@@ -63,6 +63,10 @@ spec:
               names: ["qbittorrent*"]
       disallow-host-namespaces:
         any:
+          # Coroot node-agent: hostPID to map eBPF events to processes and containers
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
           - resources:
               namespaces: [kube-system, truenas-csi, metallb]
@@ -75,6 +79,10 @@ spec:
               names: ["matter-server*"]
       disallow-host-path:
         any:
+          # Coroot node-agent: the node's cgroupfs, tracefs and debugfs for eBPF
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]
@@ -111,6 +119,10 @@ spec:
               names: ["victoriametrics-prometheus-node-exporter*"]
       disallow-privileged-containers:
         any:
+          # Coroot node-agent: loads eBPF programs (operator hardcodes privileged)
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           - resources:
               namespaces: [kube-system, truenas-csi]
           # Sets kernel sysctls on every node
@@ -141,6 +153,10 @@ spec:
       # capabilities, no privilege escalation and the RuntimeDefault seccomp profile.
       disallow-capabilities-strict:
         any:
+          # Coroot node-agent: privileged (see disallow-privileged-containers)
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           # Node infrastructure created by operators (CNI, CSI, BGP/L2, sysctls)
           - resources:
               namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
@@ -171,6 +187,10 @@ spec:
               names: ["unifi*"]
       disallow-privilege-escalation:
         any:
+          # Coroot node-agent: privileged (see disallow-privileged-containers)
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           - resources:
               namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
@@ -206,6 +226,10 @@ spec:
               names: ["qbittorrent*"]
       require-run-as-nonroot:
         any:
+          # Coroot node-agent: root for eBPF (see disallow-privileged-containers)
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]
@@ -239,6 +263,10 @@ spec:
               names: ["ollama*"]
       restrict-seccomp-strict:
         any:
+          # Coroot node-agent: privileged, no seccomp profile set by the operator
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           - resources:
               namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
@@ -249,6 +277,10 @@ spec:
               names: ["smartctl-exporter*"]
       restrict-volume-types:
         any:
+          # Coroot node-agent: hostPath (same as disallow-host-path)
+          - resources:
+              namespaces: [coroot]
+              names: ["coroot-node-agent*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]

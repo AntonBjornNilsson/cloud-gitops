@@ -288,6 +288,10 @@ spec:
                       query: round(100 * avg(probe_success))
                       format:
                         type: percent
+            - Coroot:
+                icon: mdi-chart-timeline-variant
+                description: Resource usage, service map, traces and profiles
+                href: https://coroot.${domain}
       bookmarks:
         - Everyday:
             - GitHub:

@@ -1,0 +1,113 @@
+# The Coroot instance. The operator creates from it:
+#   coroot-coroot            StatefulSet + Service (UI/API :8080, OTLP gRPC :4317)
+#   coroot-clickhouse-*      ClickHouse (metrics, logs, traces, profiles) + keeper
+#   coroot-cluster-agent     Deployment (Kubernetes API state, events)
+#   coroot-node-agent        DaemonSet (eBPF; privileged, see the Kyverno exception)
+# No Prometheus: metrics are stored in ClickHouse (storeMetricsInClickhouse).
+#
+# Images are pinned so upgrades come through Renovate (customManager for
+# `name: ghcr.io/coroot/...` lines); without a name the operator would follow
+# the newest release on its own. ClickHouse/keeper images come with the
+# operator chart version.
+#
+# Auth: Coroot Community Edition has no SSO. The UI is behind Authelia
+# forward-auth (admin group only), so Coroot itself lets that user in as Admin.
+apiVersion: coroot.com/v1
+kind: Coroot
+metadata:
+  name: coroot
+  namespace: coroot
+spec:
+  communityEdition:
+    image:
+      name: ghcr.io/coroot/coroot:1.29.2
+  authAnonymousRole: Admin
+  storeMetricsInClickhouse: true
+  metricsRefreshInterval: 15s
+  metricsTTL: 7d
+  logsTTL: 7d
+  tracesTTL: 7d
+  profilesTTL: 7d
+  cacheTTL: 7d
+  storage:
+    size: 5Gi
+    reclaimPolicy: Retain
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+
+  clickhouse:
+    shards: 1
+    replicas: 1
+    storage:
+      size: 20Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 768Mi
+      limits:
+        cpu: "2"
+        memory: 2Gi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+    keeper:
+      # A single keeper is enough for one ClickHouse replica (default is 3)
+      replicas: 1
+      storage:
+        size: 1Gi
+      resources:
+        requests:
+          cpu: 20m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        seccompProfile:
+          type: RuntimeDefault
+
+  clusterAgent:
+    image:
+      name: ghcr.io/coroot/coroot-cluster-agent:1.11.9
+    resources:
+      requests:
+        cpu: 20m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+
+  nodeAgent:
+    image:
+      name: ghcr.io/coroot/coroot-node-agent:1.38.1
+    # Every node, the control-plane node included (default toleration: all)
+    resources:
+      requests:
+        cpu: 50m
+        memory: 200Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi

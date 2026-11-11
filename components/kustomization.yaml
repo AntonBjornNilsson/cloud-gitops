@@ -18,6 +18,7 @@ resources:
   # Observability
   - observability/claude-agent/system-claude-agent.yaml
   - observability/victoriametrics/system-victoriametrics.yaml
+  - observability/coroot/system-coroot.yaml
   - observability/grafana/system-grafana.yaml
 
   # Security
