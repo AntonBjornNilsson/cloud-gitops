@@ -1,0 +1,61 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: pyroscope
+  namespace: pyroscope
+spec:
+  endpointSelector: {}
+  ingress:
+    # Queries from the Grafana datasource
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: grafana
+      toPorts:
+        - ports:
+            - port: "4040"
+              protocol: TCP
+    # Metrics scrape from VictoriaMetrics (Pyroscope 4040, Alloy 12345)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "4040"
+              protocol: TCP
+            - port: "12345"
+              protocol: TCP
+    # Intra-namespace: Alloy -> Pyroscope (ingest), Alloy -> pprof endpoints
+    - fromEndpoints:
+        - {}
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # Kubernetes API (Alloy pod discovery, Pyroscope's own discovery)
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}
+    # Alloy: pprof pull from annotated pods in other namespaces (their own
+    # policy decides whether to let it in)
+    - toEntities:
+        - cluster

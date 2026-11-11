@@ -223,9 +223,12 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
 - Root kept, but `allowPrivilegeEscalation: false` + RuntimeDefault seccomp: Home Assistant (s6, runtime pip installs),
   dispatcharr web/celery (su); ollama and vlagent (root but all capabilities dropped).
 - Privileged: UniFi OS Server (systemd as PID 1 runs its own MongoDB/Postgres/RabbitMQ); Coroot node-agent
-  (eBPF, with hostPID and the node's cgroupfs/tracefs/debugfs; the operator hardcodes its securityContext).
+  (eBPF, with hostPID and the node's cgroupfs/tracefs/debugfs; the operator hardcodes its securityContext);
+  Pyroscope's `alloy-ebpf` DaemonSet (eBPF CPU profiling, hostPID).
+- Kepler: root (RAPL `energy_uj` is root-only), hostPID, SYS_PTRACE and AppArmor unconfined (reads other processes'
+  `/proc/<pid>/exe` and `environ`), the node's `/proc` and `/sys` read-only. Not privileged.
 - hostPath (`disallow-host-path` + `restrict-volume-types`): gluetun pods' `/dev/net/tun` (dispatcharr, prowlarr,
-  qbittorrent), matter-server, node-exporter, smartctl-exporter, vlagent.
+  qbittorrent), matter-server, node-exporter, smartctl-exporter, vlagent, kepler.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
 with `kubectl --context=<admin> get policyreports -A`; test a manifest with `kubectl apply --dry-run=server`. A result
 for an unchanged resource is not re-evaluated when a policy starts excluding it: delete that PolicyReport to refresh it.
@@ -305,6 +308,16 @@ backup**; only TrueNAS snapshots on the same disks (undo, not disaster recovery)
   in the CR. Images are pinned there (`name: ghcr.io/coroot/...`, Renovate customManager); ClickHouse's image comes
   with the operator chart. Community Edition has no SSO: Authelia forward-auth guards it and Coroot's anonymous role
   is Admin, so don't give a non-admin Authelia group access to the host.
+- Kepler (`components/observability/kepler/`): CPU power per node/namespace/pod from the RAPL counters (package zone
+  = whole CPU socket; `core` is part of it, never sum zones; wall power is higher). Pod informer in `apiserver`
+  mode so the ClusterRole has no `nodes/proxy` (postRenderer). Per-process and VM metrics are off (pid label churn).
+  Dashboard `power.jsonnet` (Platform -> Power).
+- Pyroscope (`components/observability/pyroscope/`): continuous profiling, single binary, 14d retention, NAS PVC.
+  No own UI: Grafana Drilldown -> Profiles, datasource uid `Pyroscope`. Profiles come from the `alloy-ebpf`
+  DaemonSet (`alloy.yaml`): eBPF CPU profiles of every container (`service_name=<namespace>/<container>`) plus pprof
+  pull (memory, goroutines, mutex, block) from pods annotated `profiles.grafana.com/scrape: "true"` +
+  `profiles.grafana.com/port_name: <port name>`; such a pod's CiliumNetworkPolicy must allow ingress from the
+  `pyroscope` namespace on that port. Coroot also profiles with eBPF; both run side by side.
 - Ollama (`services/ai/ollama/`): don't add `models.pull` to its HelmRelease values (makes Flux reconciliation slow).
 - `components/observability/claude-agent/` (namespace `claude-agent`, Flux Kustomization `system-claude-agent`): always-on
   Agent SDK service (TypeScript and the web UI in `app/`, shipped as a ConfigMap and run by Node's type stripping; image

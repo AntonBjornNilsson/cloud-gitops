@@ -8,8 +8,10 @@ resources:
   - flux.yaml
   - grafana.yaml
   - homeassistant.yaml
+  - kepler.yaml
   - media-exporters.yaml
   - metallb.yaml
   - ntfy.yaml
+  - pyroscope.yaml
   - smartctl-exporter.yaml
   - trivy-operator.yaml

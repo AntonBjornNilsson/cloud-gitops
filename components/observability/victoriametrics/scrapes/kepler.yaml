@@ -1,0 +1,17 @@
+---
+# Kepler power estimates (components/observability/kepler). Every scrape makes
+# Kepler compute fresh values, so keep the default interval.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: kepler
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - kepler
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kepler
+  podMetricsEndpoints:
+    - port: http

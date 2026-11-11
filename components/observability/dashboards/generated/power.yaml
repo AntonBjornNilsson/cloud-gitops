@@ -1,0 +1,819 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: power
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Platform"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "CPU power and energy per node, namespace and pod (Kepler, RAPL package zone).",
+       "graphTooltip": 1,
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Overview",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Sum of the RAPL package power of all nodes. Wall power is higher (disks, fans, PSU).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 1,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "watt"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(kepler_node_cpu_watts{zone=\"package\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "CPU power now",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "watth"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(sum(increase(kepler_node_cpu_joules_total{zone=\"package\"}[24h]))) / 3600",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Energy, last 24h",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "watth"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(sum(increase(kepler_node_cpu_joules_total{zone=\"package\"}[$__range]))) / 3600",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Energy, time range",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Average CPU power over the last 7 days, times the hours in a year.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "kwatth"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 12,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "avg_over_time(sum(kepler_node_cpu_watts{zone=\"package\"})[7d:5m]) * 8.766",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Per year at 7d average",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Part of the CPU power the nodes draw when idle. This part is not split over workloads.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(kepler_node_cpu_idle_watts{zone=\"package\"}) / sum(kepler_node_cpu_watts{zone=\"package\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Idle share",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Running pods that Kepler attributes power to. 0 means Kepler cannot map processes to pods.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "blue",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "count(kepler_pod_cpu_watts{zone=\"package\", state=\"running\"})",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Pods measured",
+             "type": "stat"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 8,
+             "title": "Nodes",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "watt"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 6
+             },
+             "id": 9,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node_name) (kepler_node_cpu_watts{zone=\"package\"})",
+                   "legendFormat": "{{node_name}}"
+                }
+             ],
+             "title": "CPU power by node",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Idle is the power at the lowest load Kepler has seen; active is the rest.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "watt"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+             },
+             "id": 10,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(kepler_node_cpu_active_watts{zone=\"package\"})",
+                   "legendFormat": "active"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(kepler_node_cpu_idle_watts{zone=\"package\"})",
+                   "legendFormat": "idle"
+                }
+             ],
+             "title": "Active and idle (all nodes)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "min": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "watth"
+                }
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 0,
+                "y": 14
+             },
+             "id": 11,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(sort_desc(sum by (node_name) (increase(kepler_node_cpu_joules_total{zone=\"package\"}[$__range])))) / 3600",
+                   "legendFormat": "{{node_name}}"
+                }
+             ],
+             "title": "Energy by node (time range)",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Active power not attributed to a pod: the k0s control plane and etcd, kubelet, containerd, systemd and the kernel.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "watt"
+                }
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 12,
+                "y": 14
+             },
+             "id": 12,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node_name) (kepler_node_cpu_active_watts{zone=\"package\"}) - sum by (node_name) (kepler_pod_cpu_watts{zone=\"package\", state=\"running\"})",
+                   "legendFormat": "{{node_name}}"
+                }
+             ],
+             "title": "Host processes and kernel (not in pods)",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 21
+             },
+             "id": 13,
+             "title": "Workloads",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "watt"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 22
+             },
+             "id": 14,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "topk(10, sum by (pod_namespace) (kepler_pod_cpu_watts{zone=\"package\", state=\"running\"}))",
+                   "legendFormat": "{{pod_namespace}}"
+                }
+             ],
+             "title": "CPU power by namespace (top 10)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Energy of pods that still exist at the end of the range; deleted pods drop out.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "min": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "watth"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 22
+             },
+             "id": 15,
+             "options": {
+                "displayMode": "gradient",
+                "orientation": "horizontal",
+                "showUnfilled": true
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(sort_desc(topk(15, sum by (pod_namespace) (increase(kepler_pod_cpu_joules_total{zone=\"package\"}[$__range]))))) / 3600",
+                   "legendFormat": "{{pod_namespace}}"
+                }
+             ],
+             "title": "Energy by namespace (time range)",
+             "type": "bargauge"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "watt"
+                }
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 31
+             },
+             "id": 16,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "topk(10, sum by (pod_namespace, pod_name) (kepler_pod_cpu_watts{zone=\"package\", state=\"running\"}))",
+                   "legendFormat": "{{pod_namespace}}/{{pod_name}}"
+                }
+             ],
+             "title": "CPU power by pod (top 10)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "noValue": "-"
+                },
+                "overrides": [
+                   {
+                      "matcher": {
+                         "id": "byName",
+                         "options": "Watts"
+                      },
+                      "properties": [
+                         {
+                            "id": "unit",
+                            "value": "watt"
+                         },
+                         {
+                            "id": "decimals",
+                            "value": 2
+                         }
+                      ]
+                   }
+                ]
+             },
+             "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 31
+             },
+             "id": 17,
+             "options": {
+                "sortBy": [
+                   {
+                      "desc": true,
+                      "displayName": "Watts"
+                   }
+                ]
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "topk(20, sum by (pod_namespace, pod_name, node_name) (kepler_pod_cpu_watts{zone=\"package\", state=\"running\"}))",
+                   "format": "table",
+                   "instant": true,
+                   "refId": "A"
+                }
+             ],
+             "title": "Top pods now",
+             "transformations": [
+                {
+                   "id": "organize",
+                   "options": {
+                      "excludeByName": {
+                         "Time": true,
+                         "__name__": true,
+                         "cluster": true,
+                         "container": true,
+                         "endpoint": true,
+                         "instance": true,
+                         "job": true,
+                         "namespace": true,
+                         "pod": true,
+                         "prometheus": true,
+                         "service": true,
+                         "url": true
+                      },
+                      "renameByName": {
+                         "Value": "Watts",
+                         "node_name": "Node",
+                         "pod_name": "Pod",
+                         "pod_namespace": "Namespace"
+                      }
+                   }
+                }
+             ],
+             "type": "table"
+          }
+       ],
+       "refresh": "1m",
+       "schemaVersion": 39,
+       "tags": [
+          "power",
+          "kepler",
+          "hardware"
+       ],
+       "time": {
+          "from": "now-24h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Power",
+       "uid": "power"
+    }

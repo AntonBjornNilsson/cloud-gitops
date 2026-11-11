@@ -1,0 +1,41 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: kepler
+  namespace: kepler
+spec:
+  endpointSelector: {}
+  ingress:
+    # Metrics scrape from VictoriaMetrics
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "28282"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # Kubernetes API (pod informer)
+    - toEntities:
+        - kube-apiserver
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP

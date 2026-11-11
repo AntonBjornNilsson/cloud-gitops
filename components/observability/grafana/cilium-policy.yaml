@@ -81,6 +81,14 @@ spec:
               protocol: TCP
           rules:
             http: [{}]
+    # Profiles datasource: Pyroscope
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: pyroscope
+      toPorts:
+        - ports:
+            - port: "4040"
+              protocol: TCP
     # OIDC token exchange with Authelia via the public auth hostname. It
     # resolves to the Traefik LoadBalancer IP, which Cilium translates to the
     # Traefik pod, so the policy sees the container ports, not 80/443.

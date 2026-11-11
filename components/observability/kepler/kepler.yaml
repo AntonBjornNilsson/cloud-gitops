@@ -1,0 +1,101 @@
+# Kepler: per-node, per-pod and per-container power estimates from the CPUs'
+# RAPL energy counters (package and core zones), exported as Prometheus metrics
+# (kepler_*_watts / kepler_*_joules_total) and scraped by VictoriaMetrics
+# (victoriametrics/scrapes/kepler.yaml). Dashboard: Hardware -> Power.
+#
+# RAPL covers the CPU package only, not the whole machine (disks, PSU losses,
+# fans), so wall power is higher than what Kepler reports.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kepler
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: kepler
+  namespace: kepler
+spec:
+  type: oci
+  interval: 12h
+  url: oci://quay.io/sustainable_computing_io/charts
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kepler
+  namespace: kepler
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: kepler
+      version: "0.13.x"
+      sourceRef:
+        kind: HelmRepository
+        name: kepler
+        namespace: kepler
+      interval: 12h
+  timeout: 5m
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+    remediation:
+      retries: 3
+  values:
+    daemonset:
+      # Root (RAPL energy_uj is root-only), hostPID and SYS_PTRACE to map host
+      # processes to containers (/proc/<pid>/exe, environ), AppArmor unconfined
+      # because the runtime's default profile blocks those reads. Kyverno
+      # exceptions: security/kyverno/config/kyverno-policies.yaml.
+      securityContext:
+        # The nodes run Ubuntu without SELinux; the chart's spc_t would only
+        # trip the disallow-selinux policy.
+        seLinuxOptions: null
+      resources:
+        requests:
+          cpu: 20m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+    config:
+      log:
+        level: info
+      monitor:
+        interval: 5s
+      exporter:
+        prometheus:
+          debugCollectors:
+            - go
+          # No per-process (pid label churn) or VM series
+          metricsLevel:
+            - node
+            - container
+            - pod
+      kube:
+        podInformer:
+          # Watch pods through the API server, so the ClusterRole doesn't
+          # need nodes/proxy (kubelet access); see the postRenderer below.
+          mode: apiserver
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: ClusterRole
+              name: kepler
+            patch: |
+              - op: replace
+                path: /rules
+                value:
+                  - apiGroups: [""]
+                    resources: ["pods", "nodes"]
+                    verbs: ["get", "list", "watch"]

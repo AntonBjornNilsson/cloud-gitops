@@ -44,6 +44,10 @@ spec:
     policyExclude:
       disallow-capabilities:
         any:
+          # Kepler: SYS_PTRACE to read other processes' /proc/<pid>/exe and environ
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
           - resources:
               namespaces: [kube-system, truenas-csi, metallb]
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
@@ -67,6 +71,14 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Kepler: hostPID to attribute CPU energy to every process on the node
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
+          # Pyroscope's Alloy: hostPID to profile every process with eBPF
+          - resources:
+              namespaces: [pyroscope]
+              names: ["alloy-ebpf*"]
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
           - resources:
               namespaces: [kube-system, truenas-csi, metallb]
@@ -83,6 +95,10 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Kepler: the node's /proc and /sys (RAPL energy counters), read-only
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]
@@ -123,6 +139,10 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Pyroscope's Alloy: loads eBPF programs for CPU profiling
+          - resources:
+              namespaces: [pyroscope]
+              names: ["alloy-ebpf*"]
           - resources:
               namespaces: [kube-system, truenas-csi]
           # Sets kernel sysctls on every node
@@ -157,6 +177,14 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Kepler: SYS_PTRACE (see disallow-capabilities)
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
+          # Pyroscope's Alloy: privileged (see disallow-privileged-containers)
+          - resources:
+              namespaces: [pyroscope]
+              names: ["alloy-ebpf*"]
           # Node infrastructure created by operators (CNI, CSI, BGP/L2, sysctls)
           - resources:
               namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
@@ -191,6 +219,10 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Pyroscope's Alloy: privileged (see disallow-privileged-containers)
+          - resources:
+              namespaces: [pyroscope]
+              names: ["alloy-ebpf*"]
           - resources:
               namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
           - resources:
@@ -205,6 +237,13 @@ spec:
               names: ["unifi*"]
       require-run-as-non-root-user:
         any:
+          # Explicit runAsUser 0: Kepler (RAPL energy_uj is root-only), Alloy eBPF
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
+          - resources:
+              namespaces: [pyroscope]
+              names: ["alloy-ebpf*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]
@@ -230,6 +269,13 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Kepler: root for the RAPL counters; Alloy: root for eBPF
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
+          - resources:
+              namespaces: [pyroscope]
+              names: ["alloy-ebpf*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]
@@ -281,6 +327,10 @@ spec:
           - resources:
               namespaces: [coroot]
               names: ["coroot-node-agent*"]
+          # Kepler: hostPath /proc and /sys (same as disallow-host-path)
+          - resources:
+              namespaces: [kepler]
+              names: ["kepler*"]
           # Writes the containerd registry mirror config (Harbor) on every node
           - resources:
               namespaces: [registry-mirror]

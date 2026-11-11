@@ -1,0 +1,189 @@
+# Grafana Alloy as the profiling agent for Pyroscope, one pod per node.
+#
+# eBPF: CPU profiles of every container on the node, labelled
+#   service_name=<namespace>/<container>. Needs privileged + hostPID (Kyverno
+#   exceptions in security/kyverno/config/kyverno-policies.yaml).
+#
+# pprof pull: memory, goroutine, mutex and block profiles from Go apps that
+#   expose /debug/pprof. To opt a pod in, annotate it with
+#     profiles.grafana.com/scrape: "true"
+#     profiles.grafana.com/port_name: <container port name>
+#   and allow ingress from the pyroscope namespace on that port in its
+#   CiliumNetworkPolicy. Same service_name as eBPF, so CPU and memory of one
+#   app sit together in Grafana.
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: alloy-ebpf
+  namespace: pyroscope
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: alloy
+      version: "1.x"
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: pyroscope
+      interval: 12h
+  timeout: 5m
+  dependsOn:
+    - name: pyroscope
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 2m
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+    remediation:
+      retries: 3
+  values:
+    crds:
+      create: false
+    rbac:
+      create: true
+      # Only pod discovery (the chart default also reads every Secret). The
+      # chart concatenates both lists and can't render an empty one.
+      rules:
+        - apiGroups: [""]
+          resources: ["pods"]
+          verbs: ["get"]
+      clusterRules:
+        - apiGroups: [""]
+          resources: ["pods"]
+          verbs: ["list", "watch"]
+    controller:
+      type: daemonset
+      hostPID: true
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      podAnnotations:
+        profiles.grafana.com/scrape: "true"
+        profiles.grafana.com/port_name: http-metrics
+    global:
+      podSecurityContext:
+        seccompProfile:
+          type: RuntimeDefault
+    configReloader:
+      resources:
+        requests:
+          cpu: 5m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+    alloy:
+      enableReporting: false
+      extraEnv:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+      securityContext:
+        privileged: true
+        runAsUser: 0
+        runAsGroup: 0
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
+      resources:
+        requests:
+          cpu: 50m
+          memory: 192Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+      configMap:
+        create: true
+        content: |
+          logging {
+            level  = "info"
+            format = "logfmt"
+          }
+
+          // Pods on this node only: every node runs its own Alloy
+          discovery.kubernetes "local_pods" {
+            role = "pod"
+            selectors {
+              role  = "pod"
+              field = "spec.nodeName=" + sys.env("NODE_NAME")
+            }
+          }
+
+          discovery.relabel "local_pods" {
+            targets = discovery.kubernetes.local_pods.targets
+            rule {
+              source_labels = ["__meta_kubernetes_pod_phase"]
+              regex         = "Succeeded|Failed"
+              action        = "drop"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_namespace"]
+              target_label  = "namespace"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_name"]
+              target_label  = "pod"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_container_name"]
+              target_label  = "container"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_node_name"]
+              target_label  = "node"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_container_name"]
+              separator     = "/"
+              target_label  = "service_name"
+            }
+          }
+
+          pyroscope.ebpf "pods" {
+            targets    = discovery.relabel.local_pods.output
+            forward_to = [pyroscope.write.pyroscope.receiver]
+          }
+
+          // pprof pull from annotated pods, on the named port only
+          discovery.relabel "pprof_pods" {
+            targets = discovery.relabel.local_pods.output
+            rule {
+              source_labels = ["__meta_kubernetes_pod_annotation_profiles_grafana_com_scrape"]
+              regex         = "true"
+              action        = "keep"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_container_port_name"]
+              target_label  = "__meta_kubernetes_pod_annotation_profiles_grafana_com_port_name"
+              action        = "keepequal"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_ip", "__meta_kubernetes_pod_container_port_number"]
+              separator     = ":"
+              target_label  = "__address__"
+            }
+          }
+
+          pyroscope.scrape "pprof_pods" {
+            targets    = discovery.relabel.pprof_pods.output
+            forward_to = [pyroscope.write.pyroscope.receiver]
+            profiling_config {
+              // CPU comes from eBPF
+              profile.process_cpu {
+                enabled = false
+              }
+            }
+          }
+
+          pyroscope.write "pyroscope" {
+            endpoint {
+              url = "http://pyroscope.pyroscope.svc.cluster.local:4040"
+            }
+          }

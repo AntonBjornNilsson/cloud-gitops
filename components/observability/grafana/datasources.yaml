@@ -78,3 +78,22 @@ spec:
     jsonData:
       implementation: prometheus
       handleGrafanaManagedAlerts: false
+---
+# Continuous profiles (components/observability/pyroscope). Browse them in
+# Drilldown -> Profiles (grafana-pyroscope-app, preinstalled with Grafana).
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: profiles
+  namespace: grafana
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  uid: Pyroscope
+  datasource:
+    name: Pyroscope
+    type: grafana-pyroscope-datasource
+    access: proxy
+    url: http://pyroscope.pyroscope.svc.cluster.local:4040

@@ -20,6 +20,8 @@ resources:
   - observability/victoriametrics/system-victoriametrics.yaml
   - observability/coroot/system-coroot.yaml
   - observability/grafana/system-grafana.yaml
+  - observability/kepler/system-kepler.yaml
+  - observability/pyroscope/system-pyroscope.yaml
 
   # Security
   - security/authelia/system-authelia.yaml

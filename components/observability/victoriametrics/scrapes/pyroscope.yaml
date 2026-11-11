@@ -1,0 +1,33 @@
+---
+# Pyroscope server metrics (ingestion, storage, queries)
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: pyroscope
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - pyroscope
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pyroscope
+  podMetricsEndpoints:
+    - port: http2
+---
+# Alloy profiling agents (one per node)
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: alloy-ebpf
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - pyroscope
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alloy
+      app.kubernetes.io/instance: alloy-ebpf
+  podMetricsEndpoints:
+    - port: http-metrics

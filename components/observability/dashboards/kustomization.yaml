@@ -14,4 +14,5 @@ resources:
   - generated/media-playback.yaml
   - generated/services-overview.yaml
   - generated/home-assistant.yaml
+  - generated/power.yaml
   - upstream.yaml
