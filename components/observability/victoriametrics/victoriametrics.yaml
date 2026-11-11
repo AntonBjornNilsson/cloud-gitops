@@ -119,6 +119,9 @@ spec:
         # "cluster" label.
         externalLabels:
           cluster: homelab
+        extraArgs:
+          # The kube-apiserver's /metrics is ~20 MB uncompressed, over the 16 MB default
+          promscrape.maxScrapeSize: "64MB"
         resources:
           requests:
             cpu: 200m
