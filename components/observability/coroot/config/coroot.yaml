@@ -89,7 +89,7 @@ spec:
     resources:
       requests:
         cpu: 20m
-        memory: 128Mi
+        memory: 256Mi
       limits:
         cpu: 500m
         memory: 512Mi
@@ -104,10 +104,11 @@ spec:
     image:
       name: ghcr.io/coroot/coroot-node-agent:1.38.1
     # Every node, the control-plane node included (default toleration: all)
+    # Observed 340-565Mi at start-up on this cluster
     resources:
       requests:
         cpu: 50m
-        memory: 200Mi
+        memory: 384Mi
       limits:
         cpu: 500m
-        memory: 1Gi
+        memory: 1280Mi
