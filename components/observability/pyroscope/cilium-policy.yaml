@@ -6,8 +6,10 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
-    # Queries from the Grafana datasource
+    # Web UI (Traefik) and queries from the Grafana datasource
     - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
         - matchLabels:
             io.kubernetes.pod.namespace: grafana
       toPorts:

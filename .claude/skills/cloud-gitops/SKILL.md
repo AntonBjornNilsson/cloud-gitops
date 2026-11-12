@@ -107,6 +107,10 @@ Conventions:
   `services/management/homepage/homepage.yaml` (`services:` list), in the matching group, with `icon`,
   `description` and `href: https://<app>.${domain}`, plus a `widget` if Homepage has one for the app (its API keys
   go in `apps-substitutions` as `HOMEPAGE_VAR_*` env). Remove the tile when the service is removed.
+  Check the app itself, not just the chart: some serve a UI on their API port with no Ingress in the chart (e.g.
+  Pyroscope); add an Ingress (+ Traefik ingress in its CiliumNetworkPolicy) and then the tile. No Homepage widget
+  for the app: use a `prometheusmetric` widget against VictoriaMetrics. A component without any UI whose data lives
+  in a Grafana dashboard gets a tile linking `https://grafana.${domain}/d/<uid>` (e.g. Power for Kepler).
 
 ## Ingress, TLS and auth (mostly automatic via Kyverno)
 
@@ -311,9 +315,10 @@ backup**; only TrueNAS snapshots on the same disks (undo, not disaster recovery)
 - Kepler (`components/observability/kepler/`): CPU power per node/namespace/pod from the RAPL counters (package zone
   = whole CPU socket; `core` is part of it, never sum zones; wall power is higher). Pod informer in `apiserver`
   mode so the ClusterRole has no `nodes/proxy` (postRenderer). Per-process and VM metrics are off (pid label churn).
-  Dashboard `power.jsonnet` (Platform -> Power).
+  Dashboard `power.jsonnet` (Platform -> Power). No UI of its own: the Homepage "Power" tile links the dashboard.
 - Pyroscope (`components/observability/pyroscope/`): continuous profiling, single binary, 14d retention, NAS PVC.
-  No own UI: Grafana Drilldown -> Profiles, datasource uid `Pyroscope`. Profiles come from the `alloy-ebpf`
+  Own UI at `pyroscope.${domain}` (no login: Authelia, admin only, like Coroot), also in Grafana as Drilldown ->
+  Profiles (datasource uid `Pyroscope`). Profiles come from the `alloy-ebpf`
   DaemonSet (`alloy.yaml`): eBPF CPU profiles of every container (`service_name=<namespace>/<container>`) plus pprof
   pull (memory, goroutines, mutex, block) from pods annotated `profiles.grafana.com/scrape: "true"` +
   `profiles.grafana.com/port_name: <port name>`; such a pod's CiliumNetworkPolicy must allow ingress from the

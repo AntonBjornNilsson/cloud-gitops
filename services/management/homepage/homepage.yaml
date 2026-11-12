@@ -292,6 +292,43 @@ spec:
                 icon: mdi-chart-timeline-variant
                 description: Resource usage, service map, traces and profiles
                 href: https://coroot.${domain}
+            - Pyroscope:
+                icon: mdi-fire
+                description: CPU and memory profiles of every container
+                href: https://pyroscope.${domain}
+                widget:
+                  type: prometheusmetric
+                  url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+                  refreshInterval: 60000
+                  metrics:
+                    - label: Profiles/min
+                      query: round(sum(rate(pyroscope_distributor_profiles_received_total[5m])) * 60)
+                    - label: Containers
+                      query: sum(pyroscope_ebpf_active_targets)
+            # Kepler has no UI of its own; its data is the Grafana Power dashboard
+            - Power:
+                icon: mdi-lightning-bolt
+                description: CPU power per node and pod (Kepler)
+                href: https://grafana.${domain}/d/power
+                widget:
+                  type: prometheusmetric
+                  url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+                  refreshInterval: 60000
+                  metrics:
+                    - label: CPU now
+                      query: sum(kepler_node_cpu_watts{zone="package"})
+                      format:
+                        type: number
+                        suffix: " W"
+                        options:
+                          maximumFractionDigits: 0
+                    - label: Last 24h
+                      query: sum(increase(kepler_node_cpu_joules_total{zone="package"}[24h])) / 3600000
+                      format:
+                        type: number
+                        suffix: " kWh"
+                        options:
+                          maximumFractionDigits: 2
       bookmarks:
         - Everyday:
             - GitHub:

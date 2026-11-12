@@ -4,3 +4,4 @@ resources:
   - pyroscope.yaml
   - alloy.yaml
   - cilium-policy.yaml
+  - ingress.yaml
