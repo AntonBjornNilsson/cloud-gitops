@@ -158,6 +158,30 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /config
+        # gluetun's built-in server list is from its release; PIA renames servers, and with a
+        # stale name the port-forwarding API's TLS check fails ("certificate is valid for
+        # Server-X-5a, not Server-X-3a"). Fetch the current PIA list before the VPN starts.
+        # Non-fatal: if PIA's list is unreachable, gluetun falls back to its built-in one.
+        - name: gluetun-servers
+          image: qmcgaw/gluetun:v3.41.3
+          command:
+            - /bin/sh
+            - -c
+            - /gluetun-entrypoint update -enduser -providers "private internet access" || echo "server list update failed; using the built-in list"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: gluetun-servers
+              mountPath: /gluetun
         # Native sidecar: qBittorrent only starts once the VPN is up; the kill switch blocks
         # all egress outside the tunnel until then.
         - name: gluetun
@@ -228,6 +252,8 @@ spec:
           volumeMounts:
             - name: gluetun-data
               mountPath: /tmp/gluetun
+            - name: gluetun-servers
+              mountPath: /gluetun
             - name: tun
               mountPath: /dev/net/tun
       containers:
@@ -289,18 +315,46 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo "Starting qBittorrent port-forward sync watcher..."
+              echo "Starting qBittorrent port-forward and VPN-reconnect watcher..."
+              API=http://127.0.0.1:8080/api/v2
               LAST_PORT=""
+              LAST_IP=""
+              NO_DHT=0
+              set_port() {
+                curl -s -f -X POST -d "json={\"listen_port\":$NEW_PORT,\"random_port\":false}" "$API/app/setPreferences"
+              }
+              # After gluetun reconnects (new tunnel address), libtorrent keeps its sockets on the
+              # old address: DHT drops to 0 nodes and new magnets never get metadata, for days.
+              # A listen-port change makes it reopen them; flip to a neighbour port and back.
+              rebind() {
+                P=$(curl -s -f "$API/app/preferences" | sed -n 's/.*"listen_port":\([0-9]*\).*/\1/p')
+                [ -n "$P" ] || return 0
+                if [ "$P" -lt 65535 ]; then T=$(expr "$P" + 1); else T=$(expr "$P" - 1); fi
+                NEW_PORT="$T"; set_port
+                sleep 5
+                NEW_PORT="$P"; set_port
+                echo "Reopened qBittorrent sockets on port $P ($REASON)"
+              }
               while true; do
-                if [ -s /tmp/gluetun/forwarded_port ]; then
-                  PORT=$(cat /tmp/gluetun/forwarded_port)
+                if curl -s -f "$API/app/version" >/dev/null 2>&1; then
+                  PORT=$(cat /tmp/gluetun/forwarded_port 2>/dev/null)
+                  IP=$(cat /tmp/gluetun/ip 2>/dev/null)
                   if [ -n "$PORT" ] && [ "$PORT" != "$LAST_PORT" ]; then
-                    echo "Forwarded port detected: $PORT. Updating qBittorrent..."
-                    if curl -s -f http://127.0.0.1:8080/api/v2/app/version >/dev/null 2>&1; then
-                      curl -s -X POST -d "json={\"listen_port\":$PORT,\"random_port\":false}" http://127.0.0.1:8080/api/v2/app/setPreferences
-                      echo "Updated listening port to $PORT"
-                      LAST_PORT="$PORT"
-                    fi
+                    NEW_PORT="$PORT"; set_port && echo "Updated listening port to $PORT" && LAST_PORT="$PORT"
+                    LAST_IP="$IP"
+                  elif [ -n "$IP" ] && [ -n "$LAST_IP" ] && [ "$IP" != "$LAST_IP" ]; then
+                    REASON="VPN reconnected with a new public IP"; rebind
+                    LAST_IP="$IP"
+                    NO_DHT=0
+                  elif [ -z "$LAST_IP" ]; then
+                    LAST_IP="$IP"
+                  fi
+                  # Fallback for reconnects that keep the same public IP
+                  DHT=$(curl -s -f "$API/transfer/info" | sed -n 's/.*"dht_nodes":\([0-9]*\).*/\1/p')
+                  if [ "$DHT" = "0" ]; then NO_DHT=$(expr "$NO_DHT" + 1); else NO_DHT=0; fi
+                  if [ "$NO_DHT" -ge 20 ]; then
+                    REASON="no DHT nodes for 5 minutes"; rebind
+                    NO_DHT=0
                   fi
                 fi
                 sleep 15
@@ -327,6 +381,8 @@ spec:
           persistentVolumeClaim:
             claimName: media
         - name: gluetun-data
+          emptyDir: {}
+        - name: gluetun-servers
           emptyDir: {}
         - name: tun
           hostPath:
@@ -448,7 +504,7 @@ spec:
     - fromEndpoints:
         - {}
   egress:
-    # DNS resolution
+    # DNS resolution, through Cilium's proxy so the FQDN rule below can match
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: kube-system
@@ -457,6 +513,16 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*"
+    # The gluetun-servers init container fetches PIA's server list before the VPN is up
+    - toFQDNs:
+        - matchName: serverlist.piaservers.net
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
     # Internet only through the VPN: the OpenVPN connection to PIA (UDP 8080, pinned in gluetun).
     # Peers and trackers travel inside the tunnel; anything that would bypass it shows up as
     # DROPPED in Hubble. A second kill switch next to gluetun's firewall.
