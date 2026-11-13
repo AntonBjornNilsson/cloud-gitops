@@ -127,28 +127,39 @@ spec:
       rollingUpdate:
         maxSurge: 0
         maxUnavailable: 1
-    # The image defaults to root but needs nothing from it (software transcoding, no
-    # devices). The existing config is root-owned; fsGroup makes it group-writable once.
+    # The image defaults to root but needs nothing from it. The existing config is
+    # root-owned; fsGroup makes it group-writable once. The GPU's render node
+    # (/dev/dri/renderD128, from the Intel GPU device plugin) belongs to the node's
+    # render group: supplementalGroups lets user 1000 open it for Quick Sync.
     podSecurityContext:
       runAsNonRoot: true
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 1000
       fsGroupChangePolicy: OnRootMismatch
+      supplementalGroups:
+        - ${render_gid}
       seccompProfile:
         type: RuntimeDefault
     securityContext:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-    # Software transcodes peak at ~2 cores and ~1.5Gi
+    # Transcodes run on the iGPU (Quick Sync); the CPU limit is for background tasks
+    # (trickplay, media segments, scans) and software fallbacks.
     resources:
       limits:
         cpu: 4
         memory: 3Gi
+        gpu.intel.com/i915: 1
       requests:
         cpu: 500m
         memory: 768Mi
+        gpu.intel.com/i915: 1
+    # The node with the Quick Sync iGPU (UHD 630: HEVC/VP9 10-bit decode); the
+    # gpu.intel.com/i915 request alone would also allow an older iGPU.
+    nodeSelector:
+      kubernetes.io/hostname: ${intel_gpu_node}
 
     ingress:
       enabled: true
@@ -244,6 +255,37 @@ spec:
             test -f /config/config/encoding.xml || exit 0
             sed -i -E 's#<(EnableThrottling|EnableSegmentDeletion)>false<#<\1>true<#' /config/config/encoding.xml
             grep -oE '<(EnableThrottling|EnableSegmentDeletion)>[a-z]*' /config/config/encoding.xml
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 200m, memory: 64Mi}
+        volumeMounts:
+          - name: config
+            mountPath: /config
+      # Intel Quick Sync transcoding (iGPU from the Intel GPU device plugin): QSV on the
+      # render node, hardware decoding for h264/hevc/vc1/vp9 (10-bit HEVC/VP9 stay on),
+      # hardware encoding H.264 only (AllowHevcEncoding untouched). Low-power (VDEnc)
+      # encoders stay off: they need HuC firmware, which the node's i915 doesn't load.
+      # Tone mapping stays off. Rewritten on every start so Git is the source of truth.
+      - name: hardware-acceleration
+        image: docker.io/jellyfin/jellyfin:12.4
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        command:
+          - sh
+          - -c
+          - |
+            f=/config/config/encoding.xml
+            test -f $f || exit 0
+            sed -i -E \
+              -e 's#<HardwareAccelerationType>[^<]*<#<HardwareAccelerationType>qsv<#' \
+              -e 's#<VaapiDevice */>|<VaapiDevice>[^<]*</VaapiDevice>#<VaapiDevice>/dev/dri/renderD128</VaapiDevice>#' \
+              -e 's#<(EnableHardwareEncoding|EnableDecodingColorDepth10Hevc|EnableDecodingColorDepth10Vp9)>false<#<\1>true<#' \
+              -e 's#<(EnableTonemapping|EnableVppTonemapping|EnableIntelLowPowerH264HwEncoder|EnableIntelLowPowerHevcHwEncoder)>true<#<\1>false<#' \
+              $f
+            sed -z -i -E 's#<HardwareDecodingCodecs */>|<HardwareDecodingCodecs>([^<]|<string>[^<]*</string>)*</HardwareDecodingCodecs>#<HardwareDecodingCodecs><string>h264</string><string>hevc</string><string>vc1</string><string>vp9</string></HardwareDecodingCodecs>#' $f
+            grep -oE '<(HardwareAccelerationType|VaapiDevice|EnableHardwareEncoding|EnableTonemapping|EnableVppTonemapping)>[^<]*|<HardwareDecodingCodecs>.*</HardwareDecodingCodecs>' $f
         resources:
           requests: {cpu: 10m, memory: 16Mi}
           limits: {cpu: 200m, memory: 64Mi}

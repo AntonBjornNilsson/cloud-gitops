@@ -233,6 +233,9 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
   `/proc/<pid>/exe` and `environ`), the node's `/proc` and `/sys` read-only. Not privileged.
 - hostPath (`disallow-host-path` + `restrict-volume-types`): gluetun pods' `/dev/net/tun` (dispatcharr, prowlarr,
   qbittorrent), matter-server, node-exporter, smartctl-exporter, vlagent, kepler.
+- Intel GPU device plugin (`components/hardware/intel-gpu/`): root with no capabilities and hostPath `/dev/dri`,
+  `/sys/class/drm` and the kubelet's device-plugins dir. GPU users (Jellyfin) then request `gpu.intel.com/i915: 1`
+  and add the node's render group as `supplementalGroups` (`${render_gid}`): no hostPath, no exception for them.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
 with `kubectl --context=<admin> get policyreports -A`; test a manifest with `kubectl apply --dry-run=server`. A result
 for an unchanged resource is not re-evaluated when a policy starts excluding it: delete that PolicyReport to refresh it.
