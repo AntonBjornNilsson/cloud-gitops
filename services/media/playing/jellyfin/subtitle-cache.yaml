@@ -1,0 +1,99 @@
+# Extracts embedded subtitles at night (see subtitle-cache/prewarm.py), so the first play of a
+# file with text subtitles doesn't wait minutes for Jellyfin to read the whole file off the NAS.
+# Uses the exporter's Jellyfin API key.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: subtitle-cache
+  namespace: jellyfin
+spec:
+  schedule: "30 1 * * *"
+  timeZone: "Europe/Stockholm"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      # BUDGET_MINUTES (210) plus one extraction that may run up to 35 minutes
+      activeDeadlineSeconds: 15000
+      template:
+        metadata:
+          labels:
+            app: subtitle-cache
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: prewarm
+              image: python:3.15-alpine
+              command: ["python3", "/app/prewarm.py"]
+              env:
+                - name: DRY_RUN
+                  value: "false"
+                - name: BUDGET_MINUTES
+                  value: "210"
+                - name: MIN_FREE_GB
+                  value: "3"
+                - name: PYTHONDONTWRITEBYTECODE
+                  value: "1"
+                - name: JELLYFIN_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: jellyfin-exporter
+                      key: api-key
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: app
+                  mountPath: /app
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 128Mi
+          volumes:
+            - name: app
+              configMap:
+                name: subtitle-cache-app
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: subtitle-cache
+  namespace: jellyfin
+spec:
+  endpointSelector:
+    matchLabels:
+      app: subtitle-cache
+  ingress: []
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Jellyfin API
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP

@@ -4,8 +4,13 @@ resources:
   - jellyfin.yaml
   - jellyfin-exporter.yaml
   - collection-names.yaml
+  - subtitle-cache.yaml
 configMapGenerator:
   - name: collection-names-app
     namespace: jellyfin
     files:
       - collection-names/rename.py
+  - name: subtitle-cache-app
+    namespace: jellyfin
+    files:
+      - subtitle-cache/prewarm.py

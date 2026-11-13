@@ -56,9 +56,10 @@ spec:
   accessModes:
     - ReadWriteOnce
   storageClassName: nas-iscsi
+  # Also holds the extracted subtitle cache (subtitle-cache.yaml)
   resources:
     requests:
-      storage: 10Gi
+      storage: 20Gi
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
