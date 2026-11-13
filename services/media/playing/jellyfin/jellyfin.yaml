@@ -156,8 +156,9 @@ spec:
         cpu: 500m
         memory: 768Mi
         gpu.intel.com/i915: 1
-    # The node with the Quick Sync iGPU (UHD 630: HEVC/VP9 10-bit decode); the
-    # gpu.intel.com/i915 request alone would also allow an older iGPU.
+    # The node with the UHD 630 iGPU. The gpu.intel.com/i915 request alone would also
+    # allow the other node's HD 530, which decodes no HEVC 10-bit or VP9: with the
+    # settings below those transcodes would fail there instead of falling back.
     nodeSelector:
       kubernetes.io/hostname: ${intel_gpu_node}
 
