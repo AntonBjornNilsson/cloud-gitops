@@ -1,0 +1,92 @@
+# Intel GPU device plugin: advertises each node's Intel iGPU render node as the
+# extended resource gpu.intel.com/i915, so a pod (Jellyfin, Quick Sync transcoding)
+# can ask for it instead of a hostPath /dev/dri, which PSS restricted forbids.
+# The kubelet then adds /dev/dri/renderD* (and card*) to that pod's container; the
+# pod still needs the node's render group as a supplemental group to open it.
+# Nodes without an Intel GPU advertise nothing.
+# Upstream: intel/intel-device-plugins-for-kubernetes deployments/gpu_plugin/base,
+# without the SELinux type (no SELinux on the nodes; Kyverno allows only container_*)
+# and without the CDI spec dir (containerd 1.7 here has CDI off; DeviceSpecs suffice).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: intel-gpu
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: intel-gpu-plugin
+  namespace: intel-gpu
+  labels:
+    app: intel-gpu-plugin
+spec:
+  selector:
+    matchLabels:
+      app: intel-gpu-plugin
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: intel-gpu-plugin
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      # Root (the image has no user) with every capability dropped: it creates its
+      # socket in the kubelet's root-owned device-plugins dir. Kyverno exception in
+      # components/security/kyverno/config/kyverno-policies.yaml.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: intel-gpu-plugin
+          image: docker.io/intel/intel-gpu-plugin:0.37.1
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            - name: devfs
+              mountPath: /dev/dri
+              readOnly: true
+            - name: sysfsdrm
+              mountPath: /sys/class/drm
+              readOnly: true
+            - name: kubeletsockets
+              mountPath: /var/lib/kubelet/device-plugins
+      volumes:
+        - name: devfs
+          hostPath:
+            path: /dev/dri
+        - name: sysfsdrm
+          hostPath:
+            path: /sys/class/drm
+        # k0s keeps the kubelet's state under /var/lib/k0s/kubelet
+        - name: kubeletsockets
+          hostPath:
+            path: /var/lib/k0s/kubelet/device-plugins
+            type: Directory

@@ -1,0 +1,22 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: system-intel-gpu
+  namespace: flux-system
+spec:
+  interval: 12h
+  path: ./components/hardware/intel-gpu
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  dependsOn:
+    # Its root/hostPath exceptions must exist before the DaemonSet
+    - name: system-kyverno-config
+  retryInterval: 1m0s
+  timeout: 5m0s
+  wait: true
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: flux-substitutions

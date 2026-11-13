@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: intel-gpu-plugin
+  namespace: intel-gpu
+spec:
+  # Talks to the kubelet over a unix socket only: default-deny both directions
+  endpointSelector: {}
+  ingress:
+    - {}
+  egress:
+    - {}

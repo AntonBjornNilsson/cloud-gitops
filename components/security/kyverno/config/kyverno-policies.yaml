@@ -39,7 +39,7 @@ spec:
     # Allowlist, per policy. Each entry is the smallest scope that covers the
     # need: whole namespace for node-level infrastructure whose pods are
     # created by operators or CSI drivers (Cilium, TrueNAS CSI, MetalLB,
-    # AMD GPU), name prefix elsewhere. Autogen applies these to Deployments/DaemonSets/... too.
+    # AMD GPU), name prefix elsewhere (e.g. the Intel GPU device plugin). Autogen applies these to Deployments/DaemonSets/... too.
     # A new workload that needs one of these: add it here, with the reason.
     policyExclude:
       disallow-capabilities:
@@ -91,6 +91,11 @@ spec:
               names: ["matter-server*"]
       disallow-host-path:
         any:
+          # Intel GPU device plugin: the node's /dev/dri and /sys/class/drm (read-only) and
+          # the kubelet's device-plugins socket dir
+          - resources:
+              namespaces: [intel-gpu]
+              names: ["intel-gpu-plugin*"]
           # Coroot node-agent: the node's cgroupfs, tracefs and debugfs for eBPF
           - resources:
               namespaces: [coroot]
@@ -265,6 +270,11 @@ spec:
               names: ["qbittorrent*"]
       require-run-as-nonroot:
         any:
+          # Intel GPU device plugin: root (no capabilities) to create its socket in the
+          # kubelet's root-owned device-plugins dir
+          - resources:
+              namespaces: [intel-gpu]
+              names: ["intel-gpu-plugin*"]
           # Coroot node-agent: root for eBPF (see disallow-privileged-containers)
           - resources:
               namespaces: [coroot]
@@ -323,6 +333,10 @@ spec:
               names: ["smartctl-exporter*"]
       restrict-volume-types:
         any:
+          # Intel GPU device plugin: hostPath (same as disallow-host-path)
+          - resources:
+              namespaces: [intel-gpu]
+              names: ["intel-gpu-plugin*"]
           # Coroot node-agent: hostPath (same as disallow-host-path)
           - resources:
               namespaces: [coroot]

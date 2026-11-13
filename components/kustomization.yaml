@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   # Hardware
   # - hardware/amd-gpu/system-amd-drivers.yaml  # no GPU node (re-enable with the gpu alerts in rules/hardware.yaml)
+  - hardware/intel-gpu/system-intel-gpu.yaml
   - hardware/node-sysctls/system-node-sysctls.yaml
 
   # Networking
