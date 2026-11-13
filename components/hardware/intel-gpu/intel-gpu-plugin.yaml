@@ -85,8 +85,8 @@ spec:
         - name: sysfsdrm
           hostPath:
             path: /sys/class/drm
-        # k0s keeps the kubelet's state under /var/lib/k0s/kubelet
+        # Fixed path in the kubelet (not under k0s's /var/lib/k0s/kubelet root dir)
         - name: kubeletsockets
           hostPath:
-            path: /var/lib/k0s/kubelet/device-plugins
+            path: /var/lib/kubelet/device-plugins
             type: Directory
