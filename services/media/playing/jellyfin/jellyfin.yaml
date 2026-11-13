@@ -264,8 +264,10 @@ spec:
       # Intel Quick Sync transcoding (iGPU from the Intel GPU device plugin): QSV on the
       # render node, hardware decoding for h264/hevc/vc1/vp9 (10-bit HEVC/VP9 stay on),
       # hardware encoding H.264 only (AllowHevcEncoding untouched). Low-power (VDEnc)
-      # encoders stay off: they need HuC firmware, which the node's i915 doesn't load.
-      # Tone mapping stays off. Rewritten on every start so Git is the source of truth.
+      # encoders stay off: on this iGPU generation they need HuC firmware, which i915
+      # loads only with enable_guc=2 (not the default). HDR -> SDR tone mapping on the
+      # GPU with OpenCL (the image's Intel compute runtime supports the UHD 630); VPP
+      # tone mapping stays off. Rewritten on every start so Git is the source of truth.
       - name: hardware-acceleration
         image: docker.io/jellyfin/jellyfin:12.4
         securityContext:
@@ -281,8 +283,8 @@ spec:
             sed -i -E \
               -e 's#<HardwareAccelerationType>[^<]*<#<HardwareAccelerationType>qsv<#' \
               -e 's#<VaapiDevice */>|<VaapiDevice>[^<]*</VaapiDevice>#<VaapiDevice>/dev/dri/renderD128</VaapiDevice>#' \
-              -e 's#<(EnableHardwareEncoding|EnableDecodingColorDepth10Hevc|EnableDecodingColorDepth10Vp9)>false<#<\1>true<#' \
-              -e 's#<(EnableTonemapping|EnableVppTonemapping|EnableIntelLowPowerH264HwEncoder|EnableIntelLowPowerHevcHwEncoder)>true<#<\1>false<#' \
+              -e 's#<(EnableHardwareEncoding|EnableDecodingColorDepth10Hevc|EnableDecodingColorDepth10Vp9|EnableTonemapping)>false<#<\1>true<#' \
+              -e 's#<(EnableVppTonemapping|EnableIntelLowPowerH264HwEncoder|EnableIntelLowPowerHevcHwEncoder)>true<#<\1>false<#' \
               $f
             sed -z -i -E 's#<HardwareDecodingCodecs */>|<HardwareDecodingCodecs>([^<]|<string>[^<]*</string>)*</HardwareDecodingCodecs>#<HardwareDecodingCodecs><string>h264</string><string>hevc</string><string>vc1</string><string>vp9</string></HardwareDecodingCodecs>#' $f
             grep -oE '<(HardwareAccelerationType|VaapiDevice|EnableHardwareEncoding|EnableTonemapping|EnableVppTonemapping)>[^<]*|<HardwareDecodingCodecs>.*</HardwareDecodingCodecs>' $f
