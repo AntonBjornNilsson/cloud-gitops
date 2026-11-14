@@ -58,6 +58,8 @@ spec:
     pyroscope:
       extraArgs:
         log.level: info
+        # Egress to the internet is denied; the reports only produced drops
+        usage-stats.enabled: "false"
       structuredConfig:
         limits:
           retention_period: 14d
