@@ -67,6 +67,35 @@ spec:
             summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} stuck terminating"
             description: "The pod was deleted more than 15 minutes ago and is still present (stuck finalizer or volume detach)."
 
+    # Replace the chart's rules of the same name (disabled in victoriametrics.yaml),
+    # which require surviving the loss of the biggest node; the nodes differ too
+    # much in size for that. These fire only when requests exceed the whole cluster.
+    - name: capacity
+      rules:
+        - alert: KubeCPUOvercommit
+          expr: |
+            sum(namespace_cpu:kube_pod_container_resource_requests:sum)
+            - sum(kube_node_status_allocatable{job="kube-state-metrics", resource="cpu"})
+            > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod CPU requests exceed the cluster's allocatable CPU"
+            description: "Requests are {{ $value | humanize }} cores over what all nodes together can allocate; some pods cannot be scheduled. Lower requests or add a node."
+
+        - alert: KubeMemoryOvercommit
+          expr: |
+            sum(namespace_memory:kube_pod_container_resource_requests:sum)
+            - sum(kube_node_status_allocatable{job="kube-state-metrics", resource="memory"})
+            > 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod memory requests exceed the cluster's allocatable memory"
+            description: "Requests are {{ $value | humanize1024 }}B over what all nodes together can allocate; some pods cannot be scheduled. Lower requests or add a node."
+
     - name: nodes
       rules:
         - alert: NodeRebooted

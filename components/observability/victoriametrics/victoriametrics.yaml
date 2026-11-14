@@ -177,6 +177,14 @@ spec:
           enabled: true
         vlagent:
           enabled: true
+      # The chart's versions fire when the pods would not fit after losing the
+      # biggest node. That node holds about half the cluster's memory, so they
+      # can never clear; rules/kubernetes.yaml replaces them.
+      rules:
+        KubeCPUOvercommit:
+          enabled: false
+        KubeMemoryOvercommit:
+          enabled: false
 
     # --- Alerting -----------------------------------------------------------
     # Routing lives in alertmanager-config.yaml (VMAlertmanagerConfig). Without
