@@ -47,12 +47,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       # Indexer names get NXDOMAIN noise for A and AAAA on every cluster search domain with the
-      # default ndots:5. Not 1: musl (Alpine image) never falls back to the search list for a name
-      # with >= ndots dots, and Prowlarr's apps use "http://sonarr.sonarr:8989"-style URLs.
+      # default ndots:5. musl (Alpine image) never falls back to the search list for a name with
+      # >= ndots dots, so Prowlarr's Sonarr/Radarr apps (in its DB) must use full names:
+      # http://sonarr.sonarr.svc.cluster.local:8989, not http://sonarr.sonarr:8989.
       dnsConfig:
         options:
           - name: ndots
-            value: "2"
+            value: "1"
       initContainers:
         - name: run-dir
           image: lscr.io/linuxserver/prowlarr:latest@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef
