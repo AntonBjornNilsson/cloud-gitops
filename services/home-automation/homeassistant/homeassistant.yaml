@@ -48,7 +48,7 @@ spec:
         # configuration.yaml includes these; Home Assistant only creates them
         # together with a default configuration.yaml, which Git provides instead
         - name: include-files
-          image: ghcr.io/home-assistant/home-assistant:2026.11.0
+          image: ghcr.io/home-assistant/home-assistant:2026.11.1
           securityContext:
             allowPrivilegeEscalation: false
           command:
@@ -68,7 +68,7 @@ spec:
             - name: config
               mountPath: /config
         - name: http-store
-          image: ghcr.io/home-assistant/home-assistant:2026.11.0
+          image: ghcr.io/home-assistant/home-assistant:2026.11.1
           securityContext:
             allowPrivilegeEscalation: false
           command: ["python3", "/scripts/http-store.py"]
@@ -91,7 +91,7 @@ spec:
               readOnly: true
       containers:
         - name: homeassistant
-          image: ghcr.io/home-assistant/home-assistant:2026.11.0
+          image: ghcr.io/home-assistant/home-assistant:2026.11.1
           securityContext:
             allowPrivilegeEscalation: false
           env:
