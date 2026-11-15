@@ -255,12 +255,21 @@ spec:
         allowPrivilegeEscalation: false
         capabilities:
           drop: ["ALL"]
+        # The systemd collector talks to systemd over the host's D-Bus socket;
+        # the runtime's default AppArmor profile (cri-containerd.apparmor.d)
+        # denies every D-Bus call. Still uid 65534 with no capabilities and a
+        # read-only root. A localhost profile would need a privileged loader
+        # on every node. Same approach as Kepler.
+        appArmorProfile:
+          type: Unconfined
       extraArgs:
         - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)
         - --collector.filesystem.fs-types-exclude=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|erofs|sysfs|tracefs)$
         # GPU utilisation/VRAM/power (amdgpu exposes these via DRM sysfs)
         - --collector.drm
-        # Failed host services (feeds NodeSystemdServiceFailed)
+        # Failed/crashlooping host services (chart alerts NodeSystemdServiceFailed
+        # and NodeSystemdServiceCrashlooping); needs the D-Bus socket below
+        # and AppArmor unconfined (containerSecurityContext)
         - --collector.systemd
         - --collector.systemd.unit-include=(k0s.*|containerd|iscsid|multipathd|ssh|sshd|chronyd|systemd-timesyncd|systemd-networkd|systemd-resolved|NetworkManager|smartd)\.service
       extraHostVolumeMounts:
