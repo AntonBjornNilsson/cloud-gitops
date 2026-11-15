@@ -37,7 +37,10 @@ spec:
         cpu: 10m
         memory: 32Mi
       limits:
-        cpu: 200m
+        # Average use is ~10m, but each scrape runs smartctl for every disk
+        # in a short burst; 200m throttled 65-93% of active periods
+        # (CPUThrottlingHigh)
+        cpu: "1"
         memory: 128Mi
     # Scrape config and alert rules are standalone CRs
     # (scrapes/smartctl-exporter.yaml, rules/hardware.yaml).

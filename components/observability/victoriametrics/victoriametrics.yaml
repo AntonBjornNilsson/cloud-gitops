@@ -273,7 +273,10 @@ spec:
           cpu: 10m
           memory: 32Mi
         limits:
-          cpu: 250m
+          # Average use is ~10m, but each scrape runs the collectors in
+          # parallel for a few ms; 250m throttled most active periods
+          # (CPUThrottlingHigh)
+          cpu: "1"
           memory: 128Mi
 
     kube-state-metrics:
