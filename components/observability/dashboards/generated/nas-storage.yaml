@@ -1107,7 +1107,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "count by (storageclass) (kube_persistentvolumeclaim_info)",
+                   "expr": "label_replace(count by (storageclass) (kube_persistentvolumeclaim_info), \"storageclass\", \"none (static PV)\", \"storageclass\", \"\")",
                    "format": "table",
                    "instant": true,
                    "refId": "A"

@@ -88,7 +88,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
-             "description": "A Cilium agent restart produces a short burst of these; failures that persist fire CiliumEnvoyPolicyUpdatesFailing.",
+             "description": "Envoys with failed NPDS updates in the last 5 minutes. A Cilium agent restart (e.g. an upgrade) causes a short burst; failures that last 30 minutes fire CiliumEnvoyPolicyUpdatesFailing.",
              "fieldConfig": {
                 "defaults": {
                    "color": {
@@ -102,7 +102,7 @@ spec:
                             "value": null
                          },
                          {
-                            "color": "red",
+                            "color": "orange",
                             "value": 1
                          }
                       ]
@@ -128,11 +128,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum(increase(envoy_cilium_npds_update_failure[1h])) or vector(0)",
+                   "expr": "count(sum by (node) (increase(envoy_cilium_npds_update_failure[5m])) > 0) or vector(0)",
                    "legendFormat": ""
                 }
              ],
-             "title": "Policy update failures (1h)",
+             "title": "Nodes failing policy updates",
              "type": "stat"
           },
           {
@@ -533,6 +533,7 @@ spec:
                       "showPoints": "never"
                    },
                    "min": 0,
+                   "noValue": "none",
                    "unit": "ops"
                 }
              },
@@ -564,7 +565,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (envoy_cluster_name) (rate(envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name!~\"/envoy-admin|xds-grpc-cilium\"}[$__rate_interval]))",
+                   "expr": "sum by (envoy_cluster_name) (rate(envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name!~\"/envoy-admin|xds-grpc-cilium\"}[$__rate_interval])) > 0",
                    "legendFormat": "{{envoy_cluster_name}}"
                 }
              ],
@@ -584,6 +585,7 @@ spec:
                       "showPoints": "never"
                    },
                    "min": 0,
+                   "noValue": "none",
                    "unit": "reqps"
                 }
              },
@@ -615,7 +617,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (node) (rate(envoy_cilium_access_denied[$__rate_interval]))",
+                   "expr": "sum by (node) (rate(envoy_cilium_access_denied[$__rate_interval])) > 0",
                    "legendFormat": "{{node}}"
                 }
              ],
@@ -885,6 +887,7 @@ spec:
                       "showPoints": "never"
                    },
                    "min": 0,
+                   "noValue": "no requests (Hubble UI not in use)",
                    "unit": "reqps"
                 }
              },
@@ -916,7 +919,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (grpc_method) (rate(grpc_server_handled_total{namespace=\"kube-system\", pod=~\"hubble-relay-.*\"}[$__rate_interval]))",
+                   "expr": "sum by (grpc_method) (rate(grpc_server_handled_total{namespace=\"kube-system\", pod=~\"hubble-relay-.*\"}[$__rate_interval])) > 0",
                    "legendFormat": "{{grpc_method}}"
                 }
              ],
@@ -937,6 +940,7 @@ spec:
                       "showPoints": "never"
                    },
                    "min": 0,
+                   "noValue": "none",
                    "unit": "reqps"
                 }
              },
@@ -968,7 +972,7 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum by (grpc_code) (rate(grpc_server_handled_total{namespace=\"kube-system\", pod=~\"hubble-relay-.*\", grpc_code!~\"OK|Canceled\"}[$__rate_interval]))",
+                   "expr": "sum by (grpc_code) (rate(grpc_server_handled_total{namespace=\"kube-system\", pod=~\"hubble-relay-.*\", grpc_code!~\"OK|Canceled\"}[$__rate_interval])) > 0",
                    "legendFormat": "{{grpc_code}}"
                 }
              ],

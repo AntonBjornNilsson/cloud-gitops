@@ -32,9 +32,9 @@ dashboard.new('Cilium L7 Proxy')
   m.stat('Envoys connected to agent', 'sum(envoy_cilium_npds_control_plane_connected_state) / count(envoy_cilium_npds_control_plane_connected_state)', 0, 1, w=4,
          unit='percentunit', decimals=0, thresholds=[{ color: 'red', value: null }, { color: 'green', value: 1 }],
          desc='Share of cilium-envoy pods with a live policy (NPDS) stream to their Cilium agent. Envoys that never received an L7 policy report no stream.'),
-  m.stat('Policy update failures (1h)', 'sum(increase(envoy_cilium_npds_update_failure[1h])) or vector(0)', 4, 1, w=4,
-         thresholds=ok, decimals=0,
-         desc='A Cilium agent restart produces a short burst of these; failures that persist fire CiliumEnvoyPolicyUpdatesFailing.'),
+  m.stat('Nodes failing policy updates', 'count(sum by (node) (increase(envoy_cilium_npds_update_failure[5m])) > 0) or vector(0)', 4, 1, w=4,
+         thresholds=[{ color: 'green', value: null }, { color: 'orange', value: 1 }], decimals=0,
+         desc='Envoys with failed NPDS updates in the last 5 minutes. A Cilium agent restart (e.g. an upgrade) causes a short burst; failures that last 30 minutes fire CiliumEnvoyPolicyUpdatesFailing.'),
   m.stat('Rejected policies (1h)', '(sum(increase(envoy_cilium_npds_update_rejected[1h])) or vector(0)) + (sum(increase(envoy_cilium_policy_updates_rejected[1h])) or vector(0))', 8, 1, w=4,
          thresholds=ok, decimals=0,
          desc='Policies Envoy refused (an L7 rule it cannot apply).'),
@@ -62,12 +62,14 @@ dashboard.new('Cilium L7 Proxy')
     q('sum by (node) (envoy_http_downstream_cx_active{%s})' % proxy, '{{node}}'),
   ], 0, 14, 8, 8, min=0, legendRight=false),
   m.ts('Upstream connect failures', [
-    q('sum by (envoy_cluster_name) (rate(envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name!~"/envoy-admin|xds-grpc-cilium"}[$__rate_interval]))', '{{envoy_cluster_name}}'),
+    q('sum by (envoy_cluster_name) (rate(envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name!~"/envoy-admin|xds-grpc-cilium"}[$__rate_interval])) > 0', '{{envoy_cluster_name}}'),
   ], 8, 14, 8, 8, 'ops', min=0, legendRight=false,
-    desc='Envoy could not connect to the destination pod after allowing the request.'),
+    desc='Envoy could not connect to the destination pod after allowing the request.')
+  + grafonnet.panel.timeSeries.standardOptions.withNoValue('none'),
   m.ts('Denied by L7 policy', [
-    q('sum by (node) (rate(envoy_cilium_access_denied[$__rate_interval]))', '{{node}}'),
-  ], 16, 14, 8, 8, 'reqps', min=0, legendRight=false),
+    q('sum by (node) (rate(envoy_cilium_access_denied[$__rate_interval])) > 0', '{{node}}'),
+  ], 16, 14, 8, 8, 'reqps', min=0, legendRight=false)
+  + grafonnet.panel.timeSeries.standardOptions.withNoValue('none'),
 
   // --- Policy stream ----------------------------------------------------------------
   m.row('Policy updates (NPDS)', 22),
@@ -91,13 +93,15 @@ dashboard.new('Cilium L7 Proxy')
   ], 0, 32, 8, 8, min=0, stack=true, legendRight=false,
     desc='Connections from the relay to each node\'s Cilium agent (port 4244).'),
   m.ts('Requests by method', [
-    q('sum by (grpc_method) (rate(grpc_server_handled_total{%s}[$__rate_interval]))' % relay, '{{grpc_method}}'),
+    q('sum by (grpc_method) (rate(grpc_server_handled_total{%s}[$__rate_interval])) > 0' % relay, '{{grpc_method}}'),
   ], 8, 32, 8, 8, 'reqps', min=0, legendRight=false,
-    desc='Hubble UI and `hubble observe` calls.'),
+    desc='Hubble UI and `hubble observe` calls.')
+  + grafonnet.panel.timeSeries.standardOptions.withNoValue('no requests (Hubble UI not in use)'),
   m.ts('Failed requests by code', [
-    q('sum by (grpc_code) (rate(grpc_server_handled_total{%s, grpc_code!~"OK|Canceled"}[$__rate_interval]))' % relay, '{{grpc_code}}'),
+    q('sum by (grpc_code) (rate(grpc_server_handled_total{%s, grpc_code!~"OK|Canceled"}[$__rate_interval])) > 0' % relay, '{{grpc_code}}'),
   ], 16, 32, 8, 8, 'reqps', min=0, legendRight=false,
-    desc='Canceled is left out: it is a client closing a stream (e.g. leaving the Hubble UI).'),
+    desc='Canceled is left out: it is a client closing a stream (e.g. leaving the Hubble UI).')
+  + grafonnet.panel.timeSeries.standardOptions.withNoValue('none'),
 
   // --- Pods ---------------------------------------------------------------------------
   m.row('Pods', 40),

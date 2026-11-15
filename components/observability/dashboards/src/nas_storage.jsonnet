@@ -113,7 +113,7 @@ dashboard.new('NAS Storage')
     thresholds=[{ color: 'green', value: null }, { color: 'orange', value: 0.8 }, { color: 'red', value: 0.9 }], max=1,
     desc='Filesystem usage of mounted volumes, as the kubelet sees it. Volumes that are not mounted right now are missing.'),
   m.labelTable('Claims by StorageClass',
-               'count by (storageclass) (kube_persistentvolumeclaim_info)',
+               'label_replace(count by (storageclass) (kube_persistentvolumeclaim_info), "storageclass", "none (static PV)", "storageclass", "")',
                12, 46, 6, 10,
                rename={ storageclass: 'StorageClass', Value: 'PVCs' },
                overrides=[m.byName('PVCs', [m.decimals(0)])]),
