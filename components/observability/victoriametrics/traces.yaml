@@ -11,6 +11,12 @@ spec:
   # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
   useStrictSecurity: true
   retentionPeriod: "7d"
+  extraArgs:
+    # Default 5s. Each flush fsyncs on the iSCSI volume, and every thread
+    # waiting on that ~20 ms round trip to the NAS counts as node load
+    # (NodeSystemSaturation on the 4-core node). A crash now loses up to 30s
+    # of traces.
+    inmemoryDataFlushInterval: 30s
   # Data on the NAS PVC vtsingle-traces-nas (the operator requires the volume name "data"
   # and no `storage`)
   storageDataPath: /victoria-traces-data
