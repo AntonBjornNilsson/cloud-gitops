@@ -325,6 +325,23 @@ spec:
                         suffix: " kWh"
                         options:
                           maximumFractionDigits: 2
+            # cfgate (Cloudflare tunnel) and the Tailscale subnet router have no UI;
+            # their data is the Grafana Remote Access dashboard
+            - Remote Access:
+                icon: mdi-earth-arrow-right
+                description: Cloudflare tunnel and Tailscale subnet router
+                href: https://grafana.${domain}/d/remote-access
+                widget:
+                  type: prometheusmetric
+                  url: http://vmsingle-vm-k8s-stack.victoriametrics.svc.cluster.local:8428
+                  refreshInterval: 60000
+                  metrics:
+                    - label: Tunnel links
+                      query: sum(cloudflared_tunnel_ha_connections) or vector(0)
+                    - label: Requests 1h
+                      query: round(sum(increase(cloudflared_tunnel_total_requests[1h])))
+                    - label: Tailnet routes
+                      query: sum(tailscaled_approved_routes) or vector(0)
       bookmarks:
         - Everyday:
             - GitHub:

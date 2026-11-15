@@ -15,4 +15,7 @@ resources:
   - generated/services-overview.yaml
   - generated/home-assistant.yaml
   - generated/power.yaml
+  - generated/remote-access.yaml
+  - generated/cilium-l7-proxy.yaml
+  - generated/nas-storage.yaml
   - upstream.yaml

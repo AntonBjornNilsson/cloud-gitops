@@ -1,0 +1,1108 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cilium-l7-proxy
+  namespace: grafana
+  labels:
+    app.kubernetes.io/managed-by: grafonnet
+  annotations:
+    # Grafana data links use ${...}; keep Flux from substituting them.
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  folder: "Networking"
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  json: |
+    {
+       "description": "cilium-envoy (L7 policy enforcement, NPDS policy stream) and Hubble Relay.",
+       "graphTooltip": 1,
+       "panels": [
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+             },
+             "id": 1,
+             "title": "Overview",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Share of cilium-envoy pods with a live policy (NPDS) stream to their Cilium agent. Envoys that never received an L7 policy report no stream.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "red",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 0,
+                "y": 1
+             },
+             "id": 2,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(envoy_cilium_npds_control_plane_connected_state) / count(envoy_cilium_npds_control_plane_connected_state)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Envoys connected to agent",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "A Cilium agent restart produces a short burst of these; failures that persist fire CiliumEnvoyPolicyUpdatesFailing.",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "red",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 4,
+                "y": 1
+             },
+             "id": 3,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(envoy_cilium_npds_update_failure[1h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Policy update failures (1h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Policies Envoy refused (an L7 rule it cannot apply).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "green",
+                            "value": null
+                         },
+                         {
+                            "color": "red",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 8,
+                "y": 1
+             },
+             "id": 4,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "(sum(increase(envoy_cilium_npds_update_rejected[1h])) or vector(0)) + (sum(increase(envoy_cilium_policy_updates_rejected[1h])) or vector(0))",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Rejected policies (1h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 2,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 12,
+                "y": 1
+             },
+             "id": 5,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "area"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(rate(envoy_http_downstream_rq_total{envoy_http_conn_manager_prefix=\"proxy\"}[$__rate_interval]))",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "L7 requests/s",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Requests denied by an L7 policy rule (403 from the proxy).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "blue",
+                            "value": null
+                         }
+                      ]
+                   },
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 16,
+                "y": 1
+             },
+             "id": 6,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(increase(envoy_cilium_access_denied[24h])) or vector(0)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "L7 denied (24h)",
+             "type": "stat"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Cilium agents Hubble Relay can reach (IDLE = connected, no request open).",
+             "fieldConfig": {
+                "defaults": {
+                   "color": {
+                      "mode": "thresholds"
+                   },
+                   "decimals": 0,
+                   "noValue": "no relay",
+                   "thresholds": {
+                      "steps": [
+                         {
+                            "color": "orange",
+                            "value": null
+                         },
+                         {
+                            "color": "green",
+                            "value": 1
+                         }
+                      ]
+                   },
+                   "unit": "percentunit"
+                }
+             },
+             "gridPos": {
+                "h": 4,
+                "w": 4,
+                "x": 20,
+                "y": 1
+             },
+             "id": 7,
+             "options": {
+                "colorMode": "background",
+                "graphMode": "none"
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(hubble_relay_pool_peer_connection_status{status=~\"READY|IDLE\"}) / sum(hubble_relay_pool_peer_connection_status)",
+                   "legendFormat": ""
+                }
+             ],
+             "title": "Relay peers healthy",
+             "type": "stat"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+             },
+             "id": 8,
+             "title": "L7 traffic (proxy listener)",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 6
+             },
+             "id": 9,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (envoy_response_code_class) (rate(envoy_http_downstream_rq_xx{envoy_http_conn_manager_prefix=\"proxy\"}[$__rate_interval]))",
+                   "legendFormat": "{{envoy_response_code_class}}xx"
+                }
+             ],
+             "title": "Requests by response class",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "ms"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+             },
+             "id": 10,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.5, sum by (le) (rate(envoy_http_downstream_rq_time_bucket{envoy_http_conn_manager_prefix=\"proxy\"}[$__rate_interval])))",
+                   "legendFormat": "p50"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.95, sum by (le) (rate(envoy_http_downstream_rq_time_bucket{envoy_http_conn_manager_prefix=\"proxy\"}[$__rate_interval])))",
+                   "legendFormat": "p95"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.99, sum by (le) (rate(envoy_http_downstream_rq_time_bucket{envoy_http_conn_manager_prefix=\"proxy\"}[$__rate_interval])))",
+                   "legendFormat": "p99"
+                }
+             ],
+             "title": "Request duration",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 14
+             },
+             "id": 11,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node) (envoy_http_downstream_cx_active{envoy_http_conn_manager_prefix=\"proxy\"})",
+                   "legendFormat": "{{node}}"
+                }
+             ],
+             "title": "Active connections by node",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Envoy could not connect to the destination pod after allowing the request.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "ops"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 14
+             },
+             "id": 12,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (envoy_cluster_name) (rate(envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name!~\"/envoy-admin|xds-grpc-cilium\"}[$__rate_interval]))",
+                   "legendFormat": "{{envoy_cluster_name}}"
+                }
+             ],
+             "title": "Upstream connect failures",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 14
+             },
+             "id": 13,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node) (rate(envoy_cilium_access_denied[$__rate_interval]))",
+                   "legendFormat": "{{node}}"
+                }
+             ],
+             "title": "Denied by L7 policy",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 22
+             },
+             "id": 14,
+             "title": "Policy updates (NPDS)",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Each Cilium agent restart (e.g. an upgrade) briefly shows thousands of failures while Envoy reconnects.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "ops"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 23
+             },
+             "id": 15,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "right"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node) (rate(envoy_cilium_npds_update_success[$__rate_interval]))",
+                   "legendFormat": "ok {{node}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node) (rate(envoy_cilium_npds_update_failure[$__rate_interval]))",
+                   "legendFormat": "failed {{node}}"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (node) (rate(envoy_cilium_npds_update_rejected[$__rate_interval]))",
+                   "legendFormat": "rejected {{node}}"
+                }
+             ],
+             "title": "Policy updates by node",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 12,
+                "y": 23
+             },
+             "id": 16,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max by (node) (envoy_cilium_npds_control_plane_connected_state)",
+                   "legendFormat": "{{node}}"
+                }
+             ],
+             "title": "Connected to agent",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "ms"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 6,
+                "x": 18,
+                "y": 23
+             },
+             "id": 17,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "histogram_quantile(0.95, sum by (node, le) (rate(envoy_cilium_npds_update_duration_bucket[$__rate_interval])))",
+                   "legendFormat": "{{node}}"
+                }
+             ],
+             "title": "Policy update duration (p95)",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 31
+             },
+             "id": 18,
+             "title": "Hubble Relay",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Connections from the relay to each node's Cilium agent (port 4244).",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 32
+             },
+             "id": 19,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (status) (hubble_relay_pool_peer_connection_status) > 0",
+                   "legendFormat": "{{status}}"
+                }
+             ],
+             "title": "Peers by state",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Hubble UI and `hubble observe` calls.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 32
+             },
+             "id": 20,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (grpc_method) (rate(grpc_server_handled_total{namespace=\"kube-system\", pod=~\"hubble-relay-.*\"}[$__rate_interval]))",
+                   "legendFormat": "{{grpc_method}}"
+                }
+             ],
+             "title": "Requests by method",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Canceled is left out: it is a client closing a stream (e.g. leaving the Hubble UI).",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 32
+             },
+             "id": 21,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (grpc_code) (rate(grpc_server_handled_total{namespace=\"kube-system\", pod=~\"hubble-relay-.*\", grpc_code!~\"OK|Canceled\"}[$__rate_interval]))",
+                   "legendFormat": "{{grpc_code}}"
+                }
+             ],
+             "title": "Failed requests by code",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 40
+             },
+             "id": 22,
+             "title": "Pods",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "cores"
+                }
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 0,
+                "y": 41
+             },
+             "id": 23,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"kube-system\", container=~\"cilium-envoy|hubble-relay\"}[$__rate_interval]))",
+                   "legendFormat": "{{pod}}"
+                }
+             ],
+             "title": "CPU",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 12,
+                "y": 41
+             },
+             "id": 24,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (pod) (container_memory_working_set_bytes{namespace=\"kube-system\", container=~\"cilium-envoy|hubble-relay\"})",
+                   "legendFormat": "{{pod}}"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          }
+       ],
+       "refresh": "1m",
+       "schemaVersion": 39,
+       "tags": [
+          "networking",
+          "cilium",
+          "envoy",
+          "hubble"
+       ],
+       "time": {
+          "from": "now-24h",
+          "to": "now"
+       },
+       "timezone": "browser",
+       "title": "Cilium L7 Proxy",
+       "uid": "cilium-l7-proxy"
+    }

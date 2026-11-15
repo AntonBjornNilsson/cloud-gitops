@@ -1791,6 +1791,347 @@ spec:
                 "y": 49
              },
              "id": 23,
+             "title": "Server runtime",
+             "type": "row"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 60,
+                      "gradientMode": "opacity",
+                      "showPoints": "never",
+                      "stacking": {
+                         "mode": "normal"
+                      }
+                   },
+                   "min": 0,
+                   "unit": "reqps"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 50
+             },
+             "id": 24,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum by (code) (rate(http_requests_received_total{namespace=\"jellyfin\"}[$__rate_interval]))",
+                   "legendFormat": "{{code}}"
+                }
+             ],
+             "title": "API requests by status",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Endpoints with the highest 95th-percentile response time in each interval.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "s"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 50
+             },
+             "id": 25,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "topk(8, histogram_quantile(0.95, sum by (exported_endpoint, le) (rate(http_request_duration_seconds_bucket{namespace=\"jellyfin\"}[$__rate_interval]))))",
+                   "legendFormat": "{{exported_endpoint}}"
+                }
+             ],
+             "title": "Slowest endpoints (p95)",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "A queue that stays above zero means every thread is blocked (database locks during scans or guide refreshes): the UI and playback stall. Alert: JellyfinThreadPoolStarved.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "short"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 50
+             },
+             "id": 26,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(system_runtime_threadpool_queue_length{namespace=\"jellyfin\"})",
+                   "legendFormat": "queued work items"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(system_runtime_threadpool_thread_count{namespace=\"jellyfin\"})",
+                   "legendFormat": "threads"
+                }
+             ],
+             "title": "Thread pool",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Managed heap is .NET objects after the last GC; the rest of the working set is native memory (ffmpeg runs in its own process).",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "bytes"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 58
+             },
+             "id": 27,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(system_runtime_dotnet_process_memory_working_set{namespace=\"jellyfin\"})",
+                   "legendFormat": "working set"
+                },
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(system_runtime_dotnet_gc_last_collection_heap_size{namespace=\"jellyfin\"})",
+                   "legendFormat": "managed heap"
+                }
+             ],
+             "title": "Memory",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "percent"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 58
+             },
+             "id": 28,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "max(system_runtime_time_in_gc{namespace=\"jellyfin\"})",
+                   "legendFormat": "GC"
+                }
+             ],
+             "title": "Time in garbage collection",
+             "type": "timeseries"
+          },
+          {
+             "datasource": {
+                "type": "datasource",
+                "uid": "-- Mixed --"
+             },
+             "description": "Thrown .NET exceptions, handled ones included; a steady rate is normal, a jump is worth a look in the log.",
+             "fieldConfig": {
+                "defaults": {
+                   "custom": {
+                      "fillOpacity": 10,
+                      "gradientMode": "opacity",
+                      "showPoints": "never"
+                   },
+                   "min": 0,
+                   "unit": "ops"
+                }
+             },
+             "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 58
+             },
+             "id": 29,
+             "options": {
+                "legend": {
+                   "calcs": [
+                      "lastNotNull",
+                      "max"
+                   ],
+                   "displayMode": "table",
+                   "placement": "bottom"
+                },
+                "tooltip": {
+                   "mode": "multi",
+                   "sort": "descending"
+                }
+             },
+             "pluginVersion": "v11.0.0",
+             "targets": [
+                {
+                   "datasource": {
+                      "type": "prometheus",
+                      "uid": "VictoriaMetrics"
+                   },
+                   "expr": "sum(rate(system_runtime_exception_count_total{namespace=\"jellyfin\"}[$__rate_interval]))",
+                   "legendFormat": "exceptions"
+                }
+             ],
+             "title": "Exceptions",
+             "type": "timeseries"
+          },
+          {
+             "collapsed": false,
+             "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 66
+             },
+             "id": 30,
              "title": "Pods and traffic",
              "type": "row"
           },
@@ -1841,9 +2182,9 @@ spec:
                 "h": 3,
                 "w": 3,
                 "x": 0,
-                "y": 50
+                "y": 67
              },
-             "id": 24,
+             "id": 31,
              "options": {
                 "colorMode": "background",
                 "graphMode": "none"
@@ -1895,9 +2236,9 @@ spec:
                 "h": 3,
                 "w": 3,
                 "x": 0,
-                "y": 53
+                "y": 70
              },
-             "id": 25,
+             "id": 32,
              "options": {
                 "colorMode": "background",
                 "graphMode": "none"
@@ -1939,9 +2280,9 @@ spec:
                 "h": 6,
                 "w": 7,
                 "x": 3,
-                "y": 50
+                "y": 67
              },
-             "id": 26,
+             "id": 33,
              "options": {
                 "legend": {
                    "calcs": [
@@ -1990,9 +2331,9 @@ spec:
                 "h": 6,
                 "w": 7,
                 "x": 10,
-                "y": 50
+                "y": 67
              },
-             "id": 27,
+             "id": 34,
              "options": {
                 "legend": {
                    "calcs": [
@@ -2041,9 +2382,9 @@ spec:
                 "h": 6,
                 "w": 7,
                 "x": 17,
-                "y": 50
+                "y": 67
              },
-             "id": 28,
+             "id": 35,
              "options": {
                 "legend": {
                    "calcs": [
@@ -2119,9 +2460,9 @@ spec:
                 "h": 3,
                 "w": 3,
                 "x": 0,
-                "y": 56
+                "y": 73
              },
-             "id": 29,
+             "id": 36,
              "options": {
                 "colorMode": "background",
                 "graphMode": "none"
@@ -2173,9 +2514,9 @@ spec:
                 "h": 3,
                 "w": 3,
                 "x": 0,
-                "y": 59
+                "y": 76
              },
-             "id": 30,
+             "id": 37,
              "options": {
                 "colorMode": "background",
                 "graphMode": "none"
@@ -2217,9 +2558,9 @@ spec:
                 "h": 6,
                 "w": 7,
                 "x": 3,
-                "y": 56
+                "y": 73
              },
-             "id": 31,
+             "id": 38,
              "options": {
                 "legend": {
                    "calcs": [
@@ -2268,9 +2609,9 @@ spec:
                 "h": 6,
                 "w": 7,
                 "x": 10,
-                "y": 56
+                "y": 73
              },
-             "id": 32,
+             "id": 39,
              "options": {
                 "legend": {
                    "calcs": [
@@ -2319,9 +2660,9 @@ spec:
                 "h": 6,
                 "w": 7,
                 "x": 17,
-                "y": 56
+                "y": 73
              },
-             "id": 33,
+             "id": 40,
              "options": {
                 "legend": {
                    "calcs": [
@@ -2359,9 +2700,9 @@ spec:
                 "h": 10,
                 "w": 24,
                 "x": 0,
-                "y": 62
+                "y": 79
              },
-             "id": 34,
+             "id": 41,
              "options": {
                 "showTime": true,
                 "sortOrder": "Descending",

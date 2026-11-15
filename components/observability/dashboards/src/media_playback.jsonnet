@@ -139,11 +139,40 @@ dashboard.new('Media · Playback')
     thresholds=[{ color: 'green', value: null }, { color: 'orange', value: 0.85 }, { color: 'red', value: 0.95 }], max=1,
     desc='Disk usage behind each Jellyfin location (all libraries share the media disk).'),
 
+  // --- Server runtime -------------------------------------------------------------
+  // Jellyfin's own /metrics (VMPodScrape jellyfin; EnableMetrics set by an init
+  // container). Covers API calls; video streams are long-running requests.
+  m.row('Server runtime', 49),
+  m.ts('API requests by status', [
+    q('sum by (code) (rate(http_requests_received_total{namespace="jellyfin"}[$__rate_interval]))', '{{code}}'),
+  ], 0, 50, 8, 8, 'reqps', stack=true, min=0, legendRight=false),
+  m.ts('Slowest endpoints (p95)', [
+    q('topk(8, histogram_quantile(0.95, sum by (exported_endpoint, le) (rate(http_request_duration_seconds_bucket{namespace="jellyfin"}[$__rate_interval]))))', '{{exported_endpoint}}'),
+  ], 8, 50, 8, 8, 's', min=0, legendRight=false,
+    desc='Endpoints with the highest 95th-percentile response time in each interval.'),
+  m.ts('Thread pool', [
+    q('max(system_runtime_threadpool_queue_length{namespace="jellyfin"})', 'queued work items'),
+    q('max(system_runtime_threadpool_thread_count{namespace="jellyfin"})', 'threads'),
+  ], 16, 50, 8, 8, min=0, legendRight=false,
+    desc='A queue that stays above zero means every thread is blocked (database locks during scans or guide refreshes): the UI and playback stall. Alert: JellyfinThreadPoolStarved.'),
+  m.ts('Memory', [
+    q('max(system_runtime_dotnet_process_memory_working_set{namespace="jellyfin"})', 'working set'),
+    q('sum(system_runtime_dotnet_gc_last_collection_heap_size{namespace="jellyfin"})', 'managed heap'),
+  ], 0, 58, 8, 8, 'bytes', min=0, legendRight=false,
+    desc='Managed heap is .NET objects after the last GC; the rest of the working set is native memory (ffmpeg runs in its own process).'),
+  m.ts('Time in garbage collection', [
+    q('max(system_runtime_time_in_gc{namespace="jellyfin"})', 'GC'),
+  ], 8, 58, 8, 8, 'percent', min=0, legendRight=false),
+  m.ts('Exceptions', [
+    q('sum(rate(system_runtime_exception_count_total{namespace="jellyfin"}[$__rate_interval]))', 'exceptions'),
+  ], 16, 58, 8, 8, 'ops', min=0, legendRight=false,
+    desc='Thrown .NET exceptions, handled ones included; a steady rate is normal, a jump is worth a look in the log.'),
+
   // --- Services -----------------------------------------------------------------
-  m.row('Pods and traffic', 49),
+  m.row('Pods and traffic', 66),
 ]
-+ m.serviceStrip('Jellyfin', 'jellyfin', 50)
-+ m.serviceStrip('Tracearr', 'tracearr', 56)
++ m.serviceStrip('Jellyfin', 'jellyfin', 67)
++ m.serviceStrip('Tracearr', 'tracearr', 73)
 + [
-  m.logs('Errors and warnings', m.errorLogs('jellyfin|tracearr'), 0, 62, 24, 10),
+  m.logs('Errors and warnings', m.errorLogs('jellyfin|tracearr'), 0, 79, 24, 10),
 ])
