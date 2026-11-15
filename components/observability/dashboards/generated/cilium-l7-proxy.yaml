@@ -406,6 +406,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
+             "description": "A WebSocket (e.g. Grafana Live, /api/live/ws) counts as one request lasting the whole session, so p99 jumps to tens of seconds whenever a Grafana tab is closed. Per-workload request latency: Hubble (hubble_http_request_duration_seconds) or the Traefik access logs.",
              "fieldConfig": {
                 "defaults": {
                    "custom": {

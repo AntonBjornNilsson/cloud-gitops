@@ -57,7 +57,8 @@ dashboard.new('Cilium L7 Proxy')
     q('histogram_quantile(0.5, sum by (le) (rate(envoy_http_downstream_rq_time_bucket{%s}[$__rate_interval])))' % proxy, 'p50'),
     q('histogram_quantile(0.95, sum by (le) (rate(envoy_http_downstream_rq_time_bucket{%s}[$__rate_interval])))' % proxy, 'p95'),
     q('histogram_quantile(0.99, sum by (le) (rate(envoy_http_downstream_rq_time_bucket{%s}[$__rate_interval])))' % proxy, 'p99'),
-  ], 12, 6, 12, 8, 'ms', min=0, legendRight=false),
+  ], 12, 6, 12, 8, 'ms', min=0, legendRight=false,
+    desc='A WebSocket (e.g. Grafana Live, /api/live/ws) counts as one request lasting the whole session, so p99 jumps to tens of seconds whenever a Grafana tab is closed. Per-workload request latency: Hubble (hubble_http_request_duration_seconds) or the Traefik access logs.'),
   m.ts('Active connections by node', [
     q('sum by (node) (envoy_http_downstream_cx_active{%s})' % proxy, '{{node}}'),
   ], 0, 14, 8, 8, min=0, legendRight=false),

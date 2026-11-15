@@ -68,8 +68,11 @@ spec:
       requests:
         cpu: 5m
         memory: 192Mi
+      # Bursty: a page load fires ~25 widget calls at ~40-100 ms CPU each. At 500m
+      # they were throttled into 3 s median / 10 s p95 responses; the 1m CPU
+      # average (~0.13 cores) hides these bursts.
       limits:
-        cpu: 500m
+        cpu: "2"
         memory: 512Mi
     serviceAccount:
       create: true
