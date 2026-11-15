@@ -19,7 +19,7 @@ resources:
   # Observability
   - observability/claude-agent/system-claude-agent.yaml
   - observability/victoriametrics/system-victoriametrics.yaml
-  - observability/coroot/system-coroot.yaml
+  # - observability/coroot/system-coroot.yaml  # off: ~3.7 GiB for views VictoriaMetrics/Grafana and Pyroscope already cover; cluster is memory-bound
   - observability/grafana/system-grafana.yaml
   - observability/kepler/system-kepler.yaml
   - observability/pyroscope/system-pyroscope.yaml

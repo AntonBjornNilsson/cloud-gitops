@@ -69,7 +69,7 @@ TODO                             user's backlog (">" = done)
 ```
 
 Enable/disable = uncomment/comment the line in `components/kustomization.yaml` or `services/kustomization.yaml`.
-Currently disabled examples: stalkarr, github-runners, skyrim.
+Currently disabled examples: stalkarr, github-runners, skyrim, coroot (components).
 
 ## Components (infrastructure)
 
@@ -309,7 +309,7 @@ backup**; only TrueNAS snapshots on the same disks (undo, not disaster recovery)
   a `// grafana-folder: <name>` line in the source sets the folder. Community dashboards: `dashboards/upstream.yaml`
   (grafana.com id + revision; still Flux-substituted, so no `${...}` there).
   Trivy drilldowns (`trivy_*.jsonnet`, shared `trivy.libsonnet`) read trivy-operator's per-finding info metrics and use MetricsQL.
-- Coroot (`components/observability/coroot/`, `coroot.${domain}`): a second, self-contained UI for resource usage,
+- Coroot (`components/observability/coroot/`, `coroot.${domain}`; **disabled** in `components/kustomization.yaml` to save memory, re-enable with its Homepage tile): a second, self-contained UI for resource usage,
   service maps, logs, traces and eBPF profiles. Its own agents and ClickHouse (no Prometheus, nothing shared with
   VictoriaMetrics). Operator HelmRelease + the `Coroot` CR in `config/`; set resources/securityContext per component
   in the CR. Images are pinned there (`name: ghcr.io/coroot/...`, Renovate customManager); ClickHouse's image comes
