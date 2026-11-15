@@ -54,6 +54,10 @@ spec:
       limits:
         cpu: 200m
         memory: 128Mi
+    # The exporter's own metrics (process, config reloads); the probes are VMProbes below
+    serviceMonitor:
+      selfMonitor:
+        enabled: true
     config:
       modules:
         http_2xx:

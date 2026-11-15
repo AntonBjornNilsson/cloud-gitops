@@ -61,3 +61,6 @@ spec:
       resources:
         requests: {cpu: 10m, memory: 32Mi}
         limits: {cpu: 200m, memory: 128Mi}
+      # /metrics on the http port (8080): snapshot operation counts and latency
+      serviceMonitor:
+        create: true

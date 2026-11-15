@@ -80,6 +80,10 @@ spec:
         limits:
           cpu: 1
           memory: 256Mi
+      # L7 proxy metrics (9964); the chart already exposes them, this adds the ServiceMonitor
+      prometheus:
+        serviceMonitor:
+          enabled: true
 
     # Operator configuration
     operator:
@@ -127,6 +131,11 @@ spec:
           limits:
             cpu: 200m
             memory: 128Mi
+        # Relay's own metrics (9966): connected peers, forwarded flows, gRPC requests
+        prometheus:
+          enabled: true
+          serviceMonitor:
+            enabled: true
       # Redact sensitive headers & credentials in L7 flows
       redact:
         enabled: true

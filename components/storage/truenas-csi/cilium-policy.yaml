@@ -7,6 +7,15 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
+    # Metrics scrape from VictoriaMetrics: controller 8080, CSI sidecars 8081-8084
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "8080"
+              endPort: 8084
+              protocol: TCP
     # Liveness probes
     - fromEntities:
         - host

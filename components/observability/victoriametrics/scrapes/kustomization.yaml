@@ -3,11 +3,13 @@ kind: Kustomization
 resources:
   - adguard-home.yaml
   - authelia.yaml
+  - cfgate.yaml
   - cert-manager.yaml
   - dispatcharr.yaml
   - flux.yaml
   - grafana.yaml
   - homeassistant.yaml
+  - jellyfin.yaml
   - kepler.yaml
   - media-exporters.yaml
   - metallb.yaml

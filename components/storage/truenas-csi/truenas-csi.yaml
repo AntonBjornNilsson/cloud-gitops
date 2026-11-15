@@ -126,6 +126,13 @@ spec:
       resources:
         requests: {cpu: 10m, memory: 64Mi}
         limits: {cpu: 500m, memory: 256Mi}
+    # Controller metrics (8080) and the CSI sidecars' (8081-8084), scraped through
+    # the chart's ServiceMonitor. The node plugin's stay off: it runs with hostNetwork,
+    # so its metrics port would be bound on every node.
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
     # Retain: a deleted PVC leaves its dataset/zvol on the NAS.
     # Each volume gets a daily TrueNAS snapshot task (local undo; offsite is separate).
     storageClasses:

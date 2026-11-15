@@ -7,6 +7,14 @@ spec:
   # Operator and the proxy pods it creates (the subnet router Connector)
   endpointSelector: {}
   ingress:
+    # Proxy metrics scrape from VictoriaMetrics (ProxyClass metrics)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "9002"
+              protocol: TCP
     # Health checks and probes
     - fromEntities:
         - host

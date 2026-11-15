@@ -18,6 +18,12 @@ kind: ProxyClass
 metadata:
   name: resources
 spec:
+  # tailscaled metrics on :9002 (the operator creates the Service and ServiceMonitor).
+  # Upstream calls them unstable: names may change between releases.
+  metrics:
+    enable: true
+    serviceMonitor:
+      enable: true
   statefulSet:
     pod:
       # Seccomp for tailscaled; privileged containers (the init below) ignore it

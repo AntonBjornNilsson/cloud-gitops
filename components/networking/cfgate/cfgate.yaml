@@ -45,6 +45,10 @@ spec:
     # Leader election; one controller is enough here
     replicaCount: 1
     installCRDs: true
+    # Controller metrics (8080); cloudflared is scraped by scrapes/cfgate.yaml
+    metrics:
+      serviceMonitor:
+        enabled: true
     resources:
       requests:
         cpu: 20m

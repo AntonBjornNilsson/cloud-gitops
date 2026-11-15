@@ -1,0 +1,19 @@
+---
+# cloudflared tunnel connectors managed by cfgate (tunnel connections, edge
+# request/error counts, origin latency). The cfgate controller itself is scraped
+# through its chart's ServiceMonitor.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: cloudflared
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - cfgate-system
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+      app.kubernetes.io/managed-by: cfgate
+  podMetricsEndpoints:
+    - port: metrics

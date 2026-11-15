@@ -262,6 +262,28 @@ spec:
         volumeMounts:
           - name: config
             mountPath: /config
+      # Jellyfin's own Prometheus metrics at :8096/metrics (scrapes/jellyfin.yaml). Not the
+      # chart's metrics.enabled: its postStart hook edits system.xml after Jellyfin has
+      # already read it (and kills the container if the file is missing for 5 minutes).
+      - name: enable-metrics
+        image: docker.io/jellyfin/jellyfin:12.4
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        command:
+          - sh
+          - -c
+          - |
+            test -f /config/config/system.xml || exit 0
+            sed -i 's#<EnableMetrics>false</EnableMetrics>#<EnableMetrics>true</EnableMetrics>#' /config/config/system.xml
+            grep -o '<EnableMetrics>[a-z]*</EnableMetrics>' /config/config/system.xml
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {cpu: 200m, memory: 64Mi}
+        volumeMounts:
+          - name: config
+            mountPath: /config
       # Intel Quick Sync transcoding (iGPU from the Intel GPU device plugin): QSV on the
       # render node, hardware decoding for h264/hevc/vc1/vp9 (10-bit HEVC/VP9 stay on),
       # hardware encoding H.264 only (AllowHevcEncoding untouched). Low-power (VDEnc)

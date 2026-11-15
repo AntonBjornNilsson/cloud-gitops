@@ -8,6 +8,14 @@ spec:
     matchLabels:
       app.kubernetes.io/name: cfgate
   ingress:
+    # Metrics scrape from VictoriaMetrics
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
     # Health probes (8081) and metrics (8080)
     - fromEntities:
         - host
@@ -52,6 +60,14 @@ spec:
         - host
         - remote-node
         - health
+      toPorts:
+        - ports:
+            - port: "44483"
+              protocol: TCP
+    # Metrics scrape from VictoriaMetrics (scrapes/cfgate.yaml)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
       toPorts:
         - ports:
             - port: "44483"

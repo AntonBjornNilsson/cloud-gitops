@@ -1,0 +1,20 @@
+---
+# Jellyfin's own metrics (.NET runtime, HTTP requests). EnableMetrics is set in
+# system.xml by the enable-metrics init container. Library/session numbers come
+# from jellyfin-exporter (media-exporters.yaml).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: jellyfin
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - jellyfin
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jellyfin
+      app.kubernetes.io/instance: jellyfin
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics

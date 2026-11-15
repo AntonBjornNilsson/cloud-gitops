@@ -6,6 +6,14 @@ metadata:
 spec:
   endpointSelector: {}
   ingress:
+    # Metrics scrape from VictoriaMetrics
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
     # Probes
     - fromEntities:
         - host
