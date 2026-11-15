@@ -220,9 +220,9 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
-      # Public names (indexers / IPTV provider) get NXDOMAIN noise for A and AAAA on every
-      # cluster search domain with the default ndots:5. ndots:1 sends dotted names straight to
-      # gluetun's resolver; single-label service names (and "svc.ns") still resolve via search.
+      # IPTV provider names get NXDOMAIN noise for A and AAAA on every cluster search domain with
+      # the default ndots:5. ndots:1 sends dotted names straight to gluetun's resolver; the
+      # single-label dispatcharr-db/redis still resolve via the search list.
       dnsConfig:
         options:
           - name: ndots

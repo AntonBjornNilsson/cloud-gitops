@@ -46,13 +46,13 @@ spec:
         runAsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
-      # Public names (indexers / IPTV provider) get NXDOMAIN noise for A and AAAA on every
-      # cluster search domain with the default ndots:5. ndots:1 sends dotted names straight to
-      # gluetun's resolver; single-label service names (and "svc.ns") still resolve via search.
+      # Indexer names get NXDOMAIN noise for A and AAAA on every cluster search domain with the
+      # default ndots:5. Not 1: musl (Alpine image) never falls back to the search list for a name
+      # with >= ndots dots, and Prowlarr's apps use "http://sonarr.sonarr:8989"-style URLs.
       dnsConfig:
         options:
           - name: ndots
-            value: "1"
+            value: "2"
       initContainers:
         - name: run-dir
           image: lscr.io/linuxserver/prowlarr:latest@sha256:6660787a99b2e58203539583663c973b48979fc00ff2cb78dc0ea17429e1f6ef
