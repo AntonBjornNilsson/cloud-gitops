@@ -89,3 +89,19 @@ spec:
           annotations:
             summary: "Jellyfin task \"{{ $labels.task_name }}\" failed"
             description: "The last run of the scheduled task {{ $labels.task_name }} ({{ $labels.category }}) failed. See Dashboard > Scheduled Tasks in Jellyfin."
+
+    # Jellyfin's own /metrics (scrapes/jellyfin.yaml). HTTP 5xx are covered by
+    # TraefikServiceErrorRate, scrape failures (EnableMetrics reset) by TargetDown.
+    - name: jellyfin
+      rules:
+        - alert: JellyfinThreadPoolStarved
+          # Work items queue when every .NET thread-pool thread is blocked (database
+          # locks during library scans or guide refreshes): the UI and playback stall
+          # while /health may still answer.
+          expr: min_over_time(system_runtime_threadpool_queue_length{namespace="jellyfin"}[10m]) > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Jellyfin's thread pool has had a backlog for 15 minutes"
+            description: "At least {{ $value }} work items have been queued for the whole time. Check the Jellyfin log and running scheduled tasks (library scan, guide refresh)."

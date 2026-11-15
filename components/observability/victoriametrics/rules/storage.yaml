@@ -1,0 +1,77 @@
+---
+# NAS storage: the TrueNAS CSI controller (scraped through its chart's
+# ServiceMonitor, CSI sidecars included) and the VolumeSnapshot controller.
+# Scrape failures are TargetDown; pod health is covered by the workload rules.
+# Mounted volumes keep working while these fire: they block provisioning,
+# attach/detach, resize, snapshots and deletes. A PV whose delete failed ends up
+# Failed and is caught by the chart's KubePersistentVolumeErrors.
+# Failure counters use a short window with a long `for`, so only failures that
+# keep happening fire (a one-off error that a retry fixed does not).
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: storage
+  namespace: victoriametrics
+spec:
+  groups:
+    - name: truenas-csi
+      rules:
+        - alert: TrueNASCSIAPIDisconnected
+          expr: truenas_csi_api_connected == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TrueNAS CSI controller has lost the TrueNAS API"
+            description: "The controller's WebSocket connection to the NAS has been down for 5 minutes. New PVCs stay Pending and volumes cannot attach, resize or be snapshotted. Check that the NAS is up, its API key (truenas-csi-api Secret) and the controller log."
+        - alert: TrueNASCSIAPIFlapping
+          expr: increase(truenas_csi_api_reconnects_total[1h]) > 3
+          labels:
+            severity: warning
+          annotations:
+            summary: "TrueNAS CSI reconnected to the NAS API {{ $value | humanize }} times in an hour"
+            description: "The WebSocket keeps dropping (NAS under load, network, or middleware restarts). Volume operations may fail in between."
+        - alert: TrueNASCSIAPICallsFailing
+          expr: sum by (method, status) (increase(truenas_csi_api_calls_total{status!="success"}[10m])) > 0
+          for: 20m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TrueNAS API call {{ $labels.method }} is failing ({{ $labels.status }})"
+            description: "Calls have kept failing for 20 minutes. Check the truenas-csi controller log and the NAS (pool full, dataset busy, permissions of the API key)."
+        - alert: TrueNASCSIOperationsFailing
+          # Sidecar view of the driver's gRPC calls: CreateVolume, ControllerPublishVolume,
+          # CreateSnapshot, ControllerExpandVolume, ... Aborted is a retry of an
+          # operation that is still in progress, not a failure.
+          expr: |
+            sum by (method_name, grpc_status_code) (
+              increase(csi_sidecar_operations_seconds_count{namespace="truenas-csi", grpc_status_code!~"OK|Aborted"}[10m])
+            ) > 0
+          for: 20m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CSI {{ $labels.method_name }} keeps failing with {{ $labels.grpc_status_code }}"
+            description: "Volume operations on the NAS have kept failing for 20 minutes. Check `kubectl get events -A --field-selector reason=ProvisioningFailed` and the truenas-csi controller log."
+
+    - name: snapshot-controller
+      rules:
+        - alert: VolumeSnapshotOperationsFailing
+          # Upstream records failures as status "unknown" (only success/cancel are named)
+          expr: |
+            sum by (operation_name, driver_name) (
+              increase(snapshot_controller_operation_total_seconds_count{operation_status!~"success|cancel"}[1h])
+            ) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "VolumeSnapshot {{ $labels.operation_name }} failed ({{ $labels.driver_name }})"
+            description: "Check `kubectl get volumesnapshots -A` (READYTOUSE, ERROR) and the snapshot-controller log."
+        - alert: VolumeSnapshotOperationsStuck
+          expr: snapshot_controller_operations_in_flight > 0
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $value }} VolumeSnapshot operation(s) in flight for over an hour"
+            description: "A snapshot or snapshot delete is not finishing; usually the CSI driver (truenas-csi) is failing or the NAS API is unreachable."

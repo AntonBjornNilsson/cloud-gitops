@@ -309,3 +309,118 @@ spec:
             severity: warning
           annotations:
             summary: "{{ $labels.destination_namespace }}/{{ $labels.destination_workload }} answers {{ $value | humanizePercentage }} of in-cluster HTTP requests with 5xx"
+
+        # cilium-envoy: the L7 proxy behind HTTP-aware policies and httpV2 flow metrics.
+        # A Cilium agent restart (e.g. an upgrade) makes Envoy log thousands of NPDS
+        # failures within seconds; only failures that persist for 30 minutes fire.
+        - alert: CiliumEnvoyPolicyDisconnected
+          expr: envoy_cilium_npds_control_plane_connected_state == 0
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cilium-envoy on {{ $labels.node }} is disconnected from the Cilium agent"
+            description: "Envoy gets no network policy updates (NPDS); L7 policy on this node is stale. Check the cilium and cilium-envoy pods on the node."
+        - alert: CiliumEnvoyPolicyUpdatesFailing
+          expr: |
+            sum by (node, pod) (increase(envoy_cilium_npds_update_failure[5m]))
+            + sum by (node, pod) (increase(envoy_cilium_npds_update_rejected[5m]))
+            + sum by (node, pod) (increase(envoy_cilium_policy_updates_rejected[5m]))
+            > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cilium-envoy on {{ $labels.node }} is failing or rejecting policy updates"
+            description: "Policy updates have kept failing for 30 minutes ({{ $value | humanize }} in the last 5). An L7 rule in a CiliumNetworkPolicy may be invalid for Envoy; check the cilium-envoy log on the node."
+
+        # hubble-relay only serves the Hubble UI/CLI; flow metrics and alerts come from the agents
+        - alert: HubbleRelayPeersUnreachable
+          expr: sum(hubble_relay_pool_peer_connection_status{status=~"CONNECTING|TRANSIENT_FAILURE|SHUTDOWN"}) > 0
+          for: 15m
+          labels:
+            severity: info
+          annotations:
+            summary: "Hubble Relay cannot reach {{ $value }} Cilium agent(s)"
+            description: "The Hubble UI and `hubble observe` miss flows from those nodes. Check the hubble-relay log (peer TLS certificates, agent port 4244)."
+
+    # cfgate (components/networking/cfgate): Cloudflare tunnel, DNS and Access from Git.
+    # Scrape failures are TargetDown.
+    - name: cfgate
+      rules:
+        - alert: CloudflareTunnelDown
+          expr: (sum(cloudflared_tunnel_ha_connections) or vector(0)) == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cloudflare tunnel has no connections to the edge"
+            description: "No cloudflared connector is connected: every public hostname is unreachable from the internet. Check the cloudflared pods in cfgate-system and the CloudflareTunnel status."
+        - alert: CloudflaredConnectionsDegraded
+          expr: cloudflared_tunnel_ha_connections < 4
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cloudflared {{ $labels.pod }} has {{ $value }} of 4 edge connections"
+            description: "The connector cannot reach some Cloudflare edge locations (egress to port 7844, QUIC/UDP blocked, or an edge outage). The tunnel still works with fewer connections."
+        - alert: CloudflaredOriginErrors
+          expr: sum by (pod) (increase(cloudflared_tunnel_request_errors[5m])) > 3
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cloudflared {{ $labels.pod }} cannot reach the origin"
+            description: "Requests have kept failing for 15 minutes ({{ $value | humanize }} in the last 5) between cloudflared and Traefik's public entrypoint (Service traefik-public, port 8444). Check Traefik and the cloudflared CiliumNetworkPolicy."
+        - alert: CloudflaredConfigPushFailing
+          expr: sum by (pod) (increase(cloudflared_config_local_config_pushes_errors[30m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "cloudflared {{ $labels.pod }} failed to apply a tunnel configuration"
+            description: "The connector keeps running on its previous ingress rules; new or changed routes are not served. Check the cloudflared log."
+        - alert: CfgateReconcileErrors
+          expr: sum by (controller) (increase(controller_runtime_reconcile_errors_total{namespace="cfgate-system"}[10m])) > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cfgate cannot reconcile {{ $labels.controller }}"
+            description: "Reconcile errors for 30 minutes: changes to routes, DNS or Access applications are not reaching Cloudflare. Check the resource status (`kubectl -n cfgate-system get cloudflaretunnel,cloudflaredns,httproute,cloudflareaccessapplication`) and the cfgate log (API token, Cloudflare API errors)."
+        - alert: CfgateReconcileStalled
+          # Cloudflare-facing controllers requeue every few minutes
+          expr: time() - cfgate_controller_last_completed_reconcile_timestamp_seconds{controller=~"cloudflare.*"} > 3600
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "cfgate {{ $labels.controller }} has not completed a reconcile for {{ $value | humanizeDuration }}"
+            description: "The controller is stuck (hung Cloudflare API call or lost leader election); drift in Cloudflare is not being corrected. Restarting the cfgate pod usually clears it."
+
+    # Tailscale subnet router (components/networking/tailscale; ProxyClass metrics).
+    # Upstream calls these metrics unstable: re-check the names after operator bumps.
+    - name: tailscale
+      rules:
+        - alert: TailscaleSubnetRouterMetricsMissing
+          expr: absent_over_time(tailscaled_advertised_routes[15m])
+          labels:
+            severity: warning
+          annotations:
+            summary: "No metrics from the Tailscale subnet router for 15 minutes"
+            description: "The Connector's proxy pod (namespace tailscale) is gone or tailscaled is not running: the home LAN is probably unreachable over the tailnet. Check the operator log and the ts-* StatefulSet."
+        - alert: TailscaleRoutesNotApproved
+          expr: tailscaled_approved_routes < tailscaled_advertised_routes
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Tailscale {{ $labels.ts_proxy_parent_name }}: {{ $value }} of its advertised routes are approved"
+            description: "Some advertised subnets are not approved in the Tailscale admin console (or by an autoApprovers rule), so tailnet devices cannot reach them."
+        - alert: TailscaleHealthWarnings
+          expr: tailscaled_health_messages{type="warning"} > 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "tailscaled on {{ $labels.ts_proxy_parent_name }} reports {{ $value }} health warning(s)"
+            description: "e.g. logged out / expired node key, no DERP connection, or broken DNS. Run `tailscale status` (or check the log) in pod {{ $labels.pod }}."

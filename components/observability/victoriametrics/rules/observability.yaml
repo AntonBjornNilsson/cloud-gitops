@@ -25,6 +25,25 @@ spec:
           annotations:
             summary: "Alertmanager cannot deliver notifications"
             description: "Alerts are not reaching ntfy. Check the alertmanager-ntfy bridge and ntfy. (You are seeing this either in Grafana or because it recovered.)"
+    # blackbox-exporter's own metrics; probe results are in networking.yaml
+    - name: blackbox-exporter
+      rules:
+        - alert: BlackboxExporterConfigReloadFailed
+          expr: blackbox_exporter_config_last_reload_successful == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "blackbox-exporter rejected its new configuration"
+            description: "The probes keep running on the previous modules. Fix config.modules in blackbox-exporter.yaml (the pod log shows the error)."
+        - alert: BlackboxUnknownModule
+          expr: sum(increase(blackbox_module_unknown_total[15m])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "A probe requests a blackbox module that does not exist"
+            description: "{{ $value | humanize }} probe requests in 15 minutes named an unknown module, so those probes always fail. Compare the VMProbe module names in blackbox-exporter.yaml with config.modules."
+
     - name: power-and-profiling
       rules:
         # Kepler (components/observability/kepler). Scrape failures are TargetDown.
