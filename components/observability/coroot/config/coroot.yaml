@@ -102,7 +102,7 @@ spec:
 
   nodeAgent:
     image:
-      name: ghcr.io/coroot/coroot-node-agent:1.38.1
+      name: ghcr.io/coroot/coroot-node-agent:1.38.2
     # Every node, the control-plane node included (default toleration: all)
     # The pinger sends ICMP echo from each container's netns to its TCP peers
     # for latency; default-deny Cilium policies drop nearly all of it, which
