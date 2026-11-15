@@ -138,6 +138,17 @@ spec:
             memory: 64Mi
 
     vmalert:
+      # alertmanager-ntfy turns every alert label into an ntfy tag, and ntfy
+      # rejects a message whose tags exceed 512 bytes (HTTP 400). Alertmanager
+      # then retries the whole group, re-sending the alerts that did get
+      # through. Drop labels that are constant or only say where a series was
+      # scraped from; routing and inhibition use alertname, namespace,
+      # severity, entity and node. The chart adds the Alertmanager target and
+      # switches vmalert to this notifier config file.
+      additionalNotifierConfigs:
+        alert_relabel_configs:
+          - action: labeldrop
+            regex: cluster|prometheus|endpoint|victoriametrics_app|file
       spec:
         # Operator's restricted profile: 65534, fsGroup, seccomp, drop ALL, read-only root
         useStrictSecurity: true
