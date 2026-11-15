@@ -82,6 +82,13 @@ spec:
         runAsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
+      # Tracker names are public FQDNs: with the default ndots:5 every lookup first walks the
+      # cluster search domains (NXDOMAIN for A and AAAA each), which Coroot flags as DNS errors.
+      # Nothing in this pod resolves cluster names (the sidecars use 127.0.0.1).
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
       initContainers:
         - name: run-dir
           image: lscr.io/linuxserver/qbittorrent:latest@sha256:3d4c4545d51a690a0df15a2ff99038823a88a9822df8e794526447b9afbd7384
