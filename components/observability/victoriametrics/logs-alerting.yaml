@@ -54,9 +54,13 @@ spec:
       type: vlogs
       interval: 5m
       rules:
+        # Both rules skip vmalert's own "failed to execute query" errors: they quote
+        # the expression ("panic:", "out of memory"), so whenever VictoriaLogs is
+        # unreachable these rules would match their own failure messages.
         - alert: ContainerPanicked
           expr: |
             _time:5m ("panic:" OR "fatal error:" OR "SIGSEGV")
+            -(kubernetes.container_name:vmalert "failed to execute query")
             | stats by (kubernetes.pod_namespace, kubernetes.pod_name, kubernetes.container_name) count() as matches
             | rename kubernetes.pod_namespace as namespace, kubernetes.pod_name as pod, kubernetes.container_name as container
           labels:
@@ -68,6 +72,7 @@ spec:
         - alert: OutOfMemoryInLogs
           expr: |
             _time:5m i("out of memory")
+            -(kubernetes.container_name:vmalert "failed to execute query")
             | stats by (kubernetes.pod_namespace, kubernetes.pod_name, kubernetes.container_name) count() as matches
             | rename kubernetes.pod_namespace as namespace, kubernetes.pod_name as pod, kubernetes.container_name as container
           labels:
