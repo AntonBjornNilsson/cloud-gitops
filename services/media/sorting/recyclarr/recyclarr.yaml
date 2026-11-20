@@ -40,15 +40,24 @@ data:
             - name: Bluray-1080p
               min: 20
 
+        # Every series uses this profile. Besides TRaSH's WEB 1080p it also accepts BluRay
+        # (anime and older shows have no WEB release) and HDTV (the only 1080p source for some
+        # shows), best first. Upgrades still stop at WEB 1080p, so nothing re-downloads to BluRay.
         quality_profiles:
           - trash_id: 72dae194fc92bf828f32cde7744e51a1  # WEB-1080p
             reset_unmatched_scores:
               enabled: true
+            qualities:
+              - name: Bluray-1080p
+              - name: WEB 1080p
+                qualities:
+                  - WEBDL-1080p
+                  - WEBRip-1080p
+              - name: HDTV-1080p
 
+        # No Golden Rule HD here: Korean drama and anime packs are mostly 1080p x265, which it blocks.
         custom_format_groups:
           add:
-            # Block x265 for HD releases (mostly re-encodes; x265 only pays off for 4K/HDR)
-            - trash_id: 158188097a58d7687dee647e04af0da3  # [Optional] Golden Rule HD
             - trash_id: 85fae4a2294965b75710ef2989c850eb  # [Streaming Services] HD/UHD boost
             - trash_id: 59c3af66780d08332fdc64e68297098f  # [Unwanted] Unwanted Formats
             - trash_id: d920fd959d220306888f40b6f38e1578  # [Optional] Season Packs
