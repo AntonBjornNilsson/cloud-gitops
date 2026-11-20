@@ -30,8 +30,15 @@ data:
         api_key: !env_var SONARR_API_KEY
         delete_old_custom_formats: true
 
+        # TRaSH's Bluray-1080p minimum (50.4 MB/min) is sized for full-bitrate encodes and
+        # rejects most 1080p BluRay encodes and season packs (e.g. 35 GB for a 16-episode
+        # season), so Cleanuparr's replacement searches came back empty. 20 MB/min still
+        # filters out the tiny low-bitrate ones.
         quality_definition:
           type: series
+          qualities:
+            - name: Bluray-1080p
+              min: 20
 
         quality_profiles:
           - trash_id: 72dae194fc92bf828f32cde7744e51a1  # WEB-1080p
@@ -52,8 +59,13 @@ data:
         api_key: !env_var RADARR_API_KEY
         delete_old_custom_formats: true
 
+        # Same as Sonarr: TRaSH's 50.8 MB/min (5.7 GB for a 2-hour film) rejects normal
+        # 1080p BluRay encodes; 20 MB/min is about 2.3 GB for 2 hours.
         quality_definition:
           type: movie
+          qualities:
+            - name: Bluray-1080p
+              min: 20
 
         quality_profiles:
           - trash_id: d1d67249d3890e49bc12e275d989a7e9  # HD Bluray + WEB
