@@ -293,7 +293,7 @@ spec:
         # for the migrations of its own version (exits after 300s). With :latest each container
         # re-pulled on its own restart, so a new release left celery waiting on web forever.
         - name: web
-          image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          image: ghcr.io/dispatcharr/dispatcharr:0.34.1
           # Root: the entrypoint writes nginx/uwsgi config and drops to 1000 with su, which
           # needs the default capabilities (allowlisted in the Kyverno restricted policies)
           securityContext:
@@ -345,7 +345,7 @@ spec:
               mountPath: /app/media
               subPath: media
         - name: celery
-          image: ghcr.io/dispatcharr/dispatcharr:0.33.0
+          image: ghcr.io/dispatcharr/dispatcharr:0.34.1
           securityContext:
             allowPrivilegeEscalation: false
           command:
