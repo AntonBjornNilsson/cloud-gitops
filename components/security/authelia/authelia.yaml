@@ -296,7 +296,7 @@ spec:
         same_site: "lax"
         inactivity: '1h'
         expiration: '8h'
-        remember_me: '1d'
+        remember_me: '14d'
         encryption_key:
           value: "${authelia_session_secret}"
         cookies:
