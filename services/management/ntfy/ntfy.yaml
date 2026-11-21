@@ -105,7 +105,7 @@ spec:
             value: "0"
       containers:
         - name: ntfy
-          image: binwiederhier/ntfy:v2.37.2
+          image: binwiederhier/ntfy:v2.38.1
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
