@@ -20,7 +20,7 @@ metadata:
 spec:
   communityEdition:
     image:
-      name: ghcr.io/coroot/coroot:1.29.2
+      name: ghcr.io/coroot/coroot:1.29.4
   authAnonymousRole: Admin
   storeMetricsInClickhouse: true
   metricsRefreshInterval: 15s
