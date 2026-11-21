@@ -294,8 +294,8 @@ spec:
       session:
         name: authelia_session
         same_site: "lax"
-        inactivity: '1h'
-        expiration: '8h'
+        inactivity: '7d'
+        expiration: '7d'
         remember_me: '14d'
         encryption_key:
           value: "${authelia_session_secret}"
