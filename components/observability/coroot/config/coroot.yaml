@@ -85,7 +85,7 @@ spec:
 
   clusterAgent:
     image:
-      name: ghcr.io/coroot/coroot-cluster-agent:1.11.9
+      name: ghcr.io/coroot/coroot-cluster-agent:1.12.0
     resources:
       requests:
         cpu: 20m
