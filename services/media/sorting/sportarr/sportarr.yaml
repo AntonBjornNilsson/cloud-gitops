@@ -358,16 +358,6 @@ spec:
         - ports:
             - port: "8096"
               protocol: TCP
-    # IPTV DVR: Dispatcharr's M3U/XMLTV output and its stream proxy. Streams go through
-    # Dispatcharr so they share its provider connection and VPN exit.
-    - toEndpoints:
-        - matchLabels:
-            io.kubernetes.pod.namespace: dispatcharr
-            app: dispatcharr-web
-      toPorts:
-        - ports:
-            - port: "9191"
-              protocol: TCP
     # VPN tunnel (sportarr.net metadata API, update checks)
     - toEntities:
         - world
