@@ -393,6 +393,14 @@ spec:
         - ports:
             - port: "9191"
               protocol: TCP
+    # Sportarr metadata plugin: league/event metadata from the local Sportarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sportarr
+      toPorts:
+        - ports:
+            - port: "1867"
+              protocol: TCP
     # Jellyfin Enhanced: requests and discovery proxied to Seerr
     - toEndpoints:
         - matchLabels:
