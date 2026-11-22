@@ -59,8 +59,7 @@ spec:
     requests:
       storage: 13Ti
 ---
-# Sportarr generates a new API key on every start unless one is configured: pin it, so
-# Prowlarr's app sync keeps working across restarts
+# Pinned API key, written into config.xml by the api-key init container
 apiVersion: v1
 kind: Secret
 metadata:
@@ -101,6 +100,37 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       initContainers:
+        # Sportarr__ApiKey does not override the key it writes into config.xml on first start;
+        # pin that one instead, so Prowlarr's app sync keeps working. On a fresh volume there is
+        # no config.xml yet: the second start (any restart) applies it.
+        - name: api-key
+          image: sportarr/sportarr:4.1.12.1122@sha256:8d6d301576b24be1b1ba889ec40c9e09fd3e5cba5c4a9729989c343918701dc8
+          command:
+            - sh
+            - -c
+            - |
+              [ -f /config/config.xml ] || exit 0
+              sed -i "s|<ApiKey>[^<]*</ApiKey>|<ApiKey>$API_KEY</ApiKey>|" /config/config.xml
+          env:
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sportarr
+                  key: api-key
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
         - name: gluetun
           image: qmcgaw/gluetun:v3.41.3
           restartPolicy: Always
@@ -167,11 +197,6 @@ spec:
           env:
             - name: TZ
               value: "Europe/Stockholm"
-            - name: Sportarr__ApiKey
-              valueFrom:
-                secretKeyRef:
-                  name: sportarr
-                  key: api-key
           ports:
             - name: http
               containerPort: 1867
