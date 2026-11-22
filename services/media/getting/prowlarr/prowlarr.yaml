@@ -286,12 +286,14 @@ spec:
         - ports:
             - port: "9696"
               protocol: TCP
-    # Indexer searches / release grabs from Radarr and Sonarr
+    # Indexer searches / release grabs from Radarr, Sonarr and Sportarr
     - fromEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: radarr
         - matchLabels:
             io.kubernetes.pod.namespace: sonarr
+        - matchLabels:
+            io.kubernetes.pod.namespace: sportarr
       toPorts:
         - ports:
             - port: "9696"
@@ -353,6 +355,14 @@ spec:
       toPorts:
         - ports:
             - port: "8989"
+              protocol: TCP
+    # Indexer sync to Sportarr (as a Sonarr app)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sportarr
+      toPorts:
+        - ports:
+            - port: "1867"
               protocol: TCP
     # External trackers, indexers, and RSS feeds
     - toEntities:

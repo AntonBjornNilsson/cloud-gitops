@@ -1,0 +1,333 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sportarr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+# On the NAS (truenas-csi)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sportarr-config-nas
+  namespace: sportarr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 5Gi
+---
+# Media library on the NAS (NFS share of tank/media). One static PV per namespace:
+# a PV binds to a single PVC, and PSS restricted does not allow inline nfs volumes.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: media-sportarr
+spec:
+  capacity:
+    storage: 13Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: sportarr
+    name: media
+  mountOptions:
+    - nfsvers=4.2
+    - hard
+    - noatime
+  nfs:
+    server: ${nas_host}
+    path: /mnt/tank/media/Shared
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: media
+  namespace: sportarr
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: ""
+  volumeName: media-sportarr
+  resources:
+    requests:
+      storage: 13Ti
+---
+# Sportarr generates a new API key on every start unless one is configured: pin it, so
+# Prowlarr's app sync keeps working across restarts
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sportarr
+  namespace: sportarr
+type: Opaque
+stringData:
+  api-key: "${sportarr_api_key}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sportarr
+  namespace: sportarr
+spec:
+  # Single SQLite database on an RWO volume: never run two pods
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: sportarr
+  template:
+    metadata:
+      labels:
+        app: sportarr
+    spec:
+      # Metadata, indexer and release traffic goes out through the VPN. gluetun is a native
+      # sidecar, so Sportarr only starts once the tunnel is up; its kill switch blocks egress
+      # until then.
+      # The image starts as root only to chown and drop to PUID/PGID; started as 1000 it skips
+      # that and runs directly (PUID/PGID are then ignored).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: gluetun
+          image: qmcgaw/gluetun:v3.41.3
+          restartPolicy: Always
+          # Root with NET_ADMIN for the tunnel and kill switch (allowlisted in the Kyverno
+          # restricted policies); every other container in the pod runs as 1000.
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              add:
+                - NET_ADMIN
+          env:
+            - name: VPN_SERVICE_PROVIDER
+              value: "private internet access"
+            - name: VPN_TYPE
+              value: "openvpn"
+            - name: OPENVPN_USER
+              value: "${pia_user}"
+            - name: OPENVPN_PASSWORD
+              value: "${pia_password}"
+            - name: SERVER_REGIONS
+              value: "${pia_region}"
+            # Cluster traffic (Prowlarr, qBittorrent, Jellyfin, DNS) bypasses the tunnel
+            - name: FIREWALL_OUTBOUND_SUBNETS
+              value: "${pod_cidr},10.96.0.0/12,192.168.0.0/16"
+            - name: FIREWALL_INPUT_PORTS
+              value: "1867"
+            - name: IP6TABLES
+              value: "off"
+            # DNS stays on gluetun's own resolver (no DNS_KEEP_NAMESERVER): lookups must not
+            # leak outside the tunnel. It still answers cluster names via the cluster nameserver.
+          # Healthy only while the tunnel is up. No liveness probe: gluetun reconnects by itself.
+          startupProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 5
+            failureThreshold: 120
+          # Kill switch at the Service level: while the tunnel is down the pod is NotReady, so
+          # Traefik and the other apps stop routing to it instead of it looking healthy.
+          readinessProbe:
+            exec:
+              command: ["/gluetun-entrypoint", "healthcheck"]
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 48Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: tun
+              mountPath: /dev/net/tun
+      containers:
+        - name: sportarr
+          image: sportarr/sportarr:4.1.12.1122@sha256:8d6d301576b24be1b1ba889ec40c9e09fd3e5cba5c4a9729989c343918701dc8
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: TZ
+              value: "Europe/Stockholm"
+            - name: Sportarr__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  name: sportarr
+                  key: api-key
+          ports:
+            - name: http
+              containerPort: 1867
+          startupProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: sportarr-config-nas
+        - name: data
+          persistentVolumeClaim:
+            claimName: media
+        - name: tun
+          hostPath:
+            path: /dev/net/tun
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sportarr
+  namespace: sportarr
+spec:
+  selector:
+    app: sportarr
+  ports:
+    - name: http
+      port: 1867
+      targetPort: 1867
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sportarr
+  namespace: sportarr
+  annotations:
+    gethomepage.dev/enabled: "true"
+    gethomepage.dev/name: "Sportarr"
+    gethomepage.dev/description: "Sports Management"
+    gethomepage.dev/group: "Library"
+    gethomepage.dev/icon: "sportarr.png"
+    # Homepage looks for app.kubernetes.io/name=<ingress> by default
+    gethomepage.dev/pod-selector: "app=sportarr"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: sportarr.${domain}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sportarr
+                port:
+                  number: 1867
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: sportarr
+  namespace: sportarr
+spec:
+  endpointSelector:
+    matchLabels:
+      app: sportarr
+  ingress:
+    # Web UI access from Traefik
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: traefik
+      toPorts:
+        - ports:
+            - port: "1867"
+              protocol: TCP
+    # Indexer sync from Prowlarr (Sonarr app type: Sportarr serves the Sonarr v3 indexer API)
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: prowlarr
+      toPorts:
+        - ports:
+            - port: "1867"
+              protocol: TCP
+    # Health checks and probes
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+    # Intra-namespace communication
+    - fromEndpoints:
+        - {}
+  egress:
+    # DNS resolution
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: kube-system
+            k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+    # Download management on qBittorrent
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: qbittorrent
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    # Indexer search on Prowlarr
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: prowlarr
+      toPorts:
+        - ports:
+            - port: "9696"
+              protocol: TCP
+    # Library refresh on import (Jellyfin connection)
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: jellyfin
+      toPorts:
+        - ports:
+            - port: "8096"
+              protocol: TCP
+    # VPN tunnel (sportarr.net metadata API, update checks)
+    - toEntities:
+        - world
+    # Intra-namespace communication
+    - toEndpoints:
+        - {}

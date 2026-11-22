@@ -19,6 +19,7 @@ resources:
   # Sorting
   - media/sorting/radarr
   - media/sorting/sonarr
+  - media/sorting/sportarr
   - media/sorting/bazarr
   - media/sorting/recyclarr
 

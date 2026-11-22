@@ -65,6 +65,9 @@ spec:
           - resources:
               namespaces: [qbittorrent]
               names: ["qbittorrent*"]
+          - resources:
+              namespaces: [sportarr]
+              names: ["sportarr*"]
       disallow-host-namespaces:
         any:
           # Coroot node-agent: hostPID to map eBPF events to processes and containers
@@ -130,6 +133,7 @@ spec:
                 - dispatcharr
                 - prowlarr
                 - qbittorrent
+                - sportarr
       disallow-host-ports:
         any:
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
@@ -209,6 +213,9 @@ spec:
           - resources:
               namespaces: [qbittorrent]
               names: ["qbittorrent*"]
+          - resources:
+              namespaces: [sportarr]
+              names: ["sportarr*"]
           # Images that need root with the default capabilities (s6 init / su);
           # matter-server only for the init container's chown
           - resources:
@@ -268,6 +275,9 @@ spec:
           - resources:
               namespaces: [qbittorrent]
               names: ["qbittorrent*"]
+          - resources:
+              namespaces: [sportarr]
+              names: ["sportarr*"]
       require-run-as-nonroot:
         any:
           # Intel GPU device plugin: root (no capabilities) to create its socket in the
@@ -307,6 +317,9 @@ spec:
           - resources:
               namespaces: [qbittorrent]
               names: ["qbittorrent*"]
+          - resources:
+              namespaces: [sportarr]
+              names: ["sportarr*"]
           - resources:
               namespaces: [homeassistant]
               names: ["homeassistant*", "matter-server*"]
@@ -371,3 +384,4 @@ spec:
                 - dispatcharr
                 - prowlarr
                 - qbittorrent
+                - sportarr
