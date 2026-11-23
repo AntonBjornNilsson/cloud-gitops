@@ -26,6 +26,44 @@ Every control has:
 | **Later** | Backlog / stretch goal. Worth doing, not urgent. |
 | **Drop** | Out of scope, with the reason. |
 
+## How we work: lectures
+
+The work goes in small daily sessions, each one an hour-long **lecture**: learning first, implementing
+second. Every lecture explains the concept and the attack it stops, looks at our own cluster, does the
+smallest real step, and ends with a quiz and a preview. Big controls are split across several lectures.
+Concrete findings go into the private findings register (G2), not into this file.
+
+| # | Lecture | Controls | Status |
+|---|---|---|---|
+| | **Module 1: Baseline. Where are we?** | | |
+| 1 | Know thyself: a census of the cluster | G2, G6 prep, I2/E8/A3 checks | Done 2026-11-23 |
+| 2 | The rulebooks: CIS, NSA/CISA, MITRE, OWASP, plus a Kubescape scan | G3, C1 | |
+| 3 | The floor under the pods: kube-bench, kubelet and API server | H1, H7/H8 (read) | |
+| 4 | Think like an attacker: a red-team run from a pod | G6 | |
+| 5 | What is worth stealing: data classification, threat model check | D8, G1 | |
+| | **Module 2: Visibility before enforcement** | | |
+| 6 | Who did what: Kubernetes audit logging | J1 | |
+| 7 | One pane for security: dashboard, alert group, auth alerts | J3, J4 | |
+| 8 | Reading the wire: Hubble flows and drop alerts | N10 | |
+| | **Module 3: Blast radius** | | |
+| 9 | Humans with short-lived keys: OIDC kubectl, cert to break-glass | I1 | |
+| 10-11 | RBAC deep dive: who can do what, and why charts over-grant | I3, I10 | |
+| 12 | Tokens nobody asked for: automount off | I4 | |
+| 13 | Least privilege for the robot: scoping the agent | A1, A5, A3 | |
+| 14 | The side door: Tailscale ACLs | I8 | |
+| 15 | Fixing the floor: kube-bench findings | H7, H8 | |
+| | **Module 4: Network** | | |
+| 16 | Encrypt the wire: WireGuard | N5 | |
+| 17-18 | Default deny: audit, then enforce; no pod reaches the LAN | N1, N7 | |
+| 19-20 | Egress by name: FQDN allowlists | N2, A4 | |
+| | **Module 5: Edge and admission** | | |
+| 21 | The outer gate: Access policies and bypass paths | E2, E3, E8 | |
+| 22 | Headers, TLS and the WAF | E4, E5 | |
+| 23 | Admission beyond PSS: Kyverno best-practice policies | W7 | |
+| 24 | Graduation: rerun the red team, compare with lecture 4 | G6 | |
+
+The Next and Later items get lectures once Module 5 is done.
+
 ## Principles
 
 1. **Assume breach.** Any one pod, credential or node can be compromised. Controls should limit how far
@@ -80,7 +118,7 @@ Every control has:
   A register keeps them tracked until closed instead of lost in chat logs.
 - **Now:** None. Findings are scattered across TODO and memory.
 - **Effort:** S
-- **Decision (G2):** **Now.** Before the first scans.
+- **Decision (G2):** **Now.** Before the first scans. Opened in lecture 1.
 
 ### G3 Reference frameworks
 - **What:** Use the CIS Kubernetes Benchmark, the NSA/CISA Kubernetes Hardening Guide, MITRE ATT&CK for
