@@ -37,7 +37,7 @@ Concrete findings go into the private findings register (G2), not into this file
 |---|---|---|---|
 | | **Module 1: Baseline. Where are we?** | | |
 | 1 | Know thyself: a census of the cluster | G2, G6 prep, I2/E8/A3 checks | Done 2026-11-23 |
-| 2 | The rulebooks: CIS, NSA/CISA, MITRE, OWASP, plus a Kubescape scan | G3, C1 | |
+| 2 | The rulebooks: CIS, NSA/CISA, MITRE, OWASP, plus a Kubescape scan | G3, C1 | Done 2026-11-24 |
 | 3 | The floor under the pods: kube-bench, kubelet and API server | H1, H7/H8 (read) | |
 | 4 | Think like an attacker: a red-team run from a pod | G6 | |
 | 5 | What is worth stealing: data classification, threat model check | D8, G1 | |
@@ -46,7 +46,7 @@ Concrete findings go into the private findings register (G2), not into this file
 | 7 | One pane for security: dashboard, alert group, auth alerts | J3, J4 | |
 | 8 | Reading the wire: Hubble flows and drop alerts | N10 | |
 | | **Module 3: Blast radius** | | |
-| 9 | Humans with short-lived keys: OIDC kubectl, cert to break-glass | I1 | |
+| 9 | Humans with short-lived keys: two-factor for admin first, then OIDC kubectl, cert to break-glass | I5 (part), I1 | |
 | 10-11 | RBAC deep dive: who can do what, and why charts over-grant | I3, I10 | |
 | 12 | Tokens nobody asked for: automount off | I4 | |
 | 13 | Least privilege for the robot: scoping the agent | A1, A5, A3 | |
@@ -77,6 +77,49 @@ The Next and Later items get lectures once Module 5 is done.
    and a review date.
 6. **Security must not cost recoverability.** Every control is checked against "can I still recover the
    cluster after a full outage or a lost key?".
+
+## Framework mapping
+
+Four public rulebooks are used as checklists (G3). Each one asks a different question, so each finds
+different gaps:
+
+| Rulebook | Asks | Shape | Checked by |
+|---|---|---|---|
+| CIS Kubernetes Benchmark | "How should every setting be configured?" | ~130 numbered, testable checks in 5 sections | kube-bench (nodes, control plane), Kubescape `cis-v1.12.0` (API objects) |
+| NSA/CISA Kubernetes Hardening Guide | "What are the main themes to get right?" | Narrative guide, 5 themes | Kubescape `nsa` |
+| MITRE ATT&CK for Containers / Microsoft Threat Matrix for Kubernetes | "What would an attacker do, step by step?" | Tactics (goals) x techniques (methods) | Kubescape `mitre`, attack simulation (G6) |
+| OWASP Kubernetes Top 10 | "What goes wrong most often in practice?" | 10 risk categories | By hand (table below) |
+
+A compliance score belongs to the tool, not to the cluster: tools weigh checks differently, skip what
+they can't see, and can't see each other's controls. Scores are only tracked over time with the same
+tool, version and exceptions file.
+
+### OWASP Kubernetes Top 10 (2022) -> controls
+
+| OWASP | Risk | Controls in this strategy |
+|---|---|---|
+| K01 | Insecure workload configurations | W1-W9, I4 |
+| K02 | Supply chain vulnerabilities | S1-S12, W6, J5 |
+| K03 | Overly permissive RBAC | I3, I4, I10, A1 |
+| K04 | Lack of centralized policy enforcement | W7, W1, C3, C4 |
+| K05 | Inadequate logging and monitoring | J1-J9, N9, N10 |
+| K06 | Broken authentication | I1, I5, I6, I7, I9, K6 |
+| K07 | Missing network segmentation | N1-N8, I2, I8 |
+| K08 | Secrets management failures | K1-K7, S10 |
+| K09 | Misconfigured cluster components | H1, H7, H8, K3 |
+| K10 | Outdated and vulnerable components | H2, H3, H4, S9 |
+
+### NSA/CISA themes and CIS sections -> modules
+
+| NSA/CISA theme | CIS section | Where in this strategy |
+|---|---|---|
+| Pod security | 5.2 Pod security standards, 5.5 Admission control, 5.6 General policies | W (workloads), S3 |
+| Network separation and hardening | 5.3 Network policies | N (network), E (edge) |
+| Authentication and authorization | 3.1 Authentication, 5.1 RBAC and service accounts | I (identity), A (automation) |
+| Audit logging and threat detection | 3.2 Logging | J (detection) |
+| Upgrading and application security practices | (none) | H2-H4, S (supply chain) |
+| (control plane hardening) | 1 Control plane, 2 etcd, 4 Worker nodes | H (hosts), K3 |
+| (secrets) | 5.4 Secrets management | K (secrets) |
 
 ## Threat model
 
@@ -126,7 +169,8 @@ The Next and Later items get lectures once Module 5 is done.
 - **Why:** They are the collected experience of real attacks; they catch things we would not think of.
 - **Now:** PSS restricted covers part of CIS section 5. Nothing else is mapped.
 - **Effort:** M
-- **Decision (G3):** **Now.** The checklist for the baseline assessment.
+- **Decision (G3):** **Now.** The checklist for the baseline assessment. Done in lecture 2: the mapping is in
+  "Framework mapping" below; Kubescape covers CIS, NSA/CISA and MITRE; OWASP is mapped by hand.
 
 ### G4 Review cadence
 - **What:** Monthly automated posture report, quarterly manual review of findings and exceptions, yearly
@@ -196,7 +240,10 @@ The Next and Later items get lectures once Module 5 is done.
 - **Why:** Authelia guards almost every UI; its weakest allowed factor is the real strength of the cluster.
 - **Now:** Deny-by-default rules, 2FA managed in Git (YubiKeys + TOTP). Verify session settings.
 - **Effort:** S
-- **Decision (I5):** **Next.**
+- **Decision (I5):** **Next**, except one part pulled forward to **Now**: require two-factor for the
+  admin group and for the Kubernetes OIDC client. The baseline showed the admin rules allow a password
+  alone, so I1 (daily kubectl over OIDC) would weaken access until this is fixed. Done in lecture 9,
+  before I1.
 
 ### I6 Break-glass procedure
 - **What:** Documented, tested way back in when the normal path is broken: offline admin kubeconfig,
@@ -832,6 +879,9 @@ The Next and Later items get lectures once Module 5 is done.
 - **Now:** None (in TODO).
 - **Effort:** S
 - **Decision (C1):** **CLI scan Now** (baseline). **Operator Next**, decided after comparing it with trivy (C2).
+  Lecture 2: scores are only comparable over time with an exceptions file that sets aside verified
+  false failures (`ignore`) and marks accepted risks (`alertOnly`); the file lives with the findings
+  register until the operator makes it a cluster resource.
 
 ### C2 trivy-operator scope
 - **What:** Decide what trivy keeps (image CVEs, exposed secrets) and what moves to Kubescape (config, RBAC, compliance).
