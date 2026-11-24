@@ -38,7 +38,7 @@ Concrete findings go into the private findings register (G2), not into this file
 | | **Module 1: Baseline. Where are we?** | | |
 | 1 | Know thyself: a census of the cluster | G2, G6 prep, I2/E8/A3 checks | Done 2026-11-23 |
 | 2 | The rulebooks: CIS, NSA/CISA, MITRE, OWASP, plus a Kubescape scan | G3, C1 | Done 2026-11-24 |
-| 3 | The floor under the pods: kube-bench, kubelet and API server | H1, H7/H8 (read) | |
+| 3 | The floor under the pods: kube-bench, kubelet and API server | H1, H7/H8 (read) | Done 2026-11-24 |
 | 4 | Think like an attacker: a red-team run from a pod | G6 | |
 | 5 | What is worth stealing: data classification, threat model check | D8, G1 | |
 | | **Module 2: Visibility before enforcement** | | |
@@ -217,7 +217,9 @@ tool, version and exceptions file.
   reach it.
 - **Now:** Verify.
 - **Effort:** S
-- **Decision (I2):** **Now.** Check now what can reach it; enforce with N4/N8.
+- **Decision (I2):** **Now.** Check now what can reach it; enforce with N4/N8. Checked in lecture 3: the API
+  server listens on all interfaces and answers the whole LAN, though only with 401 to anonymous callers.
+  Restricting who can reach it is network work (N4, N8).
 
 ### I3 RBAC least-privilege audit
 - **What:** Review every ClusterRole/Role binding for wildcards, `get secrets` cluster-wide,
@@ -666,6 +668,11 @@ tool, version and exceptions file.
 - **Effort:** S
 - **Decision (H1):** **Now.** Part of the baseline. kube-bench needs host access, so it runs as a short-lived
   Job in a namespace with a temporary, documented PSS exception.
+  Done in lecture 3: one script (kept with the findings register) runs the node audit and kube-bench on
+  every node, collects the results and cleans up, in under a minute. Two host-only checks (Secure Boot,
+  which process owns each port) run over SSH, with the user's OK each time. kube-bench on k0s needs
+  triage: about half its control-plane failures are kubeadm file paths that don't exist on k0s, and it
+  reads the kubelet's config file rather than the effective config.
 
 ### H2 Automated OS patching
 - **What:** unattended-upgrades for security updates + kured to drain and reboot one node at a time.
