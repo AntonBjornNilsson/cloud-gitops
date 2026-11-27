@@ -141,11 +141,17 @@ spec:
                 sed -i "/^\[$SECTION\]/a $(echo "$1" | sed 's/\\/\\\\/g')=$2" "$CONF.tmp"
                 mv "$CONF.tmp" "$CONF"
               }
-              # Stop seeding after 1 day or a 1.0 ratio, whichever comes first. Imports are
-              # hardlinks, so removing the content only drops the copy in downloading/.
-              set_pref 'Session\GlobalMaxRatio' 1 BitTorrent
-              set_pref 'Session\GlobalMaxSeedingMinutes' 1440 BitTorrent
+              # The one place for seed limits, for every torrent: remove a torrent once it has
+              # BOTH a 1.2 ratio and 10 days of seeding (MatchAll). Prowlarr's indexers leave
+              # seed ratio/time empty, so Sonarr/Radarr/Sportarr add torrents with "use global".
+              # Imports are hardlinks, so removing the content only drops the copy in downloading/.
+              set_pref 'Session\GlobalMaxRatio' 1.2 BitTorrent
+              set_pref 'Session\GlobalMaxSeedingMinutes' 14400 BitTorrent
+              set_pref 'Session\ShareLimitsMode' MatchAll BitTorrent
               set_pref 'Session\ShareLimitAction' RemoveWithContent BitTorrent
+              # Queued torrents don't accrue seeding time, so idle seeds (< 2 KiB/s) must not
+              # hold the active-torrent slots, or the 10 days never pass.
+              set_pref 'Session\IgnoreSlowTorrentsForQueueing' true BitTorrent
               # Global download limit in KiB/s: about 2/3 of the observed peak (the line
               # saturates otherwise). 0 = unlimited.
               set_pref 'Session\GlobalDLSpeedLimit' 8192 BitTorrent
