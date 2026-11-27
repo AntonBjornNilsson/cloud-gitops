@@ -149,9 +149,13 @@ spec:
               set_pref 'Session\GlobalMaxSeedingMinutes' 14400 BitTorrent
               set_pref 'Session\ShareLimitsMode' MatchAll BitTorrent
               set_pref 'Session\ShareLimitAction' RemoveWithContent BitTorrent
-              # Queued torrents don't accrue seeding time, so idle seeds (< 2 KiB/s) must not
-              # hold the active-torrent slots, or the 10 days never pass.
+              # Queued torrents don't accrue seeding time, so every seed must stay active or
+              # the 10 days never pass. Idle seeds (< 2 KiB/s) don't use upload slots, but
+              # still count toward MaxActiveTorrents, so that limit leaves room for 200 seeds
+              # next to the 10 active downloads.
               set_pref 'Session\IgnoreSlowTorrentsForQueueing' true BitTorrent
+              set_pref 'Session\MaxActiveUploads' 200 BitTorrent
+              set_pref 'Session\MaxActiveTorrents' 210 BitTorrent
               # Global download limit in KiB/s: about 2/3 of the observed peak (the line
               # saturates otherwise). 0 = unlimited.
               set_pref 'Session\GlobalDLSpeedLimit' 8192 BitTorrent
