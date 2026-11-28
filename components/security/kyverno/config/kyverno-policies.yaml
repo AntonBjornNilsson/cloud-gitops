@@ -127,6 +127,10 @@ spec:
           # MetalLB speaker and frr-k8s: hostNetwork pods whose probes target 127.0.0.1
           - name: metallb
             expression: "!(object.metadata.namespace == 'metallb')"
+          # Cilium (hostNetwork). kube-system never reaches admission (the webhooks'
+          # namespaceSelector skips it); this keeps background scan reports clean.
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system'])"
       disallow-privileged-containers:
         matchConditions:
           # Coroot node-agent: loads eBPF programs (operator hardcodes privileged)
