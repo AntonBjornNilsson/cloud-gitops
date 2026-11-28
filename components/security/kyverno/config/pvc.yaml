@@ -20,3 +20,41 @@ spec:
           annotations:
             +(helm.sh/resource-policy): keep
             +(kustomize.toolkit.fluxcd.io/prune): disabled
+---
+# Keeps Flux from pruning PVCs. The Helm annotation does NOT stop a Helm
+# uninstall from deleting a chart's PVC (Helm only reads it from the rendered
+# chart, not the live object); the NAS StorageClasses' Retain keeps the data.
+# Each annotation is only added if it is missing.
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: add-pvc-annotations
+spec:
+  failurePolicy: Fail
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [persistentvolumeclaims]
+  variables:
+    - name: annotations
+      expression: "object.metadata.?annotations.orValue({})"
+  matchConditions:
+    - name: annotation-missing
+      expression: >-
+        !('helm.sh/resource-policy' in object.metadata.?annotations.orValue({})) ||
+        !('kustomize.toolkit.fluxcd.io/prune' in object.metadata.?annotations.orValue({}))
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          (has(object.metadata.annotations) ? [] :
+            [JSONPatch{op: "add", path: "/metadata/annotations", value: {}}]) +
+          ('helm.sh/resource-policy' in variables.annotations ? [] :
+            [JSONPatch{op: "add", path: "/metadata/annotations/helm.sh~1resource-policy", value: "keep"}]) +
+          ('kustomize.toolkit.fluxcd.io/prune' in variables.annotations ? [] :
+            [JSONPatch{op: "add", path: "/metadata/annotations/kustomize.toolkit.fluxcd.io~1prune", value: "disabled"}])

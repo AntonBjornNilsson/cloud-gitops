@@ -38,3 +38,51 @@ spec:
             hostPath:
               path: /dev/net/tun
               type: CharDevice
+---
+# The Tailscale proxies run unprivileged (NET_ADMIN, ProxyClass "resources" in
+# components/networking/tailscale/config/), so tailscaled can't create
+# /dev/net/tun itself. The ProxyClass can't add volumes, so the node's device
+# is mounted here at Pod creation (the runtime allows tun, as for gluetun).
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: tailscale-proxy-tun
+spec:
+  failurePolicy: Fail
+  # Pods only: the operator owns the proxy StatefulSets and would fight a
+  # mutated template
+  autogen:
+    podControllers:
+      controllers: []
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE]
+        resources: [pods]
+  matchConditions:
+    - name: tailscale-proxy
+      expression: "object.metadata.namespace == 'tailscale' && object.metadata.name.startsWith('ts-')"
+    - name: has-tailscale-container
+      expression: "object.spec.containers.exists(c, c.name == 'tailscale')"
+    - name: tun-not-mounted
+      expression: "!object.spec.?volumes.orValue([]).exists(v, v.name == 'dev-net-tun')"
+  variables:
+    - name: container
+      expression: "object.spec.containers.map(c, c.name).indexOf('tailscale')"
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          (has(object.spec.volumes) ? [] :
+            [JSONPatch{op: "add", path: "/spec/volumes", value: []}]) +
+          [JSONPatch{op: "add", path: "/spec/volumes/-", value: Object.spec.volumes{
+            name: "dev-net-tun",
+            hostPath: Object.spec.volumes.hostPath{path: "/dev/net/tun", type: "CharDevice"}}}] +
+          (has(object.spec.containers[variables.container].volumeMounts) ? [] :
+            [JSONPatch{op: "add", path: "/spec/containers/" + string(variables.container) + "/volumeMounts", value: []}]) +
+          [JSONPatch{op: "add", path: "/spec/containers/" + string(variables.container) + "/volumeMounts/-",
+            value: Object.spec.containers.volumeMounts{name: "dev-net-tun", mountPath: "/dev/net/tun"}}]

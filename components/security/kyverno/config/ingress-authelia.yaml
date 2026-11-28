@@ -29,3 +29,38 @@ spec:
         metadata:
           annotations:
             traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-forward-auth@kubernetescrd"
+---
+# Authelia forward-auth for every Ingress that uses the wildcard issuer (the
+# default, see add-ingress-tls), unless it has the label enable-oauth: "false"
+# (apps doing their own OIDC). Overwrites any other middleware annotation.
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: add-ingress-authelia
+spec:
+  failurePolicy: Fail
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [networking.k8s.io]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [ingresses]
+  matchConditions:
+    - name: not-authelia-or-traefik
+      expression: "!(object.metadata.namespace in ['authelia', 'traefik'])"
+    - name: wildcard-issuer
+      expression: >-
+        object.metadata.?annotations[?'cert-manager.io/cluster-issuer'].orValue('cloudflare-wildcard-issuer')
+        == 'cloudflare-wildcard-issuer'
+    - name: oauth-enabled
+      expression: "object.metadata.?labels[?'enable-oauth'].orValue('true') == 'true'"
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          has(object.metadata.annotations)
+          ? [JSONPatch{op: "add", path: "/metadata/annotations/traefik.ingress.kubernetes.io~1router.middlewares", value: "authelia-authelia-forward-auth@kubernetescrd"}]
+          : [JSONPatch{op: "add", path: "/metadata/annotations", value: {"traefik.ingress.kubernetes.io/router.middlewares": "authelia-authelia-forward-auth@kubernetescrd"}}]

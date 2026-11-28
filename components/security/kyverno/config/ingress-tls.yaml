@@ -51,3 +51,46 @@ spec:
       patchStrategicMerge:
         spec:
           ingressClassName: traefik
+---
+# TLS for every Ingress through the cert-manager wildcard issuer, and Traefik as
+# the class. Each part is only added if it is missing: the tls-acme and
+# cluster-issuer annotations, spec.tls (every rule's host, Secret
+# <ingress name>-tls) and ingressClassName.
+apiVersion: policies.kyverno.io/v1
+kind: MutatingPolicy
+metadata:
+  name: add-ingress-tls
+spec:
+  failurePolicy: Fail
+  evaluation:
+    background:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [networking.k8s.io]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [ingresses]
+  variables:
+    - name: annotations
+      expression: "object.metadata.?annotations.orValue({})"
+  mutations:
+    - patchType: JSONPatch
+      jsonPatch:
+        expression: >-
+          (has(object.metadata.annotations) ? [] :
+            [JSONPatch{op: "add", path: "/metadata/annotations", value: {}}]) +
+          ('kubernetes.io/tls-acme' in variables.annotations ? [] :
+            [JSONPatch{op: "add", path: "/metadata/annotations/kubernetes.io~1tls-acme", value: "true"}]) +
+          ('cert-manager.io/cluster-issuer' in variables.annotations ? [] :
+            [JSONPatch{op: "add", path: "/metadata/annotations/cert-manager.io~1cluster-issuer", value: "cloudflare-wildcard-issuer"}]) +
+          (size(object.spec.?tls.orValue([])) != 0 ? [] :
+            [
+              JSONPatch{op: "add", path: "/spec/tls", value: []},
+              JSONPatch{op: "add", path: "/spec/tls/-", value: Object.spec.tls{
+                hosts: object.spec.?rules.orValue([]).filter(r, has(r.host)).map(r, r.host),
+                secretName: object.metadata.name + "-tls"
+              }}
+            ]) +
+          (object.spec.?ingressClassName.orValue("") != "" ? [] :
+            [JSONPatch{op: "add", path: "/spec/ingressClassName", value: "traefik"}])
