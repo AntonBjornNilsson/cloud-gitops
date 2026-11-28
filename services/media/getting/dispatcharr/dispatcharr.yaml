@@ -321,6 +321,11 @@ spec:
               value: dispatcharr-redis
             - name: DISPATCHARR_LOG_LEVEL
               value: info
+            # Root runs Python here (web: migrate/collectstatic before su; celery: beat and
+            # workers), which left root-owned __pycache__ in /data/plugins that the app user
+            # cannot delete, so plugin updates failed. No bytecode files at all.
+            - name: PYTHONDONTWRITEBYTECODE
+              value: "1"
           # nginx answers 502 on / until the Django backend (and thus DB/Redis) is up
           readinessProbe:
             httpGet:
@@ -375,6 +380,11 @@ spec:
             - name: DJANGO_SETTINGS_MODULE
               value: dispatcharr.settings
             - name: PYTHONUNBUFFERED
+              value: "1"
+            # Root runs Python here (web: migrate/collectstatic before su; celery: beat and
+            # workers), which left root-owned __pycache__ in /data/plugins that the app user
+            # cannot delete, so plugin updates failed. No bytecode files at all.
+            - name: PYTHONDONTWRITEBYTECODE
               value: "1"
           # The entrypoint backgrounds `celery beat` and nothing restarts it if it
           # dies (e.g. a DNS blip), which silently stops EPG/M3U refreshes.
