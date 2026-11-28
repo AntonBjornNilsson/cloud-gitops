@@ -1,26 +1,3 @@
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  name: add-pvc-annotations
-spec:
-  validationFailureAction: Audit
-  background: true
-  rules:
-  # Keeps Flux from pruning PVCs. The Helm annotation does NOT stop a Helm
-  # uninstall from deleting a chart's PVC (Helm only reads it from the rendered
-  # chart, not the live object); the NAS StorageClasses' Retain keeps the data.
-  - name: add-helm-resource-policy
-    match:
-      resources:
-        kinds:
-        - PersistentVolumeClaim
-    mutate:
-      patchStrategicMerge:
-        metadata:
-          annotations:
-            +(helm.sh/resource-policy): keep
-            +(kustomize.toolkit.fluxcd.io/prune): disabled
----
 # Keeps Flux from pruning PVCs. The Helm annotation does NOT stop a Helm
 # uninstall from deleting a chart's PVC (Helm only reads it from the rendered
 # chart, not the live object); the NAS StorageClasses' Retain keeps the data.

@@ -444,7 +444,7 @@ tool, version and exceptions file.
 ## W. Workload hardening
 
 ### W1 Shrink the PSS exception list
-- **What:** Re-justify every Kyverno `policyExclude` entry; remove or narrow each one; give each a review date.
+- **What:** Re-justify every Kyverno `vpolExcludeByPolicy` entry; remove or narrow each one; give each a review date.
 - **Why:** Exceptions (privileged, root, hostPath, NET_ADMIN) are exactly what an attacker looks for.
 - **Now:** Restricted profile enforced; around ten exception groups documented.
 - **Effort:** M

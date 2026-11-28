@@ -1,7 +1,7 @@
-# Pod Security Standards as Kyverno ClusterPolicies: restricted profile (which
-# includes baseline) enforced.
+# Pod Security Standards as Kyverno ValidatingPolicies (CEL): restricted profile
+# (which includes baseline) enforced.
 # Workloads that legitimately need more (CNI, CSI, GPU, node agents, host
-# networking) are allowlisted per policy in policyExclude below. Violations
+# networking) are allowlisted per policy in vpolExcludeByPolicy below. Violations
 # show up in PolicyReports (kubectl get policyreports -A) and in admission errors.
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
@@ -28,360 +28,296 @@ spec:
     remediation:
       retries: 3
   values:
-    # Chart 3.9 defaults to CEL ValidatingPolicies, which ignore policyExclude: every
-    # exception below would be lost and those workloads denied. Keep the legacy kind
-    # until the exceptions are migrated (vpolExclude).
-    policyType: ClusterPolicy
     # restricted = the baseline policies plus the restricted-only ones below
     podSecurityStandard: restricted
     validationFailureAction: Enforce
     background: true
-    # Allowlist, per policy. Each entry is the smallest scope that covers the
-    # need: whole namespace for node-level infrastructure whose pods are
-    # created by operators or CSI drivers (Cilium, TrueNAS CSI, MetalLB,
-    # AMD GPU), name prefix elsewhere (e.g. the Intel GPU device plugin). Autogen applies these to Deployments/DaemonSets/... too.
+    # Allowlist, per policy: each matchCondition must be true for the policy to
+    # apply, so each one is !(<the excluded workloads>). Each entry is the
+    # smallest scope that covers the need: whole namespace for node-level
+    # infrastructure whose pods are created by operators or CSI drivers (Cilium,
+    # TrueNAS CSI, MetalLB), namespace + name prefix elsewhere (e.g. the Intel GPU
+    # device plugin). Autogen applies these to Deployments/DaemonSets/... too; a
+    # prefix that matches the Pod's name must match its controller's name as well.
+    # Write the name as object['metadata']['name']: Kyverno 1.19's autogen rewrites
+    # object.metadata.name to the pod template's (empty) name, the bracket form is
+    # kept as is (and 1.20+ keeps both on the controller). Don't use
+    # excludeResourceRules (it turns autogen off for the policy) or
+    # excludeNamespaces: keep every entry in this one shape, which the
+    # claude-agent's chartcheck.ts parses.
     # A new workload that needs one of these: add it here, with the reason.
-    policyExclude:
+    vpolExcludeByPolicy:
       disallow-capabilities:
-        any:
+        matchConditions:
           # Kepler: SYS_PTRACE to read other processes' /proc/<pid>/exe and environ
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb'])"
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
           # (mounted by the tailscale-proxy-tun policy)
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
           # gluetun VPN sidecar needs NET_ADMIN for its tunnel and firewall
-          - resources:
-              namespaces: [dispatcharr]
-              names: ["dispatcharr-web*"]
-          - resources:
-              namespaces: [prowlarr]
-              names: ["prowlarr*"]
-          - resources:
-              namespaces: [qbittorrent]
-              names: ["qbittorrent*"]
-          - resources:
-              namespaces: [sportarr]
-              names: ["sportarr*"]
+          - name: dispatcharr
+            expression: "!(object.metadata.namespace == 'dispatcharr' && object['metadata']['name'].startsWith('dispatcharr-web'))"
+          - name: prowlarr
+            expression: "!(object.metadata.namespace == 'prowlarr' && object['metadata']['name'].startsWith('prowlarr'))"
+          - name: qbittorrent
+            expression: "!(object.metadata.namespace == 'qbittorrent' && object['metadata']['name'].startsWith('qbittorrent'))"
+          - name: sportarr
+            expression: "!(object.metadata.namespace == 'sportarr' && object['metadata']['name'].startsWith('sportarr'))"
       disallow-host-namespaces:
-        any:
+        matchConditions:
           # Coroot node-agent: hostPID to map eBPF events to processes and containers
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Kepler: hostPID to attribute CPU energy to every process on the node
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
           # Pyroscope's Alloy: hostPID to profile every process with eBPF
-          - resources:
-              namespaces: [pyroscope]
-              names: ["alloy-ebpf*"]
+          - name: pyroscope
+            expression: "!(object.metadata.namespace == 'pyroscope' && object['metadata']['name'].startsWith('alloy-ebpf'))"
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb]
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["victoriametrics-prometheus-node-exporter*"]
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb'])"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('victoriametrics-prometheus-node-exporter'))"
           # Matter needs hostNetwork for IPv6 link-local / mDNS to devices
-          - resources:
-              namespaces: [homeassistant]
-              names: ["matter-server*"]
+          - name: homeassistant
+            expression: "!(object.metadata.namespace == 'homeassistant' && object['metadata']['name'].startsWith('matter-server'))"
       disallow-host-path:
-        any:
+        matchConditions:
           # Intel GPU device plugin: the node's /dev/dri and /sys/class/drm (read-only) and
           # the kubelet's device-plugins socket dir
-          - resources:
-              namespaces: [intel-gpu]
-              names: ["intel-gpu-plugin*"]
+          - name: intel-gpu
+            expression: "!(object.metadata.namespace == 'intel-gpu' && object['metadata']['name'].startsWith('intel-gpu-plugin'))"
           # Coroot node-agent: the node's cgroupfs, tracefs and debugfs for eBPF
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Kepler: the node's /proc and /sys (RAPL energy counters), read-only
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
           # Writes the containerd registry mirror config (Harbor) on every node
-          - resources:
-              namespaces: [registry-mirror]
-              names: ["registry-mirror*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi]
+          - name: registry-mirror
+            expression: "!(object.metadata.namespace == 'registry-mirror' && object['metadata']['name'].startsWith('registry-mirror'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi'])"
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
           # (mounted by the tailscale-proxy-tun policy)
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
-          - resources:
-              namespaces: [victoriametrics]
-              names:
-                - "victoriametrics-prometheus-node-exporter*"
-                - "smartctl-exporter*"
-                - "vlagent-logs*"
-          - resources:
-              namespaces: [homeassistant]
-              names: ["matter-server*"]
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && ['victoriametrics-prometheus-node-exporter', 'smartctl-exporter', 'vlagent-logs'].exists(p, object['metadata']['name'].startsWith(p)))"
+          - name: homeassistant
+            expression: "!(object.metadata.namespace == 'homeassistant' && object['metadata']['name'].startsWith('matter-server'))"
           # gluetun VPN sidecars: the node's /dev/net/tun
-          - resources:
-              namespaces:
-                - dispatcharr
-                - prowlarr
-                - qbittorrent
-                - sportarr
+          - name: gluetun-tun
+            expression: "!(object.metadata.namespace in ['dispatcharr', 'prowlarr', 'qbittorrent', 'sportarr'])"
       disallow-host-ports:
-        any:
+        matchConditions:
           # Node-level infrastructure: CNI/kube-system, the TrueNAS CSI node plugin, MetalLB
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb]
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["victoriametrics-prometheus-node-exporter*"]
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb'])"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('victoriametrics-prometheus-node-exporter'))"
+      # New in chart 3.10.0
+      disallow-host-probes:
+        matchConditions:
+          # MetalLB speaker and frr-k8s: hostNetwork pods whose probes target 127.0.0.1
+          - name: metallb
+            expression: "!(object.metadata.namespace == 'metallb')"
       disallow-privileged-containers:
-        any:
+        matchConditions:
           # Coroot node-agent: loads eBPF programs (operator hardcodes privileged)
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Pyroscope's Alloy: loads eBPF programs for CPU profiling
-          - resources:
-              namespaces: [pyroscope]
-              names: ["alloy-ebpf*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi]
+          - name: pyroscope
+            expression: "!(object.metadata.namespace == 'pyroscope' && object['metadata']['name'].startsWith('alloy-ebpf'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi'])"
           # Sets kernel sysctls on every node
-          - resources:
-              namespaces: [node-sysctls]
-              names: ["node-sysctls*"]
+          - name: node-sysctls
+            expression: "!(object.metadata.namespace == 'node-sysctls' && object['metadata']['name'].startsWith('node-sysctls'))"
           # Tailscale proxies: the operator's sysctler init container (sets ip_forward)
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
           # Raw disk access for SMART data
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["smartctl-exporter*"]
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('smartctl-exporter'))"
           # UniFi OS Server: systemd as PID 1 needs a writable cgroup tree and mounts
-          - resources:
-              namespaces: [unifi]
-              names: ["unifi*"]
+          - name: unifi
+            expression: "!(object.metadata.namespace == 'unifi' && object['metadata']['name'].startsWith('unifi'))"
       disallow-selinux:
-        any:
-          - resources:
-              namespaces: [kube-system]
+        matchConditions:
+          - name: kube-system
+            expression: "!(object.metadata.namespace == 'kube-system')"
+      # AppArmor Unconfined. The legacy ClusterPolicy only checked the old annotation,
+      # the CEL one also checks the appArmorProfile field these two set.
+      restrict-apparmor-profiles:
+        matchConditions:
+          # Kepler: the runtime's default profile blocks reading other processes'
+          # /proc/<pid>/exe and environ
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
+          # node-exporter's systemd collector: the default profile denies every D-Bus call
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('victoriametrics-prometheus-node-exporter'))"
       restrict-seccomp:
-        any:
-          - resources:
-              namespaces: [kube-system]
+        matchConditions:
+          - name: kube-system
+            expression: "!(object.metadata.namespace == 'kube-system')"
       # --- Restricted profile. Every other workload runs as non-root with no
       # capabilities, no privilege escalation and the RuntimeDefault seccomp profile.
       disallow-capabilities-strict:
-        any:
+        matchConditions:
           # Coroot node-agent: privileged (see disallow-privileged-containers)
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Kepler: SYS_PTRACE (see disallow-capabilities)
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
           # Pyroscope's Alloy: privileged (see disallow-privileged-containers)
-          - resources:
-              namespaces: [pyroscope]
-              names: ["alloy-ebpf*"]
+          - name: pyroscope
+            expression: "!(object.metadata.namespace == 'pyroscope' && object['metadata']['name'].startsWith('alloy-ebpf'))"
           # Node infrastructure created by operators (CNI, CSI, BGP/L2, sysctls)
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["smartctl-exporter*"]
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb', 'node-sysctls'])"
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('smartctl-exporter'))"
           # gluetun VPN sidecar: root with its default capabilities plus NET_ADMIN
-          - resources:
-              namespaces: [dispatcharr]
-              names: ["dispatcharr-web*"]
-          - resources:
-              namespaces: [prowlarr]
-              names: ["prowlarr*"]
-          - resources:
-              namespaces: [qbittorrent]
-              names: ["qbittorrent*"]
-          - resources:
-              namespaces: [sportarr]
-              names: ["sportarr*"]
+          - name: dispatcharr
+            expression: "!(object.metadata.namespace == 'dispatcharr' && object['metadata']['name'].startsWith('dispatcharr-web'))"
+          - name: prowlarr
+            expression: "!(object.metadata.namespace == 'prowlarr' && object['metadata']['name'].startsWith('prowlarr'))"
+          - name: qbittorrent
+            expression: "!(object.metadata.namespace == 'qbittorrent' && object['metadata']['name'].startsWith('qbittorrent'))"
+          - name: sportarr
+            expression: "!(object.metadata.namespace == 'sportarr' && object['metadata']['name'].startsWith('sportarr'))"
           # Images that need root with the default capabilities (s6 init / su);
           # matter-server only for the init container's chown
-          - resources:
-              namespaces: [homeassistant]
-              names: ["homeassistant*", "matter-server*"]
+          - name: homeassistant
+            expression: "!(object.metadata.namespace == 'homeassistant' && ['homeassistant', 'matter-server'].exists(p, object['metadata']['name'].startsWith(p)))"
           # UniFi OS Server: privileged (see disallow-privileged-containers)
-          - resources:
-              namespaces: [unifi]
-              names: ["unifi*"]
+          - name: unifi
+            expression: "!(object.metadata.namespace == 'unifi' && object['metadata']['name'].startsWith('unifi'))"
       disallow-privilege-escalation:
-        any:
+        matchConditions:
           # Coroot node-agent: privileged (see disallow-privileged-containers)
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Pyroscope's Alloy: privileged (see disallow-privileged-containers)
-          - resources:
-              namespaces: [pyroscope]
-              names: ["alloy-ebpf*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["smartctl-exporter*"]
+          - name: pyroscope
+            expression: "!(object.metadata.namespace == 'pyroscope' && object['metadata']['name'].startsWith('alloy-ebpf'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb', 'node-sysctls'])"
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('smartctl-exporter'))"
           # Privileged (see disallow-privileged-containers)
-          - resources:
-              namespaces: [unifi]
-              names: ["unifi*"]
+          - name: unifi
+            expression: "!(object.metadata.namespace == 'unifi' && object['metadata']['name'].startsWith('unifi'))"
       require-run-as-non-root-user:
-        any:
+        matchConditions:
           # Explicit runAsUser 0: Kepler (RAPL energy_uj is root-only), Alloy eBPF
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
-          - resources:
-              namespaces: [pyroscope]
-              names: ["alloy-ebpf*"]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
+          - name: pyroscope
+            expression: "!(object.metadata.namespace == 'pyroscope' && object['metadata']['name'].startsWith('alloy-ebpf'))"
           # Writes the containerd registry mirror config (Harbor) on every node
-          - resources:
-              namespaces: [registry-mirror]
-              names: ["registry-mirror*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi]
+          - name: registry-mirror
+            expression: "!(object.metadata.namespace == 'registry-mirror' && object['metadata']['name'].startsWith('registry-mirror'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi'])"
           # Explicit runAsUser 0: SMART reads, node log reader, chown init, gluetun
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["smartctl-exporter*", "vlagent-logs*"]
-          - resources:
-              namespaces: [homeassistant]
-              names: ["matter-server*"]
-          - resources:
-              namespaces: [prowlarr]
-              names: ["prowlarr*"]
-          - resources:
-              namespaces: [qbittorrent]
-              names: ["qbittorrent*"]
-          - resources:
-              namespaces: [sportarr]
-              names: ["sportarr*"]
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && ['smartctl-exporter', 'vlagent-logs'].exists(p, object['metadata']['name'].startsWith(p)))"
+          - name: homeassistant
+            expression: "!(object.metadata.namespace == 'homeassistant' && object['metadata']['name'].startsWith('matter-server'))"
+          - name: prowlarr
+            expression: "!(object.metadata.namespace == 'prowlarr' && object['metadata']['name'].startsWith('prowlarr'))"
+          - name: qbittorrent
+            expression: "!(object.metadata.namespace == 'qbittorrent' && object['metadata']['name'].startsWith('qbittorrent'))"
+          - name: sportarr
+            expression: "!(object.metadata.namespace == 'sportarr' && object['metadata']['name'].startsWith('sportarr'))"
       require-run-as-nonroot:
-        any:
+        matchConditions:
           # Intel GPU device plugin: root (no capabilities) to create its socket in the
           # kubelet's root-owned device-plugins dir
-          - resources:
-              namespaces: [intel-gpu]
-              names: ["intel-gpu-plugin*"]
+          - name: intel-gpu
+            expression: "!(object.metadata.namespace == 'intel-gpu' && object['metadata']['name'].startsWith('intel-gpu-plugin'))"
           # Coroot node-agent: root for eBPF (see disallow-privileged-containers)
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Kepler: root for the RAPL counters; Alloy: root for eBPF
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
-          - resources:
-              namespaces: [pyroscope]
-              names: ["alloy-ebpf*"]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
+          - name: pyroscope
+            expression: "!(object.metadata.namespace == 'pyroscope' && object['metadata']['name'].startsWith('alloy-ebpf'))"
           # Writes the containerd registry mirror config (Harbor) on every node
-          - resources:
-              namespaces: [registry-mirror]
-              names: ["registry-mirror*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["smartctl-exporter*", "vlagent-logs*"]
-          - resources:
-              namespaces: [dispatcharr]
-              names: ["dispatcharr-web*"]
-          - resources:
-              namespaces: [prowlarr]
-              names: ["prowlarr*"]
-          - resources:
-              namespaces: [qbittorrent]
-              names: ["qbittorrent*"]
-          - resources:
-              namespaces: [sportarr]
-              names: ["sportarr*"]
-          - resources:
-              namespaces: [homeassistant]
-              names: ["homeassistant*", "matter-server*"]
-          - resources:
-              namespaces: [unifi]
-              names: ["unifi*"]
+          - name: registry-mirror
+            expression: "!(object.metadata.namespace == 'registry-mirror' && object['metadata']['name'].startsWith('registry-mirror'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb', 'node-sysctls'])"
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && ['smartctl-exporter', 'vlagent-logs'].exists(p, object['metadata']['name'].startsWith(p)))"
+          - name: dispatcharr
+            expression: "!(object.metadata.namespace == 'dispatcharr' && object['metadata']['name'].startsWith('dispatcharr-web'))"
+          - name: prowlarr
+            expression: "!(object.metadata.namespace == 'prowlarr' && object['metadata']['name'].startsWith('prowlarr'))"
+          - name: qbittorrent
+            expression: "!(object.metadata.namespace == 'qbittorrent' && object['metadata']['name'].startsWith('qbittorrent'))"
+          - name: sportarr
+            expression: "!(object.metadata.namespace == 'sportarr' && object['metadata']['name'].startsWith('sportarr'))"
+          - name: homeassistant
+            expression: "!(object.metadata.namespace == 'homeassistant' && ['homeassistant', 'matter-server'].exists(p, object['metadata']['name'].startsWith(p)))"
+          - name: unifi
+            expression: "!(object.metadata.namespace == 'unifi' && object['metadata']['name'].startsWith('unifi'))"
           # GPU device nodes belong to a per-node render gid; root keeps no capabilities
-          - resources:
-              namespaces: [ollama]
-              names: ["ollama*"]
+          - name: ollama
+            expression: "!(object.metadata.namespace == 'ollama' && object['metadata']['name'].startsWith('ollama'))"
       restrict-seccomp-strict:
-        any:
+        matchConditions:
           # Coroot node-agent: privileged, no seccomp profile set by the operator
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
-          - resources:
-              namespaces: [kube-system, truenas-csi, metallb, node-sysctls]
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
-          - resources:
-              namespaces: [victoriametrics]
-              names: ["smartctl-exporter*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi', 'metallb', 'node-sysctls'])"
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('smartctl-exporter'))"
       restrict-volume-types:
-        any:
+        matchConditions:
           # Intel GPU device plugin: hostPath (same as disallow-host-path)
-          - resources:
-              namespaces: [intel-gpu]
-              names: ["intel-gpu-plugin*"]
+          - name: intel-gpu
+            expression: "!(object.metadata.namespace == 'intel-gpu' && object['metadata']['name'].startsWith('intel-gpu-plugin'))"
           # Coroot node-agent: hostPath (same as disallow-host-path)
-          - resources:
-              namespaces: [coroot]
-              names: ["coroot-node-agent*"]
+          - name: coroot
+            expression: "!(object.metadata.namespace == 'coroot' && object['metadata']['name'].startsWith('coroot-node-agent'))"
           # Kepler: hostPath /proc and /sys (same as disallow-host-path)
-          - resources:
-              namespaces: [kepler]
-              names: ["kepler*"]
+          - name: kepler
+            expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
           # Writes the containerd registry mirror config (Harbor) on every node
-          - resources:
-              namespaces: [registry-mirror]
-              names: ["registry-mirror*"]
+          - name: registry-mirror
+            expression: "!(object.metadata.namespace == 'registry-mirror' && object['metadata']['name'].startsWith('registry-mirror'))"
           # hostPath: same workloads as disallow-host-path above
-          - resources:
-              namespaces: [kube-system, truenas-csi]
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system', 'truenas-csi'])"
           # Tailscale proxy: tailscaled with NET_ADMIN and the node's /dev/net/tun
           # (mounted by the tailscale-proxy-tun policy)
-          - resources:
-              namespaces: [tailscale]
-              names: ["ts-*"]
-          - resources:
-              namespaces: [victoriametrics]
-              names:
-                - "victoriametrics-prometheus-node-exporter*"
-                - "smartctl-exporter*"
-                - "vlagent-logs*"
-          - resources:
-              namespaces: [homeassistant]
-              names: ["matter-server*"]
-          - resources:
-              namespaces:
-                - dispatcharr
-                - prowlarr
-                - qbittorrent
-                - sportarr
+          - name: tailscale
+            expression: "!(object.metadata.namespace == 'tailscale' && object['metadata']['name'].startsWith('ts-'))"
+          - name: victoriametrics
+            expression: "!(object.metadata.namespace == 'victoriametrics' && ['victoriametrics-prometheus-node-exporter', 'smartctl-exporter', 'vlagent-logs'].exists(p, object['metadata']['name'].startsWith(p)))"
+          - name: homeassistant
+            expression: "!(object.metadata.namespace == 'homeassistant' && object['metadata']['name'].startsWith('matter-server'))"
+          - name: gluetun-tun
+            expression: "!(object.metadata.namespace in ['dispatcharr', 'prowlarr', 'qbittorrent', 'sportarr'])"
+

@@ -1,35 +1,3 @@
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  name: add-ingress-authelia
-spec:
-  validationFailureAction: Audit
-  background: true
-  rules:
-  - name: add-authelia-middleware
-    match:
-      resources:
-        kinds:
-        - Ingress
-    exclude:
-      resources:
-        namespaces:
-        - authelia
-        - traefik
-    preconditions:
-      all:
-      - key: "{{ request.object.metadata.annotations.\"cert-manager.io/cluster-issuer\" || 'cloudflare-wildcard-issuer' }}"
-        operator: Equals
-        value: "cloudflare-wildcard-issuer"
-      - key: "{{ request.object.metadata.labels.\"enable-oauth\" || 'true' }}"
-        operator: Equals
-        value: "true"
-    mutate:
-      patchStrategicMerge:
-        metadata:
-          annotations:
-            traefik.ingress.kubernetes.io/router.middlewares: "authelia-authelia-forward-auth@kubernetescrd"
----
 # Authelia forward-auth for every Ingress that uses the wildcard issuer (the
 # default, see add-ingress-tls), unless it has the label enable-oauth: "false"
 # (apps doing their own OIDC). Overwrites any other middleware annotation.

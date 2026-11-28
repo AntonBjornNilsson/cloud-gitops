@@ -37,12 +37,14 @@ kubectl/flux context `in-cluster` (the current context) has cluster-admin rights
 - Never write setup-specific information (hostnames, IPs, node names, account names, secrets) into the repo; use
   the Flux postBuild substitution variables described in the skill.
 - Validate edits with `kubectl kustomize components > /dev/null && kubectl kustomize services > /dev/null`.
-- If a workload or update is denied by a Pod Security policy (Kyverno), do not widen `policyExclude` in
+- If a workload or update is denied by a Pod Security policy (Kyverno), do not widen `vpolExcludeByPolicy` in
   `components/security/kyverno/config/kyverno-policies.yaml` yourself: report it, saying what the workload needs and why.
   The restricted profile is enforced too: never remove or loosen a securityContext (runAsNonRoot, dropped capabilities,
   seccomp) to make a new version start; if an update fails with permission errors under them, report it. Adding a
-  missing securityContext or limits through chart values is fine, Helm hook Jobs included. Keep `policyType: ClusterPolicy`
-  in that same file: CEL policies ignore `policyExclude`, so changing it would drop every exception.
+  missing securityContext or limits through chart values is fine, Helm hook Jobs included. A kyverno-policies update
+  that adds a policy which existing workloads fail needs a human (a new exception): report it, don't merge it.
+  All Kyverno policies are CEL (`policies.kyverno.io`); never add a legacy `kyverno.io` ClusterPolicy or Policy,
+  Kyverno 1.20+ rejects them.
 - Never delete or modify PVCs/PVs, Namespaces, TrueNAS datasets/zvols/snapshots, Secrets, CRDs or Flux Kustomizations.
 
 ## Memory

@@ -179,10 +179,11 @@ publicly again. cfgate is alpha and pinned exactly: read the chart upgrade notes
 
 The `kyverno-policies` chart (`components/security/kyverno/config/kyverno-policies.yaml`) enforces the Pod Security
 Standards **restricted** profile, which includes baseline: no privileged containers, added capabilities, hostPath or
-other non-PVC/ConfigMap/Secret/emptyDir volume types, host namespaces/ports, custom SELinux/AppArmor/sysctls; and every
-container non-root, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`, seccomp `RuntimeDefault`.
-A violating Pod or controller is denied at admission
-(`admission webhook "validate.kyverno.svc-fail" denied the request`; Flux shows it on the Kustomization/HelmRelease,
+other non-PVC/ConfigMap/Secret/emptyDir volume types, host namespaces/ports, host in probes, custom
+SELinux/AppArmor/sysctls; and every container non-root, `capabilities.drop: [ALL]`, `allowPrivilegeEscalation: false`,
+seccomp `RuntimeDefault`. A violating Pod or controller is denied at admission
+(`admission webhook "vpol.validate.kyverno.svc-fail-finegrained-<policy>" denied the request: Policy <policy> failed: ...`;
+Flux shows it on the Kustomization/HelmRelease,
 operators log it, and alert `KyvernoAdmissionDenied` fires). Standard block (copy from any service, e.g.
 `services/media/sorting/sonarr/sonarr.yaml`):
 ```yaml
@@ -217,7 +218,17 @@ Patterns that made root images work non-root (check the live pod's `/proc/1/stat
 - **Pods an operator creates**: VictoriaMetrics CRs `useStrictSecurity: true`; trivy scan jobs
   `trivyOperator.scanJobPodTemplatePodSecurityContext`; check each chart for its pod/container keys.
 
-Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with the reason in a comment):
+All policies are CEL (`policies.kyverno.io`): the chart's ValidatingPolicies and the repo's own MutatingPolicies in
+`config/` (Ingress TLS/Authelia, PVC and Namespace annotations, Tailscale tun). Kyverno 1.20+ neither runs nor admits
+legacy `kyverno.io` ClusterPolicies/Policies. In a JSONPatch mutation, never put typed `Object{}` values inside a list
+(Kyverno's webhook panics): add an empty list, then append each item with `/-`.
+
+Exceptions (all in `vpolExcludeByPolicy`, per policy, one CEL matchCondition per workload with the reason in a
+comment): `!(object.metadata.namespace == '<ns>' && object['metadata']['name'].startsWith('<prefix>'))`, or a whole
+namespace. Keep that exact shape: `chartcheck.ts` parses it. Write the name in bracket form (Kyverno 1.19 autogen
+rewrote `object.metadata.name` to the pod template's), and use neither `excludeResourceRules` (turns off autogen
+for Deployments/DaemonSets/...) nor `excludeNamespaces` (a second shape). The prefix must match both the
+Pod and its controller. Current exceptions:
 - Node infrastructure created by operators or CSI drivers (Cilium/kube-system, truenas-csi, MetalLB): whole namespace.
   The TrueNAS CSI node plugin is privileged with hostNetwork and host paths.
 - gluetun VPN sidecars (dispatcharr-web, prowlarr, qbittorrent): root with NET_ADMIN; the rest of the pod runs as 1000.
@@ -231,13 +242,18 @@ Exceptions (all in `policyExclude`, per policy, namespace + name prefix, with th
   Pyroscope's `alloy-ebpf` DaemonSet (eBPF CPU profiling, hostPID).
 - Kepler: root (RAPL `energy_uj` is root-only), hostPID, SYS_PTRACE and AppArmor unconfined (reads other processes'
   `/proc/<pid>/exe` and `environ`), the node's `/proc` and `/sys` read-only. Not privileged.
+- AppArmor `Unconfined` (`restrict-apparmor-profiles`): Kepler and node-exporter (systemd collector's D-Bus calls).
+- Host in probes (`disallow-host-probes`): MetalLB's hostNetwork speaker and frr-k8s probe `127.0.0.1`.
 - hostPath (`disallow-host-path` + `restrict-volume-types`): gluetun pods' `/dev/net/tun` (dispatcharr, prowlarr,
   qbittorrent), matter-server, node-exporter, smartctl-exporter, vlagent, kepler.
 - Intel GPU device plugin (`components/hardware/intel-gpu/`): root with no capabilities and hostPath `/dev/dri`,
   `/sys/class/drm` and the kubelet's device-plugins dir. GPU users (Jellyfin) then request `gpu.intel.com/i915: 1`
   and add the node's render group as `supplementalGroups` (`${render_gid}`): no hostPath, no exception for them.
 To add one: fix the workload first; only if it really needs it, add the smallest entry with a comment. Check results
-with `kubectl --context=<admin> get policyreports -A`; test a manifest with `kubectl apply --dry-run=server`. A result
+with `kubectl --context=<admin> get policyreports -A`; test a manifest with `kubectl apply --dry-run=server`. To test
+policy changes before they enforce, apply renamed copies with `validationActions: [Deny]` and a first matchCondition
+`request.dryRun == true`: they only ever deny dry-runs, so a server dry-run of copies of all live Pods and
+controllers (name + `-dry`) shows exactly what would be denied. Delete the copies afterwards. A result
 for an unchanged resource is not re-evaluated when a policy starts excluding it: delete that PolicyReport to refresh it.
 
 ## Network policy (Cilium)
@@ -360,7 +376,8 @@ backup**; only TrueNAS snapshots on the same disks (undo, not disaster recovery)
   stores' majors). That run is zero-touch: applied without the ntfy question, then a health review 30 min later.
   After a bump, trivy-operator rescans the new images: `kubectl --context=<admin> get vulnerabilityreports -n <ns> -o wide`.
 - Before a chart bump, `helm template` old and new with the repo's values and check more than the diff: object kinds
-  (kyverno-policies 3.9+ needs `policyType: ClusterPolicy`, CEL policies ignore `policyExclude`), changed defaults, CRD stored
+  (new kyverno-policies releases add policies, e.g. `disallow-host-probes` in 3.10, which need their own
+  `vpolExcludeByPolicy` entries), changed defaults, CRD stored
   versions, and every pod template against the restricted profile, Helm hook Jobs included. A hook only runs during an
   upgrade, so a denied one fails that upgrade and blocks every Kustomization behind it. The agent's `app/chartcheck.ts`
   does this for its `updates` runs.

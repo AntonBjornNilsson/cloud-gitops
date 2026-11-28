@@ -84,21 +84,23 @@ spec:
             summary: "Kyverno admission controller is down"
             description: "Ingress/PVC mutations (TLS, Authelia, backups) are not being applied."
 
+        # CEL policies (policies.kyverno.io); readiness comes from kube-state-metrics
         - alert: KyvernoPolicyNotReady
-          expr: kyverno_policy_rule_info_total{status_ready="false"} == 1
+          expr: kyverno_cel_policy_ready == 0
           for: 15m
           labels:
             severity: warning
           annotations:
-            summary: "Kyverno policy {{ $labels.policy_name }} rule {{ $labels.rule_name }} is not ready"
+            summary: "Kyverno {{ $labels.policy_kind }} {{ $labels.policy_name }} is not ready"
+            description: "A policy that is not ready is not enforced. Check its status: `kubectl get {{ $labels.policy_kind }} {{ $labels.policy_name }} -o yaml`."
 
         - alert: KyvernoPolicyErrors
-          expr: sum by (policy_name, rule_name) (increase(kyverno_policy_results_total{rule_result="error"}[30m])) > 0
+          expr: sum by (policy_name) (increase({__name__=~"kyverno_(validating|mutating)_policy_results_total", result="error"}[30m])) > 0
           labels:
             severity: warning
           annotations:
-            summary: "Kyverno rule {{ $labels.policy_name }}/{{ $labels.rule_name }} is erroring"
-            description: "{{ $value | humanize }} rule evaluation errors in the last 30 minutes."
+            summary: "Kyverno policy {{ $labels.policy_name }} is erroring"
+            description: "{{ $value | humanize }} policy evaluation errors in the last 30 minutes."
 
         - alert: KyvernoAdmissionDenied
           expr: sum by (resource_kind, resource_namespace) (increase(kyverno_admission_requests_total{request_allowed="false"}[15m])) > 0

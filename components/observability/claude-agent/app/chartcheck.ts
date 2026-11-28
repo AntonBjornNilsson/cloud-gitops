@@ -64,16 +64,32 @@ const hooks = (d: Doc) => String(d.metadata?.annotations?.['helm.sh/hook'] ?? ''
 const runsOnUpgrade = (d: Doc) => !hooks(d) || /install|upgrade/.test(hooks(d));
 const allContainers = (p: Doc): Doc[] => [...(p.initContainers ?? []), ...(p.containers ?? []), ...(p.ephemeralContainers ?? [])];
 
-// Mirrors the enforced restricted profile, honouring the policyExclude allowlist in the repo
+// Whether one of the repo's vpolExcludeByPolicy matchConditions exempts this workload. They are written as
+// !(object.metadata.namespace == 'ns' [&& <name prefix test>]) or with namespace in ['a', 'b']; the prefix test is
+// object['metadata']['name'].startsWith('x') or ['x', 'y'].exists(p, object['metadata']['name'].startsWith(p)).
+// An expression of any other shape can't be evaluated here and counts as no exclusion.
+export function excludedBy(conditions: Doc[], ns: string, name: string): boolean {
+  return conditions.some((m) => {
+    const e = String(m?.expression ?? '').trim();
+    const nsTest = e.match(/^!\(object\.metadata\.namespace (?:== '([^']+)'|in \[([^\]]*)\])(.*)\)$/s);
+    if (!nsTest) return false;
+    const namespaces = nsTest[1] ? [nsTest[1]] : [...nsTest[2].matchAll(/'([^']+)'/g)].map((x) => x[1]);
+    if (!namespaces.includes(ns)) return false;
+    const rest = nsTest[3].trim();
+    if (!rest) return true;
+    const one = rest.match(/^&& object\['metadata'\]\['name'\]\.startsWith\('([^']+)'\)$/);
+    const many = rest.match(/^&& \[([^\]]*)\]\.exists\(p, object\['metadata'\]\['name'\]\.startsWith\(p\)\)$/);
+    const prefixes = one ? [one[1]] : many ? [...many[1].matchAll(/'([^']+)'/g)].map((x) => x[1]) : [];
+    return prefixes.some((x) => name.startsWith(x));
+  });
+}
+
+// Mirrors the enforced restricted profile, honouring the vpolExcludeByPolicy allowlist in the repo
 function restrictedProblems(d: Doc, ns: string, excludes: Doc, postRenderers: string): { denied: string[]; noLimits: string[] } {
   const p = podSpec(d);
   if (!p || !runsOnUpgrade(d)) return { denied: [], noLimits: [] };
   const name = String(d.metadata.name);
-  const excluded = (policy: string) => (excludes[policy]?.any ?? []).some((e: Doc) => {
-    const r = e.resources ?? {};
-    return (!r.namespaces || r.namespaces.includes(ns)) && (!r.names || r.names.some((n: string) =>
-      new RegExp(`^${n.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(name)));
-  });
+  const excluded = (policy: string) => excludedBy(excludes[policy]?.matchConditions ?? [], ns, name);
   const fail = (out: string[], policy: string, what: string) => { if (!excluded(policy)) out.push(what); };
   const pod: string[] = [];
   const psc = p.securityContext ?? {};
@@ -105,6 +121,10 @@ function restrictedProblems(d: Doc, ns: string, excludes: Doc, postRenderers: st
     const seccomp = sc.seccompProfile?.type ?? psc.seccompProfile?.type;
     if (seccomp !== 'RuntimeDefault' && seccomp !== 'Localhost') fail(bad, 'restrict-seccomp-strict', 'seccomp profile not set');
     if ((c.ports ?? []).some((x: Doc) => x.hostPort)) fail(bad, 'disallow-host-ports', 'hostPort');
+    const apparmor = sc.appArmorProfile?.type ?? psc.appArmorProfile?.type;
+    if (apparmor && apparmor !== 'RuntimeDefault' && apparmor !== 'Localhost') fail(bad, 'restrict-apparmor-profiles', `AppArmor ${apparmor}`);
+    const handlers = [c.livenessProbe, c.readinessProbe, c.startupProbe, c.lifecycle?.postStart, c.lifecycle?.preStop];
+    if (handlers.some((h) => h?.httpGet?.host || h?.tcpSocket?.host)) fail(bad, 'disallow-host-probes', 'probe or lifecycle handler with a host');
     if (bad.length) denied.push(`${d.kind}/${name}${hook} container ${c.name}: ${bad.join(', ')}`);
     const l = c.resources?.limits ?? {};
     if (!l.cpu || !l.memory) {
@@ -195,7 +215,7 @@ export async function chartChecks(repo: string, remote: string, branch: string, 
     }
     // Some manifests leave the namespace to their kustomization
     const find = (kind: string, ns: string, name: string) => manifests.find((d) => d.kind === kind && d.metadata.name === name && (d.metadata.namespace ?? ns) === ns);
-    const excludes = manifests.find((d) => d.kind === 'HelmRelease' && d.metadata.name === 'kyverno-policies')?.spec?.values?.policyExclude ?? {};
+    const excludes = manifests.find((d) => d.kind === 'HelmRelease' && d.metadata.name === 'kyverno-policies')?.spec?.values?.vpolExcludeByPolicy ?? {};
 
     mkdirSync(bare);
     await g('init', '--quiet', '--bare');

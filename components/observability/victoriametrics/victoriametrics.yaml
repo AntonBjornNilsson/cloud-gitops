@@ -308,6 +308,9 @@ spec:
               - helmreleases
               - receivers
             verbs: ["list", "watch"]
+          - apiGroups: [policies.kyverno.io]
+            resources: [validatingpolicies, mutatingpolicies]
+            verbs: ["list", "watch"]
       customResourceState:
         enabled: true
         config:
@@ -445,6 +448,36 @@ spec:
                   ready: [status, conditions, '[type=Ready]', status]
                   suspended: [spec, suspend]
                   webhook_path: [status, webhookPath]
+            # Kyverno CEL policies (alert KyvernoPolicyNotReady): one that doesn't
+            # compile is not Ready, gets no webhook and so is not enforced.
+            - groupVersionKind: {group: policies.kyverno.io, version: v1, kind: ValidatingPolicy}
+              metricNamePrefix: kyverno_cel
+              commonLabels:
+                policy_kind: ValidatingPolicy
+              labelsFromPath:
+                policy_name: [metadata, name]
+              metrics:
+              - name: policy_ready
+                help: Whether a Kyverno CEL policy is ready (compiled, webhook configured).
+                each:
+                  type: Gauge
+                  gauge:
+                    path: [status, conditionStatus, ready]
+                    nilIsZero: true
+            - groupVersionKind: {group: policies.kyverno.io, version: v1, kind: MutatingPolicy}
+              metricNamePrefix: kyverno_cel
+              commonLabels:
+                policy_kind: MutatingPolicy
+              labelsFromPath:
+                policy_name: [metadata, name]
+              metrics:
+              - name: policy_ready
+                help: Whether a Kyverno CEL policy is ready (compiled, webhook configured).
+                each:
+                  type: Gauge
+                  gauge:
+                    path: [status, conditionStatus, ready]
+                    nilIsZero: true
       resources:
         requests:
           cpu: 10m
