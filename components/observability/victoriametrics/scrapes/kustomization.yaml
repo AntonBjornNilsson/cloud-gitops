@@ -15,5 +15,6 @@ resources:
   - metallb.yaml
   - ntfy.yaml
   - pyroscope.yaml
+  - recyclarr.yaml
   - smartctl-exporter.yaml
   - trivy-operator.yaml

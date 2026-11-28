@@ -1377,6 +1377,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
+             "description": "Daily scheduled syncs plus manual ones (kubectl exec ... recyclarr sync).",
              "fieldConfig": {
                 "defaults": {
                    "color": {
@@ -1385,20 +1386,20 @@ spec:
                    "thresholds": {
                       "steps": [
                          {
-                            "color": "green",
+                            "color": "red",
                             "value": null
                          },
                          {
                             "color": "orange",
-                            "value": 172800
+                            "value": 1
                          },
                          {
-                            "color": "red",
-                            "value": 604800
+                            "color": "green",
+                            "value": 5
                          }
                       ]
                    },
-                   "unit": "s"
+                   "unit": "short"
                 }
              },
              "gridPos": {
@@ -1419,11 +1420,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "time() - max(kube_cronjob_status_last_successful_time{namespace=\"recyclarr\"})",
+                   "expr": "sum(increase_pure(recyclarr_sync_job_duration_seconds_count{recyclarr_sync_job_status=\"succeeded\"}[7d])) or vector(0)",
                    "legendFormat": ""
                 }
              ],
-             "title": "Last successful sync",
+             "title": "Successful syncs (7d)",
              "type": "stat"
           },
           {
@@ -1431,7 +1432,7 @@ spec:
                 "type": "datasource",
                 "uid": "-- Mixed --"
              },
-             "description": "Recyclarr jobs still kept by the CronJob history that ended in failure.",
+             "description": "Syncs that ended as failed or partial (some instances or resources did not sync).",
              "fieldConfig": {
                 "defaults": {
                    "color": {
@@ -1470,11 +1471,11 @@ spec:
                       "type": "prometheus",
                       "uid": "VictoriaMetrics"
                    },
-                   "expr": "sum(kube_job_status_failed{namespace=\"recyclarr\"}) or vector(0)",
+                   "expr": "sum(increase_pure(recyclarr_sync_job_duration_seconds_count{recyclarr_sync_job_status=~\"failed|partial\"}[7d])) or vector(0)",
                    "legendFormat": ""
                 }
              ],
-             "title": "Failed jobs",
+             "title": "Failed syncs (7d)",
              "type": "stat"
           },
           {

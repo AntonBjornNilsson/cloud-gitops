@@ -23,7 +23,7 @@ metadata:
   namespace: recyclarr
 data:
   recyclarr.yml: |
-    # yaml-language-server: $schema=https://schemas.recyclarr.dev/v8/config-schema.json
+    # yaml-language-server: $schema=https://schemas.recyclarr.dev/v9/config-schema.json
     sonarr:
       sonarr:
         base_url: http://sonarr.sonarr.svc.cluster.local:8989
@@ -92,68 +92,164 @@ data:
         custom_format_groups:
           add:
             - trash_id: a3ac6af01d78e4f21fcb75f601ac96df  # [Unwanted] Unwanted Formats
+  # Server settings. The schedule replaces the old CronJob; TZ (below) sets its time zone.
+  settings.yml: |
+    # yaml-language-server: $schema=https://schemas.recyclarr.dev/v9/settings-schema.json
+    server:
+      schedule:
+        cron: "0 4 * * *"
 ---
-apiVersion: batch/v1
-kind: CronJob
+# Recyclarr's state: which Sonarr/Radarr custom formats and profiles it created.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: recyclarr-state
+  namespace: recyclarr
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: nas-iscsi
+  resources:
+    requests:
+      storage: 1Gi
+---
+# Recyclarr 9 is a server: it syncs on its own schedule (settings.yml) and the image no
+# longer runs CLI commands passed as arguments. Sync by hand with
+#   kubectl -n recyclarr exec deploy/recyclarr -- recyclarr sync [--preview]
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: recyclarr
   namespace: recyclarr
 spec:
-  schedule: "0 4 * * *"
-  timeZone: "Europe/Stockholm"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
-  jobTemplate:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: recyclarr
+  template:
+    metadata:
+      labels:
+        app: recyclarr
     spec:
-      backoffLimit: 2
-      template:
-        metadata:
-          labels:
-            app: recyclarr
-        spec:
-          restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # The server refuses to start without an API key (32+ characters). Only the CLI in
+        # this same container uses it, so a fresh random key per pod start is enough.
+        - name: api-key
+          image: ghcr.io/recyclarr/recyclarr:9.0.0
           securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            runAsGroup: 1000
-            seccompProfile:
-              type: RuntimeDefault
-          containers:
-            - name: recyclarr
-              image: ghcr.io/recyclarr/recyclarr:8.8.1
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop: ["ALL"]
-              # Any argument makes the entrypoint run the CLI once instead of its own cron
-              args: ["sync"]
-              env:
-                - name: TZ
-                  value: "Europe/Stockholm"
-              envFrom:
-                - secretRef:
-                    name: recyclarr-api-keys
-              resources:
-                requests:
-                  cpu: 20m
-                  memory: 128Mi
-                limits:
-                  cpu: 1
-                  memory: 512Mi
-              volumeMounts:
-                # Writable: Recyclarr clones the TRaSH guides repo and keeps a cache here
-                - name: config
-                  mountPath: /config
-                - name: recyclarr-config
-                  mountPath: /config/recyclarr.yml
-                  subPath: recyclarr.yml
-          volumes:
-            - name: config
-              emptyDir: {}
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          command:
+            - sh
+            - -c
+            - umask 077 && head -c 48 /dev/urandom | base64 | tr -d '\n=+/' > /run/recyclarr/api-key
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          volumeMounts:
+            - name: api-key
+              mountPath: /run/recyclarr
+      containers:
+        - name: recyclarr
+          image: ghcr.io/recyclarr/recyclarr:9.0.0
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: TZ
+              value: "Europe/Stockholm"
+            - name: RECYCLARR_API_KEY_FILE
+              value: /run/recyclarr/api-key
+            # /config is the read-only ConfigMap; downloaded guides and logs go to an
+            # emptyDir, state to the PVC
+            - name: RECYCLARR_DATA_DIR
+              value: /data
+            - name: RECYCLARR_STATE_DIR
+              value: /state
+          envFrom:
+            - secretRef:
+                name: recyclarr-api-keys
+          ports:
+            - name: api
+              containerPort: 7982
+              protocol: TCP
+            - name: metrics
+              containerPort: 7983
+              protocol: TCP
+          # No port opens until the first TRaSH guides download finishes
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: metrics
+            periodSeconds: 10
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: metrics
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: metrics
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 192Mi
+            limits:
+              cpu: 1
+              memory: 768Mi
+          volumeMounts:
+            # Mounted as a directory (no subPath) so ConfigMap edits reach the pod
             - name: recyclarr-config
-              configMap:
-                name: recyclarr-config
+              mountPath: /config
+              readOnly: true
+            - name: state
+              mountPath: /state
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+            - name: api-key
+              mountPath: /run/recyclarr
+              readOnly: true
+      volumes:
+        - name: recyclarr-config
+          configMap:
+            name: recyclarr-config
+        - name: state
+          persistentVolumeClaim:
+            claimName: recyclarr-state
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: api-key
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
@@ -164,7 +260,24 @@ spec:
   endpointSelector:
     matchLabels:
       app: recyclarr
-  ingress: []
+  ingress:
+    # Kubelet probes (/livez, /readyz)
+    - fromEntities:
+        - host
+        - remote-node
+        - health
+      toPorts:
+        - ports:
+            - port: "7983"
+              protocol: TCP
+    # Sync metrics
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: victoriametrics
+      toPorts:
+        - ports:
+            - port: "7983"
+              protocol: TCP
   egress:
     # DNS resolution
     - toEndpoints:
@@ -190,7 +303,7 @@ spec:
         - ports:
             - port: "7878"
               protocol: TCP
-    # TRaSH guides and config templates (git clone from GitHub)
+    # TRaSH guides (download from GitHub)
     - toEntities:
         - world
       toPorts:

@@ -1,0 +1,16 @@
+# Recyclarr server (sync job durations and results) on its management port.
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: recyclarr
+  namespace: victoriametrics
+spec:
+  namespaceSelector:
+    matchNames:
+      - recyclarr
+  selector:
+    matchLabels:
+      app: recyclarr
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics

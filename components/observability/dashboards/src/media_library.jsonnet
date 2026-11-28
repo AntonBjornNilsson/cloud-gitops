@@ -96,11 +96,12 @@ dashboard.new('Media · Library')
 
   // --- Recyclarr ----------------------------------------------------------------
   m.row('Recyclarr (TRaSH profile sync)', 45),
-  m.stat('Last successful sync', 'time() - max(kube_cronjob_status_last_successful_time{namespace="recyclarr"})', 0, 46, 4, 8, unit='s',
-         thresholds=[{ color: 'green', value: null }, { color: 'orange', value: 2 * 86400 }, { color: 'red', value: 7 * 86400 }]),
-  m.stat('Failed jobs', 'sum(kube_job_status_failed{namespace="recyclarr"}) or vector(0)', 4, 46, 4, 8,
+  m.stat('Successful syncs (7d)', 'sum(increase_pure(recyclarr_sync_job_duration_seconds_count{recyclarr_sync_job_status="succeeded"}[7d])) or vector(0)', 0, 46, 4, 8,
+         thresholds=[{ color: 'red', value: null }, { color: 'orange', value: 1 }, { color: 'green', value: 5 }],
+         desc='Daily scheduled syncs plus manual ones (kubectl exec ... recyclarr sync).'),
+  m.stat('Failed syncs (7d)', 'sum(increase_pure(recyclarr_sync_job_duration_seconds_count{recyclarr_sync_job_status=~"failed|partial"}[7d])) or vector(0)', 4, 46, 4, 8,
          thresholds=[{ color: 'green', value: null }, { color: 'red', value: 1 }],
-         desc='Recyclarr jobs still kept by the CronJob history that ended in failure.'),
+         desc='Syncs that ended as failed or partial (some instances or resources did not sync).'),
   m.logs('Last sync output', 'kubernetes.pod_namespace:="recyclarr" | sort by (_time desc) | limit 200', 8, 46, 16, 8),
 
   // --- Services -----------------------------------------------------------------
