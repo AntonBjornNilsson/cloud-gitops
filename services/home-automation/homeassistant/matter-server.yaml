@@ -72,7 +72,7 @@ spec:
               memory: 16Mi
       containers:
         - name: matter-server
-          image: ghcr.io/matter-js/matterjs-server:1.6.0
+          image: ghcr.io/matter-js/matterjs-server:1.6.1
           securityContext:
             runAsNonRoot: true
             runAsUser: 1000
