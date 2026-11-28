@@ -161,6 +161,10 @@ spec:
           # /proc/<pid>/exe and environ
           - name: kepler
             expression: "!(object.metadata.namespace == 'kepler' && object['metadata']['name'].startsWith('kepler'))"
+          # Cilium agent and envoy. kube-system never reaches admission (the webhooks'
+          # namespaceSelector skips it); this keeps background scan reports clean.
+          - name: node-infrastructure
+            expression: "!(object.metadata.namespace in ['kube-system'])"
           # node-exporter's systemd collector: the default profile denies every D-Bus call
           - name: victoriametrics
             expression: "!(object.metadata.namespace == 'victoriametrics' && object['metadata']['name'].startsWith('victoriametrics-prometheus-node-exporter'))"
