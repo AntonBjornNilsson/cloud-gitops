@@ -216,7 +216,7 @@ spec:
         - ports:
             - port: "53"
               protocol: ANY
-    # Queue inspection, removal and blocklisting on Radarr and Sonarr
+    # Queue inspection, removal and blocklisting on Radarr, Sonarr and Sportarr
     - toEndpoints:
         - matchLabels:
             io.kubernetes.pod.namespace: radarr
@@ -230,6 +230,13 @@ spec:
       toPorts:
         - ports:
             - port: "8989"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: sportarr
+      toPorts:
+        - ports:
+            - port: "1867"
               protocol: TCP
     # Torrent inspection and file blocking on qBittorrent
     - toEndpoints:

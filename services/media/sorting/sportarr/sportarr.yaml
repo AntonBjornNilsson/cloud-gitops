@@ -308,6 +308,14 @@ spec:
         - ports:
             - port: "1867"
               protocol: TCP
+    # Queue cleanup, malware blocking and searches from Cleanuparr
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: cleanuparr
+      toPorts:
+        - ports:
+            - port: "1867"
+              protocol: TCP
     # Metadata agent API for Jellyfin's Sportarr plugin (no API key on these routes)
     - fromEndpoints:
         - matchLabels:
