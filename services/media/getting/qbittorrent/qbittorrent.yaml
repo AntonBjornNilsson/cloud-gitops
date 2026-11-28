@@ -141,14 +141,13 @@ spec:
                 sed -i "/^\[$SECTION\]/a $(echo "$1" | sed 's/\\/\\\\/g')=$2" "$CONF.tmp"
                 mv "$CONF.tmp" "$CONF"
               }
-              # The one place for seed limits, for every torrent: remove a torrent once it has
-              # BOTH a 1.2 ratio and 10 days of seeding (MatchAll). Prowlarr's indexers leave
-              # seed ratio/time empty, so Sonarr/Radarr/Sportarr add torrents with "use global".
-              # Imports are hardlinks, so removing the content only drops the copy in downloading/.
-              set_pref 'Session\GlobalMaxRatio' 1.2 BitTorrent
-              set_pref 'Session\GlobalMaxSeedingMinutes' 14400 BitTorrent
-              set_pref 'Session\ShareLimitsMode' MatchAll BitTorrent
-              set_pref 'Session\ShareLimitAction' RemoveWithContent BitTorrent
+              # No seed limits here: Cleanuparr's Download Cleaner removes torrents, with
+              # per-tracker seeding rules (settings in its own database). Prowlarr's indexers
+              # leave seed ratio/time empty, so Sonarr/Radarr add torrents without per-torrent
+              # limits. If one still gets a limit, Stop only pauses it instead of deleting.
+              set_pref 'Session\GlobalMaxRatio' -1 BitTorrent
+              set_pref 'Session\GlobalMaxSeedingMinutes' -1 BitTorrent
+              set_pref 'Session\ShareLimitAction' Stop BitTorrent
               # Queued torrents don't accrue seeding time, so every seed must stay active or
               # the 10 days never pass. Idle seeds (< 2 KiB/s) don't use upload slots, but
               # still count toward MaxActiveTorrents, so that limit leaves room for 200 seeds
