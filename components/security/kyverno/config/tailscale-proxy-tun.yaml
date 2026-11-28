@@ -23,8 +23,13 @@ spec:
         operations: [CREATE]
         resources: [pods]
   matchConditions:
+    # Mutating admission runs before generateName becomes a name, so a Pod from a
+    # ReplicaSet/DaemonSet has no metadata.name yet: reading it would error and
+    # failurePolicy Fail would deny the Pod. Check whichever of the two is set.
     - name: tailscale-proxy
-      expression: "object.metadata.namespace == 'tailscale' && object.metadata.name.startsWith('ts-')"
+      expression: >-
+        object.metadata.namespace == 'tailscale' &&
+        [object.metadata.?name.orValue(''), object.metadata.?generateName.orValue('')].exists(n, n.startsWith('ts-'))
     - name: has-tailscale-container
       expression: "object.spec.containers.exists(c, c.name == 'tailscale')"
     - name: tun-not-mounted
